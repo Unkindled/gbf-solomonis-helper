@@ -255,11 +255,8 @@ export class MapRenderer {
   }
 
   _isNodeInCurrentMiasma(node) {
-    const state = getCurrentMiasmaState(this.miasmaInfo);
-    if (!state.active || state.cx == null || state.cy == null) return false;
-    const dx = node.position_x - state.cx;
-    const dy = node.position_y - state.cy;
-    return Math.sqrt(dx * dx + dy * dy) > state.innerRadius;
+    // Server-authoritative: is_shrinking is set by the game server
+    return !!node.is_shrinking;
   }
 
   // --- Rendering ---
