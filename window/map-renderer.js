@@ -8,7 +8,6 @@ const BG_W = 2680, BG_H = 1830;
 const NODE_W = 90, NODE_H = 100;
 const PIECE_W = 90, PIECE_H = 100;
 
-
 const ASSET_BASE = '../assets/';
 
 export class MapRenderer {
@@ -87,8 +86,8 @@ export class MapRenderer {
   }
 
   _iconForNode(node) {
-    // Cult founder (sp:1) and cultists (sp:2,3) use the fanatic icon
-    if (node.node_type === 10 && node.special_incident_id != null && [1, 2, 3].includes(node.special_incident_id)) {
+    // Cult Founder (sp:1) and Cultists (sp:2,3) use a dedicated icon
+    if (node.node_type === 10 && node.special_incident_id != null && node.special_incident_id <= 3) {
       return this.images.icon10fanatic || null;
     }
     const key = 'icon' + node.node_type;
@@ -154,9 +153,11 @@ export class MapRenderer {
     const rect = this.canvas.getBoundingClientRect();
     const world = this._screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
     const hitW = NODE_W / 2 + 8;
-    const hitH = NODE_H / 2 + 8;
+    const hitH = NODE_H + 8; // icon extends upward from ground point
     for (const [, node] of this.nodeMap) {
-      if (Math.abs(node.position_x - world.x) < hitW && Math.abs(node.position_y - world.y) < hitH) {
+      // Node coordinate is at bottom-center of icon
+      if (Math.abs(node.position_x - world.x) < hitW &&
+          world.y > node.position_y - hitH && world.y < node.position_y + 12) {
         return node;
       }
     }
@@ -249,8 +250,11 @@ export class MapRenderer {
   }
 
   _isNodeInCurrentMiasma(node) {
-    // Use game data as authoritative source
-    return !!node.is_shrinking;
+    const state = getCurrentMiasmaState(this.miasmaInfo);
+    if (!state.active || state.cx == null || state.cy == null) return false;
+    const dx = node.position_x - state.cx;
+    const dy = node.position_y - state.cy;
+    return Math.sqrt(dx * dx + dy * dy) > state.innerRadius;
   }
 
   // --- Rendering ---
@@ -308,36 +312,42 @@ export class MapRenderer {
     const state = getCurrentMiasmaState(this.miasmaInfo);
     if (!state.active || state.cx == null || state.cy == null) return;
 
-    const { cx, cy, radius } = state;
-    if (radius === Infinity || radius <= 0) return;
+    const { cx, cy, innerRadius, safeRadius } = state;
 
-    // Purple miasma fog: everything OUTSIDE the fixed safe circle
+    // Purple miasma fog: area between innerRadius and map edge
     ctx.save();
     ctx.beginPath();
     ctx.rect(-200, -200, BG_W + 400, BG_H + 400);
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2, true);
+    ctx.arc(cx, cy, innerRadius, 0, Math.PI * 2, true);
     ctx.fillStyle = 'rgba(90, 20, 120, 0.4)';
     ctx.fill();
     ctx.restore();
 
-    // Safe-zone boundary (matches the white circle in-game)
+    // Miasma inner boundary (where the fog currently is)
     const t = Date.now() / 1000;
     ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.arc(cx, cy, innerRadius, 0, Math.PI * 2);
     ctx.strokeStyle = 'rgba(200, 80, 255, 0.85)';
     ctx.lineWidth = 4;
     ctx.setLineDash([16, 10]);
     ctx.lineDashOffset = -t * 30;
     ctx.stroke();
     ctx.setLineDash([]);
+
+    // Safe circle (final boundary after countdown ends)
+    if (safeRadius < innerRadius - 5) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, safeRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(100, 220, 100, 0.5)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 6]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
   }
 
   _drawEdges(ctx) {
     const drawn = new Set();
-    // Outer glow pass
-    ctx.lineWidth = 6;
-    ctx.strokeStyle = 'rgba(140, 170, 200, 0.12)';
-    ctx.lineCap = 'round';
     for (const [id, node] of this.nodeMap) {
       for (const adjId of (node.adjacent_node_ids || [])) {
         const key = id < adjId ? `${id}-${adjId}` : `${adjId}-${id}`;
@@ -348,21 +358,11 @@ export class MapRenderer {
         ctx.beginPath();
         ctx.moveTo(node.position_x, node.position_y);
         ctx.lineTo(adj.position_x, adj.position_y);
+        ctx.strokeStyle = 'rgba(200, 215, 230, 0.45)';
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
         ctx.stroke();
       }
-    }
-    // Core line pass
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = 'rgba(180, 210, 240, 0.4)';
-    for (const key of drawn) {
-      const [idStr, adjStr] = key.split('-');
-      const node = this.nodeMap.get(Number(idStr));
-      const adj = this.nodeMap.get(Number(adjStr));
-      if (!node || !adj) continue;
-      ctx.beginPath();
-      ctx.moveTo(node.position_x, node.position_y);
-      ctx.lineTo(adj.position_x, adj.position_y);
-      ctx.stroke();
     }
   }
 
@@ -403,7 +403,7 @@ export class MapRenderer {
       ctx.stroke();
     }
 
-    // Step number labels on path nodes
+    // Step number labels on path nodes (above the icon)
     ctx.font = 'bold 18px system-ui';
     ctx.textAlign = 'center';
     for (let i = 1; i < this.path.length; i++) {
@@ -411,14 +411,14 @@ export class MapRenderer {
       if (!node) continue;
       const danger = dangerSet.has(i);
       const label = String(i);
-      // Background pill
       const tw = ctx.measureText(label).width + 10;
+      const ly = node.position_y - NODE_H - 10;
       ctx.fillStyle = danger ? 'rgba(180, 30, 30, 0.85)' : 'rgba(160, 130, 0, 0.85)';
       ctx.beginPath();
-      ctx.roundRect(node.position_x - tw / 2, node.position_y - NODE_H / 2 - 24, tw, 20, 4);
+      ctx.roundRect(node.position_x - tw / 2, ly, tw, 20, 4);
       ctx.fill();
       ctx.fillStyle = '#fff';
-      ctx.fillText(label, node.position_x, node.position_y - NODE_H / 2 - 9);
+      ctx.fillText(label, node.position_x, ly + 15);
     }
   }
 
@@ -464,8 +464,9 @@ export class MapRenderer {
       const alpha = hasFilter && !highlighted ? 0.25 : 1.0;
       ctx.globalAlpha = alpha;
 
+      // Anchor at bottom-center: coordinate is the "ground", icon sits on top
       const x = node.position_x - NODE_W / 2;
-      const y = node.position_y - NODE_H / 2;
+      const y = node.position_y - NODE_H;
 
       // Choose base image
       let baseImg;
@@ -493,10 +494,10 @@ export class MapRenderer {
         ctx.drawImage(icon, x, y, NODE_W, NODE_H);
       }
 
-      // Path highlight ring
+      // Path highlight ring (centered on icon body)
       if (isOnPath && !isCurrent) {
         ctx.beginPath();
-        ctx.arc(node.position_x, node.position_y, NODE_W / 2 + 4, 0, Math.PI * 2);
+        ctx.arc(node.position_x, node.position_y - NODE_H / 2, NODE_W / 2 + 4, 0, Math.PI * 2);
         ctx.strokeStyle = 'rgba(255, 230, 80, 0.8)';
         ctx.lineWidth = 3;
         ctx.stroke();
@@ -505,7 +506,7 @@ export class MapRenderer {
       // Hover ring
       if (this.hoveredNode && this.hoveredNode.node_id === id) {
         ctx.beginPath();
-        ctx.arc(node.position_x, node.position_y, NODE_W / 2 + 8, 0, Math.PI * 2);
+        ctx.arc(node.position_x, node.position_y - NODE_H / 2, NODE_W / 2 + 8, 0, Math.PI * 2);
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
         ctx.lineWidth = 3;
         ctx.stroke();
@@ -520,8 +521,9 @@ export class MapRenderer {
     const node = this.nodeMap.get(this.currentNodeId);
     if (!node) return;
 
+    // Anchor at bottom-center
     const x = node.position_x - PIECE_W / 2;
-    const y = node.position_y - PIECE_H / 2;
+    const y = node.position_y - PIECE_H;
 
     // Glow (pulsing)
     const t = Date.now() / 1000;
@@ -566,7 +568,7 @@ export class MapRenderer {
     ctx.font = '12px system-ui';
     const tw = ctx.measureText(label).width + 16;
     const tx = Math.min(screen.x + 18, this.canvas.width - tw - 5);
-    const ty = Math.max(screen.y - 32, 20);
+    const ty = Math.max(screen.y - NODE_H * this.scale - 34, 20);
 
     ctx.fillStyle = 'rgba(10, 14, 20, 0.92)';
     ctx.strokeStyle = 'rgba(100, 120, 140, 0.5)';
@@ -580,21 +582,21 @@ export class MapRenderer {
     ctx.fillText(label, tx + 8, ty + 16);
   }
 
-  resize(width, height) {
-    this.canvas.width = width;
-    this.canvas.height = height;
-    this.render();
-  }
-
-  /** Center the view on the player's current node */
-  focusOnPlayer() {
+  /** Center view on the player's current node */
+  focusPlayer() {
     if (this.currentNodeId == null) return;
     const node = this.nodeMap.get(this.currentNodeId);
     if (!node) return;
     const w = this.canvas.width;
     const h = this.canvas.height;
     this.offsetX = w / 2 - node.position_x * this.scale;
-    this.offsetY = h / 2 - node.position_y * this.scale;
+    this.offsetY = h / 2 - (node.position_y - NODE_H / 2) * this.scale;
+    this.render();
+  }
+
+  resize(width, height) {
+    this.canvas.width = width;
+    this.canvas.height = height;
     this.render();
   }
 }

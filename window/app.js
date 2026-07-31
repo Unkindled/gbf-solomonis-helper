@@ -4,7 +4,7 @@ import { MapRenderer } from './map-renderer.js';
 import { FilterPanel } from './filter-panel.js';
 import { findShortestPath } from './pathfinder.js';
 import { annotatePathWithMiasma, MIASMA_ACTIVATION_TURN } from './miasma-predictor.js';
-import { DUNGEON_STATUS_LABELS, NODE_TYPE_LABELS, MIASMA_RADIUS } from '../shared/constants.js';
+import { DUNGEON_STATUS_LABELS, NODE_TYPE_LABELS } from '../shared/constants.js';
 
 let renderer = null;
 let filterPanel = null;
@@ -55,13 +55,15 @@ function init() {
 
   // Focus button
   document.getElementById('btn-focus').addEventListener('click', () => {
-    if (renderer) renderer.focusOnPlayer();
+    if (renderer) renderer.focusPlayer();
   });
 
   // Keyboard
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       clearCurrentPath();
+    } else if (e.key === 'f' || e.key === 'F') {
+      if (renderer) renderer.focusPlayer();
     }
   });
 
@@ -81,18 +83,6 @@ function applyFullMap(mapData) {
   currentMiasmaInfo = dungeon.miasma_info;
   currentTurn = dungeon.total_turn || 0;
   prevMiasmic = !!(currentMiasmaInfo && currentMiasmaInfo.after && currentMiasmaInfo.after.is_miasmic);
-  // Fallback: if miasma is active but no node is flagged shrinking (e.g. window
-  // opened after activation, or cached pre-miasma map), mark by geometry using
-  // the fixed safe-zone radius (authoritative per game client).
-  const ma = currentMiasmaInfo && currentMiasmaInfo.after;
-  const anyShrinking = [...nodeMap.values()].some(n => n.is_shrinking);
-  if (ma && ma.is_miasmic && ma.center_position_x != null && !anyShrinking) {
-    const r = MIASMA_RADIUS[ma.level || 1] || MIASMA_RADIUS[1];
-    for (const [, node] of nodeMap) {
-      const d = Math.hypot(node.position_x - ma.center_position_x, node.position_y - ma.center_position_y);
-      if (d > r) node.is_shrinking = true;
-    }
-  }
   renderer.setMap(dungeon);
   // Update filter panel with present special events
   if (filterPanel) filterPanel.setPresentSpecials(getPresentSpecialIds());
@@ -116,28 +106,10 @@ function checkMiasmaTransition(newMiasmaInfo) {
 
   if (wasMiasmic && !isMiasmic) {
     // Miasma disappeared → new phase/day, map will refresh
+    // The game client re-requests content/index which triggers 'map-init'
+    // Clear stale path since map is about to change
     clearCurrentPath();
-    clearAllShrinking();
     updateStatusBar('New phase — map refreshing...');
-  }
-}
-
-/** Update node is_shrinking flags from miasma_info.shrink_node_ids (incremental) */
-function applyShrinkNodeIds(miasmaInfo) {
-  if (!miasmaInfo) return;
-  const shrinkIds = miasmaInfo.shrink_node_ids;
-  if (!shrinkIds || shrinkIds.length === 0) return;
-  // Incremental: only ADD nodes to shrinking set, never clear existing
-  for (const id of shrinkIds) {
-    const node = nodeMap.get(Number(id));
-    if (node) node.is_shrinking = true;
-  }
-}
-
-/** Clear all is_shrinking flags (called when miasma ends) */
-function clearAllShrinking() {
-  for (const [, node] of nodeMap) {
-    node.is_shrinking = false;
   }
 }
 
@@ -161,7 +133,6 @@ function handleWindowMessage(type, payload) {
       currentMiasmaInfo = payload.miasmaInfo || currentMiasmaInfo;
       currentTurn = payload.totalTurn !== undefined ? payload.totalTurn : currentTurn;
       checkMiasmaTransition(currentMiasmaInfo);
-      applyShrinkNodeIds(currentMiasmaInfo);
       renderer.updatePosition(payload.currentNodeId, currentMiasmaInfo, currentTurn);
       updateStatusBar();
       reEvaluatePath();
@@ -175,7 +146,6 @@ function handleWindowMessage(type, payload) {
       }
       if (payload.miasmaInfo) currentMiasmaInfo = payload.miasmaInfo;
       checkMiasmaTransition(currentMiasmaInfo);
-      applyShrinkNodeIds(currentMiasmaInfo);
       // Update special incident appearances
       if (payload.specialIncidentAppearance) {
         const info = payload.specialIncidentAppearance;
@@ -208,7 +178,7 @@ function handleWindowMessage(type, payload) {
   }
 }
 
-// --- Path planning ---
+// --- Path planning (Issue 5: path from last point, click player to clear) ---
 
 function handleNodeClick(node) {
   if (!dungeon || dungeon.current_node_id == null) return;
@@ -220,22 +190,23 @@ function handleNodeClick(node) {
     return;
   }
 
-  // If we have a path and clicked a node already on it → truncate path to that node
+  // If clicked node is already on the current path → truncate path to that node
   if (currentPath && currentPath.length > 0) {
     const idx = currentPath.indexOf(clickedId);
-    if (idx >= 0) {
-      // Re-target: keep path up to (and including) clicked node
+    if (idx >= 0 && idx < currentPath.length - 1) {
+      // Truncate: keep path up to and including clicked node
       currentPath = currentPath.slice(0, idx + 1);
-      if (currentPath.length <= 1) {
-        clearCurrentPath();
-      } else {
-        reEvaluatePath();
-      }
+      reEvaluatePath();
+      return;
+    }
+    // Clicking the last node of path → clear
+    if (idx === currentPath.length - 1) {
+      clearCurrentPath();
       return;
     }
   }
 
-  // Determine start: extend from last path node, or from player position
+  // Determine start: if we have a path, extend from its last node; otherwise from player
   const startId = (currentPath && currentPath.length > 0)
     ? currentPath[currentPath.length - 1]
     : dungeon.current_node_id;
@@ -246,7 +217,7 @@ function handleNodeClick(node) {
     return;
   }
 
-  // Append segment (avoid duplicating junction node)
+  // Append segment to existing path (avoid duplicating the junction node)
   if (currentPath && currentPath.length > 0) {
     currentPath = [...currentPath, ...segment.slice(1)];
   } else {
