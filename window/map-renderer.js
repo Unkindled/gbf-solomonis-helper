@@ -308,38 +308,28 @@ export class MapRenderer {
     const state = getCurrentMiasmaState(this.miasmaInfo);
     if (!state.active || state.cx == null || state.cy == null) return;
 
-    const { cx, cy, innerRadius, safeRadius } = state;
+    const { cx, cy, radius } = state;
+    if (radius === Infinity || radius <= 0) return;
 
-    // Purple miasma fog: area between innerRadius and map edge
+    // Purple miasma fog: everything OUTSIDE the fixed safe circle
     ctx.save();
     ctx.beginPath();
     ctx.rect(-200, -200, BG_W + 400, BG_H + 400);
-    ctx.arc(cx, cy, innerRadius, 0, Math.PI * 2, true);
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2, true);
     ctx.fillStyle = 'rgba(90, 20, 120, 0.4)';
     ctx.fill();
     ctx.restore();
 
-    // Miasma inner boundary (where the fog currently is)
+    // Safe-zone boundary (matches the white circle in-game)
     const t = Date.now() / 1000;
     ctx.beginPath();
-    ctx.arc(cx, cy, innerRadius, 0, Math.PI * 2);
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
     ctx.strokeStyle = 'rgba(200, 80, 255, 0.85)';
     ctx.lineWidth = 4;
     ctx.setLineDash([16, 10]);
     ctx.lineDashOffset = -t * 30;
     ctx.stroke();
     ctx.setLineDash([]);
-
-    // Safe circle (final boundary after countdown ends)
-    if (safeRadius < innerRadius - 5) {
-      ctx.beginPath();
-      ctx.arc(cx, cy, safeRadius, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(100, 220, 100, 0.5)';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([6, 6]);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
   }
 
   _drawEdges(ctx) {

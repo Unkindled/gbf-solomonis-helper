@@ -4,7 +4,7 @@ import { MapRenderer } from './map-renderer.js';
 import { FilterPanel } from './filter-panel.js';
 import { findShortestPath } from './pathfinder.js';
 import { annotatePathWithMiasma, MIASMA_ACTIVATION_TURN } from './miasma-predictor.js';
-import { DUNGEON_STATUS_LABELS, NODE_TYPE_LABELS } from '../shared/constants.js';
+import { DUNGEON_STATUS_LABELS, NODE_TYPE_LABELS, MIASMA_RADIUS } from '../shared/constants.js';
 
 let renderer = null;
 let filterPanel = null;
@@ -81,6 +81,18 @@ function applyFullMap(mapData) {
   currentMiasmaInfo = dungeon.miasma_info;
   currentTurn = dungeon.total_turn || 0;
   prevMiasmic = !!(currentMiasmaInfo && currentMiasmaInfo.after && currentMiasmaInfo.after.is_miasmic);
+  // Fallback: if miasma is active but no node is flagged shrinking (e.g. window
+  // opened after activation, or cached pre-miasma map), mark by geometry using
+  // the fixed safe-zone radius (authoritative per game client).
+  const ma = currentMiasmaInfo && currentMiasmaInfo.after;
+  const anyShrinking = [...nodeMap.values()].some(n => n.is_shrinking);
+  if (ma && ma.is_miasmic && ma.center_position_x != null && !anyShrinking) {
+    const r = MIASMA_RADIUS[ma.level || 1] || MIASMA_RADIUS[1];
+    for (const [, node] of nodeMap) {
+      const d = Math.hypot(node.position_x - ma.center_position_x, node.position_y - ma.center_position_y);
+      if (d > r) node.is_shrinking = true;
+    }
+  }
   renderer.setMap(dungeon);
   // Update filter panel with present special events
   if (filterPanel) filterPanel.setPresentSpecials(getPresentSpecialIds());
@@ -105,16 +117,27 @@ function checkMiasmaTransition(newMiasmaInfo) {
   if (wasMiasmic && !isMiasmic) {
     // Miasma disappeared → new phase/day, map will refresh
     clearCurrentPath();
+    clearAllShrinking();
     updateStatusBar('New phase — map refreshing...');
   }
 }
 
-/** Update node is_shrinking flags from miasma_info.shrink_node_ids */
+/** Update node is_shrinking flags from miasma_info.shrink_node_ids (incremental) */
 function applyShrinkNodeIds(miasmaInfo) {
-  if (!miasmaInfo || !miasmaInfo.shrink_node_ids) return;
-  const shrinkSet = new Set(miasmaInfo.shrink_node_ids.map(Number));
-  for (const [id, node] of nodeMap) {
-    node.is_shrinking = shrinkSet.has(id);
+  if (!miasmaInfo) return;
+  const shrinkIds = miasmaInfo.shrink_node_ids;
+  if (!shrinkIds || shrinkIds.length === 0) return;
+  // Incremental: only ADD nodes to shrinking set, never clear existing
+  for (const id of shrinkIds) {
+    const node = nodeMap.get(Number(id));
+    if (node) node.is_shrinking = true;
+  }
+}
+
+/** Clear all is_shrinking flags (called when miasma ends) */
+function clearAllShrinking() {
+  for (const [, node] of nodeMap) {
+    node.is_shrinking = false;
   }
 }
 
