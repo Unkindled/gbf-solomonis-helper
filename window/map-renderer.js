@@ -7,8 +7,7 @@ import { getCurrentMiasmaState } from './miasma-predictor.js';
 const BG_W = 2680, BG_H = 1830;
 const NODE_W = 90, NODE_H = 100;
 const PIECE_W = 90, PIECE_H = 100;
-// Visual center offset: node icons are 90x100 but the hexagon center is ~5px above geometric center
-const NODE_CENTER_Y_OFFSET = -5;
+
 
 const ASSET_BASE = '../assets/';
 
@@ -310,14 +309,12 @@ export class MapRenderer {
     if (!state.active || state.cx == null || state.cy == null) return;
 
     const { cx, cy, innerRadius, safeRadius } = state;
-    // Apply visual center offset to match game rendering
-    const adjCy = cy + NODE_CENTER_Y_OFFSET;
 
     // Purple miasma fog: area between innerRadius and map edge
     ctx.save();
     ctx.beginPath();
     ctx.rect(-200, -200, BG_W + 400, BG_H + 400);
-    ctx.arc(cx, adjCy, innerRadius, 0, Math.PI * 2, true);
+    ctx.arc(cx, cy, innerRadius, 0, Math.PI * 2, true);
     ctx.fillStyle = 'rgba(90, 20, 120, 0.4)';
     ctx.fill();
     ctx.restore();
@@ -325,7 +322,7 @@ export class MapRenderer {
     // Miasma inner boundary (where the fog currently is)
     const t = Date.now() / 1000;
     ctx.beginPath();
-    ctx.arc(cx, adjCy, innerRadius, 0, Math.PI * 2);
+    ctx.arc(cx, cy, innerRadius, 0, Math.PI * 2);
     ctx.strokeStyle = 'rgba(200, 80, 255, 0.85)';
     ctx.lineWidth = 4;
     ctx.setLineDash([16, 10]);
@@ -336,7 +333,7 @@ export class MapRenderer {
     // Safe circle (final boundary after countdown ends)
     if (safeRadius < innerRadius - 5) {
       ctx.beginPath();
-      ctx.arc(cx, adjCy, safeRadius, 0, Math.PI * 2);
+      ctx.arc(cx, cy, safeRadius, 0, Math.PI * 2);
       ctx.strokeStyle = 'rgba(100, 220, 100, 0.5)';
       ctx.lineWidth = 2;
       ctx.setLineDash([6, 6]);
