@@ -3,7 +3,7 @@
 import { MapRenderer } from './map-renderer.js';
 import { FilterPanel } from './filter-panel.js';
 import { findShortestPath } from './pathfinder.js';
-import { annotatePathWithMiasma, MIASMA_ACTIVATION_TURN } from './miasma-predictor.js';
+import { MiasmaTracker, annotatePathWithMiasma, MIASMA_ACTIVATION_TURN } from './miasma-predictor.js';
 import { DUNGEON_STATUS_LABELS, NODE_TYPE_LABELS } from '../shared/constants.js';
 
 let renderer = null;
@@ -13,8 +13,9 @@ let nodeMap = new Map();
 let currentMiasmaInfo = null;
 let currentTurn = 0;
 let currentPath = null;
-let pathStartId = null; // The node the current path starts from
-let prevMiasmic = false; // Track miasma state for disappear detection
+let pathStartId = null;
+let prevMiasmic = false;
+const miasmaTracker = new MiasmaTracker();
 
 // --- Init ---
 
@@ -81,7 +82,7 @@ function init() {
     }
   });
 
-  // Animation loop for pulsing effects
+  // Animation loop
   requestAnimationFrame(function animLoop() {
     if (renderer && renderer.nodeMap.size > 0) renderer.render();
     requestAnimationFrame(animLoop);
@@ -103,11 +104,10 @@ function applyFullMap(mapData) {
   prevMiasmic = !!(currentMiasmaInfo && currentMiasmaInfo.after && currentMiasmaInfo.after.is_miasmic);
 
   if (isNewDungeon) {
-    // Full reset: new dungeon started
+    miasmaTracker.reset();
     clearCurrentPath();
     renderer.setMap(dungeon);
   } else {
-    // Same dungeon: update data without resetting view/zoom/path
     renderer.nodeMap = nodeMap;
     renderer.currentNodeId = dungeon.current_node_id;
     renderer.miasmaInfo = currentMiasmaInfo;
@@ -116,7 +116,10 @@ function applyFullMap(mapData) {
     renderer.render();
   }
 
-  // Update filter panel with present special events
+  // Feed initial miasma state to tracker
+  if (currentMiasmaInfo) miasmaTracker.update(currentMiasmaInfo);
+  renderer.miasmaTracker = miasmaTracker;
+
   if (filterPanel) filterPanel.setPresentSpecials(getPresentSpecialIds());
   reEvaluatePath();
 }
@@ -129,7 +132,7 @@ function getPresentSpecialIds() {
   return ids;
 }
 
-// --- Miasma disappear detection (Issue 1) ---
+// --- Miasma disappear detection ---
 
 function checkMiasmaTransition(newMiasmaInfo) {
   const wasMiasmic = prevMiasmic;
@@ -137,9 +140,6 @@ function checkMiasmaTransition(newMiasmaInfo) {
   prevMiasmic = isMiasmic;
 
   if (wasMiasmic && !isMiasmic) {
-    // Miasma disappeared → new phase/day, map will refresh
-    // The game client re-requests content/index which triggers 'map-init'
-    // Clear stale path since map is about to change
     clearCurrentPath();
     updateStatusBar('New phase — map refreshing...');
   }
@@ -166,23 +166,23 @@ function handleWindowMessage(type, payload) {
       currentTurn = payload.totalTurn !== undefined ? payload.totalTurn : currentTurn;
       checkMiasmaTransition(currentMiasmaInfo);
 
-      // Sync renderer with latest map state
+      // Feed miasma data to tracker
+      if (currentMiasmaInfo) miasmaTracker.update(currentMiasmaInfo);
+      renderer.miasmaTracker = miasmaTracker;
+
+      // Sync renderer
       renderer.miasmaInfo = currentMiasmaInfo;
       renderer.totalTurn = currentTurn;
       renderer.updatePosition(payload.currentNodeId, currentMiasmaInfo, currentTurn);
 
-      // Update path: if player moved to next node on path, advance; otherwise clear
+      // Path auto-advance
       if (currentPath && currentPath.length > 1) {
         if (payload.currentNodeId === currentPath[1]) {
-          // Player followed the path — trim the first node
           currentPath = currentPath.slice(1);
         } else if (!currentPath.includes(payload.currentNodeId)) {
-          // Player went off-path — clear
           clearCurrentPath();
         }
-        // If player moved to a later node on path (skipped), keep path as-is for now
       } else if (currentPath && currentPath.length === 1) {
-        // Path was just the destination and player arrived
         if (payload.currentNodeId === currentPath[0]) clearCurrentPath();
       }
 
@@ -196,9 +196,13 @@ function handleWindowMessage(type, payload) {
         currentTurn = payload.totalTurn;
         if (dungeon) dungeon.total_turn = payload.totalTurn;
       }
-      if (payload.miasmaInfo) currentMiasmaInfo = payload.miasmaInfo;
+      if (payload.miasmaInfo) {
+        currentMiasmaInfo = payload.miasmaInfo;
+        miasmaTracker.update(currentMiasmaInfo);
+        renderer.miasmaTracker = miasmaTracker;
+      }
       checkMiasmaTransition(currentMiasmaInfo);
-      // Update special incident appearances
+
       if (payload.specialIncidentAppearance) {
         const info = payload.specialIncidentAppearance;
         const appearances = Array.isArray(info) ? info : Object.values(info);
@@ -210,7 +214,6 @@ function handleWindowMessage(type, payload) {
             }
           }
         }
-        // Refresh filter panel highlights
         if (filterPanel) filterPanel.setPresentSpecials(getPresentSpecialIds());
       }
       renderer.miasmaInfo = currentMiasmaInfo;
@@ -230,35 +233,31 @@ function handleWindowMessage(type, payload) {
   }
 }
 
-// --- Path planning (Issue 5: path from last point, click player to clear) ---
+// --- Path planning ---
 
 function handleNodeClick(node) {
   if (!dungeon || dungeon.current_node_id == null) return;
   const clickedId = node.node_id;
 
-  // Clicking player's current position → clear path
   if (clickedId === dungeon.current_node_id) {
     clearCurrentPath();
     return;
   }
 
-  // If clicked node is already on the current path → truncate path to that node
+  // Truncate if clicking a node already on path
   if (currentPath && currentPath.length > 0) {
     const idx = currentPath.indexOf(clickedId);
     if (idx >= 0 && idx < currentPath.length - 1) {
-      // Truncate: keep path up to and including clicked node
       currentPath = currentPath.slice(0, idx + 1);
       reEvaluatePath();
       return;
     }
-    // Clicking the last node of path → clear
     if (idx === currentPath.length - 1) {
       clearCurrentPath();
       return;
     }
   }
 
-  // Determine start: if we have a path, extend from its last node; otherwise from player
   const startId = (currentPath && currentPath.length > 0)
     ? currentPath[currentPath.length - 1]
     : dungeon.current_node_id;
@@ -269,7 +268,6 @@ function handleNodeClick(node) {
     return;
   }
 
-  // Append segment to existing path (avoid duplicating the junction node)
   if (currentPath && currentPath.length > 0) {
     currentPath = [...currentPath, ...segment.slice(1)];
   } else {
@@ -292,8 +290,7 @@ function clearCurrentPath() {
 
 function reEvaluatePath() {
   if (!currentPath || !renderer) return;
-  // Calculate turn offset: path[0] is at currentTurn (player is there now or was there)
-  const annotation = annotatePathWithMiasma(currentPath, nodeMap, currentMiasmaInfo, currentTurn, 0);
+  const annotation = annotatePathWithMiasma(currentPath, nodeMap, miasmaTracker);
   renderer.setPath(currentPath, annotation);
   updatePathInfo(currentPath, annotation);
 }
@@ -315,9 +312,8 @@ function updateStatusBar(override) {
   const status = DUNGEON_STATUS_LABELS[dungeon.dungeon_status] || `status:${dungeon.dungeon_status}`;
 
   let miasmaHtml = '';
-  const a = currentMiasmaInfo && currentMiasmaInfo.after;
-  if (a && a.is_miasmic) {
-    miasmaHtml = `<span class="status-miasma">☠ Miasma Lv${a.level} · ${a.miasma_stop_countdown} turns until shrink</span>`;
+  if (miasmaTracker.active) {
+    miasmaHtml = `<span class="status-miasma">☠ Miasma Lv${miasmaTracker.level} · ${miasmaTracker.countdown} turns left · ${miasmaTracker.consumedNodes.size} nodes consumed</span>`;
   } else {
     const turnsUntil = MIASMA_ACTIVATION_TURN - turn;
     if (turnsUntil > 0) {
@@ -341,7 +337,6 @@ function updatePathInfo(path, annotation, error) {
 
   const steps = path.length - 1;
 
-  // Node type summary
   const counts = {};
   for (const id of path) {
     const n = nodeMap.get(id);
@@ -355,8 +350,8 @@ function updatePathInfo(path, annotation, error) {
   if (annotation && annotation.dangerSteps.length > 0) {
     const first = annotation.firstDangerStep;
     const details = annotation.dangerSteps.slice(0, 8).map(d => {
-      const phaseLabel = d.phase === 'lv2' || d.phase === 'predicted-lv2' ? 'after Lv2 shrink' : 'in miasma';
-      return `step ${d.step} (#${d.nodeId}) ${phaseLabel}`;
+      const label = d.alreadyConsumed ? 'already in miasma' : 'predicted in miasma';
+      return `step ${d.step} (#${d.nodeId}) ${label}`;
     });
     const more = annotation.dangerSteps.length > 8 ? ` +${annotation.dangerSteps.length - 8} more` : '';
     dangerHtml = `<div class="path-danger">⚠ ${annotation.dangerSteps.length}/${path.length} nodes affected — first at step ${first}<br><small>${details.join('<br>')}${more}</small></div>`;
