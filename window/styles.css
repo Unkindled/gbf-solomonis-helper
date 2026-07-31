@@ -120,6 +120,23 @@ html, body {
   line-height: 1.6;
 }
 
+.btn-export {
+  margin: 6px 12px;
+  padding: 5px 10px;
+  font-size: 11px;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  background: #21262d;
+  color: #8b949e;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.btn-export:hover {
+  background: #30363d;
+  color: #e6edf3;
+}
+
 .path-hint {
   color: #6e7681;
   font-style: italic;

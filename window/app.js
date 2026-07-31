@@ -58,6 +58,20 @@ function init() {
     if (renderer) renderer.focusPlayer();
   });
 
+  // Export miasma log button
+  document.getElementById('btn-export-miasma').addEventListener('click', () => {
+    chrome.runtime.sendMessage({ channel: 'gbf-helper:get-miasma-log' }, (log) => {
+      if (chrome.runtime.lastError || !log) return;
+      const blob = new Blob([JSON.stringify(log, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `miasma_log_${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  });
+
   // Keyboard
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
@@ -75,6 +89,10 @@ function init() {
 }
 
 function applyFullMap(mapData) {
+  const isNewDungeon = !dungeon ||
+    dungeon.map_id !== mapData.map_id ||
+    (mapData.total_turn === 0 && dungeon.total_turn > 0);
+
   dungeon = mapData;
   nodeMap.clear();
   if (dungeon.node_list) {
@@ -83,7 +101,21 @@ function applyFullMap(mapData) {
   currentMiasmaInfo = dungeon.miasma_info;
   currentTurn = dungeon.total_turn || 0;
   prevMiasmic = !!(currentMiasmaInfo && currentMiasmaInfo.after && currentMiasmaInfo.after.is_miasmic);
-  renderer.setMap(dungeon);
+
+  if (isNewDungeon) {
+    // Full reset: new dungeon started
+    clearCurrentPath();
+    renderer.setMap(dungeon);
+  } else {
+    // Same dungeon: update data without resetting view/zoom/path
+    renderer.nodeMap = nodeMap;
+    renderer.currentNodeId = dungeon.current_node_id;
+    renderer.miasmaInfo = currentMiasmaInfo;
+    renderer.totalTurn = currentTurn;
+    renderer._updateAdjacentSet();
+    renderer.render();
+  }
+
   // Update filter panel with present special events
   if (filterPanel) filterPanel.setPresentSpecials(getPresentSpecialIds());
   reEvaluatePath();

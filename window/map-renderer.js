@@ -65,6 +65,7 @@ export class MapRenderer {
       icon10: 'node_icon/10_incident.png',
       icon10fanatic: 'node_icon/10_fanatic.png',
       icon10guru: 'node_icon/10_guru.png',
+      icon10teleport: 'node_icon/10_teleport.png',
       icon11: 'node_icon/11.png',
     };
 
@@ -87,10 +88,12 @@ export class MapRenderer {
   }
 
   _iconForNode(node) {
-    // Cult Founder (sp:1) uses guru icon; Cultists (sp:2,3) use fanatic icon
     if (node.node_type === 10 && node.special_incident_id != null) {
-      if (node.special_incident_id === 1) return this.images.icon10guru || null;
-      if (node.special_incident_id === 2 || node.special_incident_id === 3) return this.images.icon10fanatic || null;
+      const sp = node.special_incident_id;
+      if (sp === 1) return this.images.icon10guru || null;          // Cult Founder
+      if (sp === 2 || sp === 3) return this.images.icon10fanatic || null; // Cultists
+      if (sp === 4) return this.images.icon10teleport || null;      // Floating Castle
+      if (sp === 5 || sp === 6 || sp === 7) return this.images.icon10teleport || null; // FC Portals
     }
     const key = 'icon' + node.node_type;
     return this.images[key] || null;

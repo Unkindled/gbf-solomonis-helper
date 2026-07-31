@@ -11,6 +11,9 @@ let gameState = {
   partyStatus: null,
 };
 
+// Miasma data recorder — stores every miasma snapshot for formula analysis
+let miasmaLog = [];
+
 // --- Window management ---
 
 async function openHelperWindow() {
@@ -55,6 +58,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   if (msg.channel === 'gbf-helper:get-state') {
     sendResponse(gameState);
+    return true;
+  }
+
+  if (msg.channel === 'gbf-helper:get-miasma-log') {
+    sendResponse(miasmaLog);
     return true;
   }
 
@@ -103,6 +111,21 @@ function handleMapInit(data) {
   broadcastToWindow('map-init', dungeon);
 }
 
+function recordMiasma(source, data) {
+  if (!data || !data.miasma_info) return;
+  const m = data.miasma_info;
+  miasmaLog.push({
+    source,
+    turn: data.total_turn,
+    timestamp: Date.now(),
+    before: m.before,
+    after: m.after,
+    shrink_node_ids: m.shrink_node_ids || [],
+  });
+  // Keep last 200 entries
+  if (miasmaLog.length > 200) miasmaLog = miasmaLog.slice(-200);
+}
+
 function handleMoveNode(data) {
   if (!data) return;
 
@@ -110,6 +133,7 @@ function handleMoveNode(data) {
   gameState.totalTurn = data.total_turn;
   if (data.dungeon_status) gameState.dungeonStatus = data.dungeon_status;
   if (data.miasma_info) gameState.miasmaInfo = data.miasma_info;
+  recordMiasma('move_node', data);
 
   // Update node visited status in map
   if (gameState.map && gameState.map.node_list) {
@@ -133,6 +157,7 @@ function handleFinishNode(data) {
   if (data.dungeon_status) gameState.dungeonStatus = data.dungeon_status;
   if (data.miasma_info) gameState.miasmaInfo = data.miasma_info;
   if (data.total_turn !== undefined) gameState.totalTurn = data.total_turn;
+  recordMiasma('finish_node', data);
 
   // Update map nodes
   if (gameState.map && gameState.map.node_list) {
