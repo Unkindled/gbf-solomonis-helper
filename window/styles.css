@@ -212,6 +212,38 @@ html, body {
   box-shadow: 0 0 4px rgba(255, 255, 255, 0.15);
 }
 
+.filter-dot-special {
+  background: #555;
+}
+
+.filter-present-hint {
+  font-size: 9px;
+  color: #6e7681;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Special events present in current run: highlighted */
+.filter-row-present .filter-dot-special {
+  background: #ec407a;
+  box-shadow: 0 0 6px rgba(236, 64, 122, 0.6);
+}
+
+.filter-row-present .filter-label {
+  color: #f0c0d8;
+  font-weight: 600;
+}
+
+/* Special events NOT in current run: dimmed */
+.filter-row-absent {
+  opacity: 0.4;
+}
+
+.filter-row-absent .filter-dot-special {
+  background: #333;
+}
+
 /* --- Scrollbar --- */
 
 #sidebar::-webkit-scrollbar,

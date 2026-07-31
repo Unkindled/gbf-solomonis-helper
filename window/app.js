@@ -13,6 +13,8 @@ let nodeMap = new Map();
 let currentMiasmaInfo = null;
 let currentTurn = 0;
 let currentPath = null;
+let pathStartId = null; // The node the current path starts from
+let prevMiasmic = false; // Track miasma state for disappear detection
 
 // --- Init ---
 
@@ -73,8 +75,35 @@ function applyFullMap(mapData) {
   }
   currentMiasmaInfo = dungeon.miasma_info;
   currentTurn = dungeon.total_turn || 0;
+  prevMiasmic = !!(currentMiasmaInfo && currentMiasmaInfo.after && currentMiasmaInfo.after.is_miasmic);
   renderer.setMap(dungeon);
+  // Update filter panel with present special events
+  if (filterPanel) filterPanel.setPresentSpecials(getPresentSpecialIds());
   reEvaluatePath();
+}
+
+function getPresentSpecialIds() {
+  const ids = new Set();
+  for (const [, node] of nodeMap) {
+    if (node.special_incident_id != null) ids.add(node.special_incident_id);
+  }
+  return ids;
+}
+
+// --- Miasma disappear detection (Issue 1) ---
+
+function checkMiasmaTransition(newMiasmaInfo) {
+  const wasMiasmic = prevMiasmic;
+  const isMiasmic = !!(newMiasmaInfo && newMiasmaInfo.after && newMiasmaInfo.after.is_miasmic);
+  prevMiasmic = isMiasmic;
+
+  if (wasMiasmic && !isMiasmic) {
+    // Miasma disappeared → new phase/day, map will refresh
+    // The game client re-requests content/index which triggers 'map-init'
+    // Clear stale path since map is about to change
+    clearCurrentPath();
+    updateStatusBar('New phase — map refreshing...');
+  }
 }
 
 // --- Message handling ---
@@ -96,6 +125,7 @@ function handleWindowMessage(type, payload) {
       }
       currentMiasmaInfo = payload.miasmaInfo || currentMiasmaInfo;
       currentTurn = payload.totalTurn !== undefined ? payload.totalTurn : currentTurn;
+      checkMiasmaTransition(currentMiasmaInfo);
       renderer.updatePosition(payload.currentNodeId, currentMiasmaInfo, currentTurn);
       updateStatusBar();
       reEvaluatePath();
@@ -108,6 +138,7 @@ function handleWindowMessage(type, payload) {
         if (dungeon) dungeon.total_turn = payload.totalTurn;
       }
       if (payload.miasmaInfo) currentMiasmaInfo = payload.miasmaInfo;
+      checkMiasmaTransition(currentMiasmaInfo);
       // Update special incident appearances
       if (payload.specialIncidentAppearance) {
         const info = payload.specialIncidentAppearance;
@@ -120,6 +151,8 @@ function handleWindowMessage(type, payload) {
             }
           }
         }
+        // Refresh filter panel highlights
+        if (filterPanel) filterPanel.setPresentSpecials(getPresentSpecialIds());
       }
       renderer.miasmaInfo = currentMiasmaInfo;
       renderer.totalTurn = currentTurn;
@@ -138,25 +171,42 @@ function handleWindowMessage(type, payload) {
   }
 }
 
-// --- Path planning ---
+// --- Path planning (Issue 5: path from last point, click player to clear) ---
 
 function handleNodeClick(node) {
   if (!dungeon || dungeon.current_node_id == null) return;
-  const startId = dungeon.current_node_id;
-  const endId = node.node_id;
+  const clickedId = node.node_id;
 
-  if (startId === endId) {
+  // Clicking player's current position → clear path
+  if (clickedId === dungeon.current_node_id) {
     clearCurrentPath();
     return;
   }
 
-  const path = findShortestPath(nodeMap, startId, endId);
-  if (!path) {
+  // Determine start: if we have a path, extend from its last node; otherwise from player
+  const startId = (currentPath && currentPath.length > 0)
+    ? currentPath[currentPath.length - 1]
+    : dungeon.current_node_id;
+
+  // Clicking the current path start → clear
+  if (clickedId === startId) {
+    clearCurrentPath();
+    return;
+  }
+
+  const segment = findShortestPath(nodeMap, startId, clickedId);
+  if (!segment) {
     updatePathInfo(null, null, 'No path found!');
     return;
   }
 
-  currentPath = path;
+  // Append segment to existing path (avoid duplicating the junction node)
+  if (currentPath && currentPath.length > 0) {
+    currentPath = [...currentPath, ...segment.slice(1)];
+  } else {
+    currentPath = segment;
+  }
+  pathStartId = currentPath[0];
   reEvaluatePath();
 }
 
@@ -166,21 +216,27 @@ function handleEmptyClick() {
 
 function clearCurrentPath() {
   currentPath = null;
+  pathStartId = null;
   renderer.clearPath();
   updatePathInfo(null, null);
 }
 
 function reEvaluatePath() {
   if (!currentPath || !renderer) return;
-  const annotation = annotatePathWithMiasma(currentPath, nodeMap, currentMiasmaInfo, currentTurn);
+  // Calculate turn offset: path[0] is at currentTurn (player is there now or was there)
+  const annotation = annotatePathWithMiasma(currentPath, nodeMap, currentMiasmaInfo, currentTurn, 0);
   renderer.setPath(currentPath, annotation);
   updatePathInfo(currentPath, annotation);
 }
 
 // --- UI updates ---
 
-function updateStatusBar() {
+function updateStatusBar(override) {
   const el = document.getElementById('status-bar');
+  if (override) {
+    el.innerHTML = `<span class="status-waiting">${override}</span>`;
+    return;
+  }
   if (!dungeon) {
     el.innerHTML = '<span class="status-waiting">Waiting for game data...</span>';
     return;
@@ -210,7 +266,7 @@ function updatePathInfo(path, annotation, error) {
     return;
   }
   if (!path) {
-    el.innerHTML = '<span class="path-hint">Click a node to plan a route from your position. Press Esc to clear.</span>';
+    el.innerHTML = '<span class="path-hint">Click a node to plan a route. Click again to extend. Click your position or Esc to clear.</span>';
     return;
   }
 

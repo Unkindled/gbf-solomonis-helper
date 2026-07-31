@@ -1,51 +1,100 @@
 // Miasma (shrinking zone) state prediction engine
 //
-// Known mechanics (from HAR analysis):
+// Mechanics (from HAR + user feedback):
 // - Miasma activates around turn 9 (is_miasmic: false → true)
-// - miasma_stop_countdown decreases by 1 each turn (unit = turns)
-// - step increases by 5 each turn (drives spread animation only)
-// - Level 1 safe zone: circle radius 670 at (center_position_x, center_position_y)
-// - Level 2 safe zone: radius 67 (extreme shrink after level 1 countdown ends)
+// - miasma_stop_countdown decreases by 1 each turn (unit = turns), starts at 20
+// - The miasma boundary gradually closes in from map edges toward the safe circle
+// - Current miasma inner radius interpolates: at countdown=20 it's at max extent,
+//   at countdown=0 it reaches the level's safe circle radius
+// - When countdown hits 0: level advances (1→2), radius shrinks (670→67)
 //
-// Prediction model:
-// - While countdown > 0: same level, same center, same radius
-// - When countdown hits 0: level advances (1→2), radius shrinks
-// - Level 2 assumed to persist (no HAR data beyond level 2 yet)
+// Real-time miasma boundary formula:
+//   innerRadius = safeRadius + (maxRadius - safeRadius) * (countdown / totalCountdown)
+//   A node is in miasma if distance(node, center) > innerRadius
 
 import { MIASMA_RADIUS } from '../shared/constants.js';
 
 /** Estimated turn when miasma first activates (observed: turn 9) */
 export const MIASMA_ACTIVATION_TURN = 9;
 
-/** Assumed countdown for level 2+ (no HAR data yet; conservative estimate) */
-const LEVEL2_COUNTDOWN = 10;
+/** Total countdown for level 1 (observed: 20) */
+const LEVEL1_TOTAL_COUNTDOWN = 20;
+
+/** Assumed countdown for level 2 (no HAR data; conservative) */
+const LEVEL2_TOTAL_COUNTDOWN = 10;
+
+/** Max miasma radius at activation start (covers entire map ~2680x1830) */
+const MAX_MIASMA_RADIUS = 1600;
+
+/**
+ * Calculate the current miasma inner boundary radius.
+ * The miasma closes in from MAX_MIASMA_RADIUS toward the safe circle over the countdown.
+ * @param {number} level - miasma level (1 or 2)
+ * @param {number} countdown - current miasma_stop_countdown
+ * @returns {number} current inner radius (nodes beyond this are in miasma)
+ */
+export function getMiasmaInnerRadius(level, countdown) {
+  const safeRadius = MIASMA_RADIUS[level] || MIASMA_RADIUS[1];
+  const totalCountdown = level === 1 ? LEVEL1_TOTAL_COUNTDOWN : LEVEL2_TOTAL_COUNTDOWN;
+  const progress = Math.max(0, Math.min(1, countdown / totalCountdown));
+  // At countdown=total: innerRadius = MAX (miasma just at edges)
+  // At countdown=0: innerRadius = safeRadius (miasma reached safe circle)
+  return safeRadius + (MAX_MIASMA_RADIUS - safeRadius) * progress;
+}
+
+/**
+ * Get the current real-time miasma state for rendering.
+ * @param {object|null} miasmaInfo
+ * @returns {{active:boolean, level:number, cx:number|null, cy:number|null, countdown:number, innerRadius:number, safeRadius:number}}
+ */
+export function getCurrentMiasmaState(miasmaInfo) {
+  const after = miasmaInfo && miasmaInfo.after;
+  if (!after || !after.is_miasmic) {
+    return { active: false, level: 0, cx: null, cy: null, countdown: 0, innerRadius: Infinity, safeRadius: Infinity };
+  }
+  const level = after.level || 1;
+  const countdown = after.miasma_stop_countdown || 0;
+  const safeRadius = MIASMA_RADIUS[level] || MIASMA_RADIUS[1];
+  const innerRadius = getMiasmaInnerRadius(level, countdown);
+  return {
+    active: true,
+    level,
+    cx: after.center_position_x,
+    cy: after.center_position_y,
+    countdown,
+    innerRadius,
+    safeRadius,
+  };
+}
 
 /**
  * Predict the miasma state at a future turn.
- * @param {object|null} miasmaInfo - current miasma_info ({before, after, shrink_node_ids})
+ * @param {object|null} miasmaInfo - current miasma_info
  * @param {number} currentTurn - current total_turn
  * @param {number} targetTurn - the turn to predict for
- * @returns {{active:boolean, level:number, radius:number, cx:number|null, cy:number|null, countdown:number, phase:string}}
+ * @returns {{active:boolean, level:number, innerRadius:number, safeRadius:number, cx:number|null, cy:number|null, countdown:number, phase:string}}
  */
 export function predictMiasmaAtTurn(miasmaInfo, currentTurn, targetTurn) {
   const turnsAhead = Math.max(0, targetTurn - currentTurn);
-
   const after = miasmaInfo && miasmaInfo.after;
 
   // Not yet active
   if (!after || !after.is_miasmic) {
-    const activationIn = MIASMA_ACTIVATION_TURN - currentTurn;
+    const activationIn = Math.max(0, MIASMA_ACTIVATION_TURN - currentTurn);
     if (turnsAhead < activationIn) {
-      // Still safe at target turn
-      return { active: false, level: 0, radius: Infinity, cx: null, cy: null, countdown: 0, phase: 'inactive' };
+      return { active: false, level: 0, innerRadius: Infinity, safeRadius: Infinity, cx: null, cy: null, countdown: 0, phase: 'inactive' };
     }
-    // Will have activated by target turn — predict as fresh level 1
-    const elapsedSinceActivation = turnsAhead - Math.max(0, activationIn);
-    const countdown = 20 - elapsedSinceActivation;
+    // Predicted activation
+    const elapsedSince = turnsAhead - activationIn;
+    const countdown = LEVEL1_TOTAL_COUNTDOWN - elapsedSince;
     if (countdown > 0) {
-      return { active: true, level: 1, radius: MIASMA_RADIUS[1], cx: null, cy: null, countdown, phase: 'predicted-lv1' };
+      return { active: true, level: 1, innerRadius: getMiasmaInnerRadius(1, countdown), safeRadius: MIASMA_RADIUS[1], cx: null, cy: null, countdown, phase: 'predicted-lv1' };
     }
-    return { active: true, level: 2, radius: MIASMA_RADIUS[2], cx: null, cy: null, countdown: LEVEL2_COUNTDOWN + countdown, phase: 'predicted-lv2' };
+    const lv2Countdown = LEVEL2_TOTAL_COUNTDOWN + countdown;
+    if (lv2Countdown > 0) {
+      return { active: true, level: 2, innerRadius: getMiasmaInnerRadius(2, lv2Countdown), safeRadius: MIASMA_RADIUS[2], cx: null, cy: null, countdown: lv2Countdown, phase: 'predicted-lv2' };
+    }
+    return { active: true, level: 3, innerRadius: 0, safeRadius: 0, cx: null, cy: null, countdown: 0, phase: 'total' };
   }
 
   // Currently active
@@ -53,62 +102,62 @@ export function predictMiasmaAtTurn(miasmaInfo, currentTurn, targetTurn) {
   const cy = after.center_position_y;
   const level = after.level || 1;
   const countdown = after.miasma_stop_countdown || 0;
+  const totalCountdown = level === 1 ? LEVEL1_TOTAL_COUNTDOWN : LEVEL2_TOTAL_COUNTDOWN;
 
   const remaining = countdown - turnsAhead;
 
   if (level === 1) {
     if (remaining > 0) {
-      return { active: true, level: 1, radius: MIASMA_RADIUS[1], cx, cy, countdown: remaining, phase: 'lv1' };
+      return { active: true, level: 1, innerRadius: getMiasmaInnerRadius(1, remaining), safeRadius: MIASMA_RADIUS[1], cx, cy, countdown: remaining, phase: 'lv1' };
     }
-    // Level 1 countdown expired → level 2
-    const lv2Remaining = LEVEL2_COUNTDOWN + remaining;
+    // Level 1 expired → level 2
+    const lv2Remaining = LEVEL2_TOTAL_COUNTDOWN + remaining;
     if (lv2Remaining > 0) {
-      return { active: true, level: 2, radius: MIASMA_RADIUS[2], cx, cy, countdown: lv2Remaining, phase: 'lv2' };
+      return { active: true, level: 2, innerRadius: getMiasmaInnerRadius(2, lv2Remaining), safeRadius: MIASMA_RADIUS[2], cx, cy, countdown: lv2Remaining, phase: 'lv2' };
     }
-    // Level 2 countdown also expired → assume miasma fully covers map
-    return { active: true, level: 3, radius: 0, cx, cy, countdown: 0, phase: 'total' };
+    return { active: true, level: 3, innerRadius: 0, safeRadius: 0, cx, cy, countdown: 0, phase: 'total' };
   }
 
   // Already level 2+
   if (remaining > 0) {
-    return { active: true, level, radius: MIASMA_RADIUS[level] || MIASMA_RADIUS[2], cx, cy, countdown: remaining, phase: 'lv2' };
+    return { active: true, level, innerRadius: getMiasmaInnerRadius(level, remaining), safeRadius: MIASMA_RADIUS[level] || MIASMA_RADIUS[2], cx, cy, countdown: remaining, phase: 'lv2' };
   }
-  return { active: true, level: level + 1, radius: 0, cx, cy, countdown: 0, phase: 'total' };
+  return { active: true, level: level + 1, innerRadius: 0, safeRadius: 0, cx, cy, countdown: 0, phase: 'total' };
 }
 
 /**
- * Check if a node is outside the safe zone for a given predicted state.
+ * Check if a node is in miasma for a given predicted state.
  */
 export function isNodeInDanger(node, predicted) {
-  if (!predicted.active || predicted.radius === Infinity) return false;
+  if (!predicted.active || predicted.innerRadius === Infinity) return false;
   if (predicted.cx == null || predicted.cy == null) return false;
-  if (predicted.radius <= 0) return true; // total coverage
+  if (predicted.innerRadius <= 0) return true;
   const dx = node.position_x - predicted.cx;
   const dy = node.position_y - predicted.cy;
-  return Math.sqrt(dx * dx + dy * dy) > predicted.radius;
+  return Math.sqrt(dx * dx + dy * dy) > predicted.innerRadius;
 }
 
 /**
  * Annotate a path with per-step miasma danger.
- * @param {number[]} path - node_id array (index 0 = current position)
+ * @param {number[]} path - node_id array (index 0 = start)
  * @param {Map<number,object>} nodeMap
  * @param {object|null} miasmaInfo
  * @param {number} currentTurn
+ * @param {number} startStepOffset - turn offset for path[0] (0 if starting now)
  * @returns {{dangerSteps: Array<{step:number, nodeId:number, phase:string, level:number}>, firstDangerStep:number|null, predictions: Map<number,object>}}
  */
-export function annotatePathWithMiasma(path, nodeMap, miasmaInfo, currentTurn) {
+export function annotatePathWithMiasma(path, nodeMap, miasmaInfo, currentTurn, startStepOffset = 0) {
   const dangerSteps = [];
-  const predictions = new Map(); // step → predicted state (only for steps where state changes)
-
+  const predictions = new Map();
   let lastPhase = null;
 
   for (let i = 0; i < path.length; i++) {
     const node = nodeMap.get(path[i]);
     if (!node) continue;
 
-    const predicted = predictMiasmaAtTurn(miasmaInfo, currentTurn, currentTurn + i);
+    const turnAtStep = currentTurn + startStepOffset + i;
+    const predicted = predictMiasmaAtTurn(miasmaInfo, currentTurn, turnAtStep);
 
-    // Record phase transitions for circle preview rendering
     if (predicted.phase !== lastPhase) {
       predictions.set(i, predicted);
       lastPhase = predicted.phase;

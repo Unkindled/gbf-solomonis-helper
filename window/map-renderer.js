@@ -1,6 +1,7 @@
 // Canvas-based map renderer using original game assets
 
 import { NODE_TYPE_COLORS, MIASMA_RADIUS } from '../shared/constants.js';
+import { getCurrentMiasmaState } from './miasma-predictor.js';
 
 // Game asset dimensions
 const BG_W = 2680, BG_H = 1830;
@@ -242,13 +243,11 @@ export class MapRenderer {
   }
 
   _isNodeInCurrentMiasma(node) {
-    if (!this.miasmaInfo || !this.miasmaInfo.after || !this.miasmaInfo.after.is_miasmic) return false;
-    const a = this.miasmaInfo.after;
-    if (a.center_position_x == null || a.center_position_y == null) return false;
-    const radius = MIASMA_RADIUS[a.level || 1] || MIASMA_RADIUS[1];
-    const dx = node.position_x - a.center_position_x;
-    const dy = node.position_y - a.center_position_y;
-    return Math.sqrt(dx * dx + dy * dy) > radius;
+    const state = getCurrentMiasmaState(this.miasmaInfo);
+    if (!state.active || state.cx == null || state.cy == null) return false;
+    const dx = node.position_x - state.cx;
+    const dy = node.position_y - state.cy;
+    return Math.sqrt(dx * dx + dy * dy) > state.innerRadius;
   }
 
   // --- Rendering ---
@@ -303,32 +302,41 @@ export class MapRenderer {
   }
 
   _drawMiasmaOverlay(ctx) {
-    if (!this.miasmaInfo || !this.miasmaInfo.after || !this.miasmaInfo.after.is_miasmic) return;
-    const a = this.miasmaInfo.after;
-    const cx = a.center_position_x;
-    const cy = a.center_position_y;
-    if (cx == null || cy == null) return;
-    const radius = MIASMA_RADIUS[a.level || 1] || MIASMA_RADIUS[1];
+    const state = getCurrentMiasmaState(this.miasmaInfo);
+    if (!state.active || state.cx == null || state.cy == null) return;
 
-    // Purple miasma fog outside safe circle
+    const { cx, cy, innerRadius, safeRadius } = state;
+
+    // Purple miasma fog: area between innerRadius and map edge
     ctx.save();
     ctx.beginPath();
     ctx.rect(-200, -200, BG_W + 400, BG_H + 400);
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2, true);
-    ctx.fillStyle = 'rgba(90, 20, 120, 0.35)';
+    ctx.arc(cx, cy, innerRadius, 0, Math.PI * 2, true);
+    ctx.fillStyle = 'rgba(90, 20, 120, 0.4)';
     ctx.fill();
     ctx.restore();
 
-    // Animated dashed border
+    // Miasma inner boundary (where the fog currently is)
     const t = Date.now() / 1000;
     ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(200, 80, 255, 0.8)';
+    ctx.arc(cx, cy, innerRadius, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(200, 80, 255, 0.85)';
     ctx.lineWidth = 4;
     ctx.setLineDash([16, 10]);
     ctx.lineDashOffset = -t * 30;
     ctx.stroke();
     ctx.setLineDash([]);
+
+    // Safe circle (final boundary after countdown ends)
+    if (safeRadius < innerRadius - 5) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, safeRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(100, 220, 100, 0.5)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 6]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
   }
 
   _drawEdges(ctx) {
@@ -357,34 +365,52 @@ export class MapRenderer {
       for (const d of this.pathAnnotation.dangerSteps) dangerSet.add(d.step);
     }
 
+    // Outer glow pass
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
     for (let i = 0; i < this.path.length - 1; i++) {
       const a = this.nodeMap.get(this.path[i]);
       const b = this.nodeMap.get(this.path[i + 1]);
       if (!a || !b) continue;
-
       const segDanger = dangerSet.has(i) || dangerSet.has(i + 1);
       ctx.beginPath();
       ctx.moveTo(a.position_x, a.position_y);
       ctx.lineTo(b.position_x, b.position_y);
-      ctx.strokeStyle = segDanger ? 'rgba(255, 60, 60, 0.9)' : 'rgba(255, 230, 80, 0.9)';
-      ctx.lineWidth = 5;
-      ctx.lineCap = 'round';
+      ctx.strokeStyle = segDanger ? 'rgba(255, 40, 40, 0.3)' : 'rgba(255, 220, 50, 0.3)';
+      ctx.lineWidth = 14;
+      ctx.stroke();
+    }
+
+    // Main line pass
+    for (let i = 0; i < this.path.length - 1; i++) {
+      const a = this.nodeMap.get(this.path[i]);
+      const b = this.nodeMap.get(this.path[i + 1]);
+      if (!a || !b) continue;
+      const segDanger = dangerSet.has(i) || dangerSet.has(i + 1);
+      ctx.beginPath();
+      ctx.moveTo(a.position_x, a.position_y);
+      ctx.lineTo(b.position_x, b.position_y);
+      ctx.strokeStyle = segDanger ? 'rgba(255, 70, 70, 0.95)' : 'rgba(255, 230, 80, 0.95)';
+      ctx.lineWidth = 7;
       ctx.stroke();
     }
 
     // Step number labels on path nodes
-    ctx.font = 'bold 16px system-ui';
+    ctx.font = 'bold 18px system-ui';
     ctx.textAlign = 'center';
     for (let i = 1; i < this.path.length; i++) {
       const node = this.nodeMap.get(this.path[i]);
       if (!node) continue;
       const danger = dangerSet.has(i);
-      ctx.fillStyle = danger ? '#ff4444' : '#ffe650';
-      ctx.strokeStyle = 'rgba(0,0,0,0.7)';
-      ctx.lineWidth = 3;
       const label = String(i);
-      ctx.strokeText(label, node.position_x, node.position_y - NODE_H / 2 - 8);
-      ctx.fillText(label, node.position_x, node.position_y - NODE_H / 2 - 8);
+      // Background pill
+      const tw = ctx.measureText(label).width + 10;
+      ctx.fillStyle = danger ? 'rgba(180, 30, 30, 0.85)' : 'rgba(160, 130, 0, 0.85)';
+      ctx.beginPath();
+      ctx.roundRect(node.position_x - tw / 2, node.position_y - NODE_H / 2 - 24, tw, 20, 4);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.fillText(label, node.position_x, node.position_y - NODE_H / 2 - 9);
     }
   }
 
@@ -517,8 +543,16 @@ export class MapRenderer {
     const screen = this._worldToScreen(node.position_x, node.position_y);
 
     const typeNames = { 0: 'Path', 1: 'Boss', 2: 'Battle', 3: 'Strong Foe', 4: 'Ruler', 5: 'Event', 6: 'Treasure', 7: 'Healing', 8: 'Shop', 9: 'Teleporter', 10: 'Special', 11: 'Terrifying' };
-    let label = `#${node.node_id} ${typeNames[node.node_type] || node.node_type}`;
-    if (node.special_incident_id) label += ` [sp:${node.special_incident_id}]`;
+    const spNames = { 1: 'Cult Founder', 2: 'Cultist I', 3: 'Cultist II', 4: 'Floating Castle', 5: 'FC Portal I', 6: 'FC Portal II', 7: 'FC Portal III', 8: 'FC Researcher', 9: 'Clock Tower', 10: 'Flower Garden', 11: 'Prison', 12: 'Hot Spring', 13: 'Blacksmith', 14: 'Fort', 15: 'Cathedral', 16: 'Cave', 17: 'Stone Face', 18: 'Village' };
+
+    let label;
+    if (node.node_type === 10 && node.special_incident_id != null) {
+      // Special event: show name instead of generic "Special [sp:N]"
+      const spName = spNames[node.special_incident_id] || `Special ${node.special_incident_id}`;
+      label = `#${node.node_id} ${spName}`;
+    } else {
+      label = `#${node.node_id} ${typeNames[node.node_type] || node.node_type}`;
+    }
     if (node.is_visited) label += ' ✓';
 
     ctx.font = '12px system-ui';
