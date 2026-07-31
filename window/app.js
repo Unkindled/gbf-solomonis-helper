@@ -3,7 +3,7 @@
 import { MapRenderer } from './map-renderer.js';
 import { FilterPanel } from './filter-panel.js';
 import { findShortestPath } from './pathfinder.js';
-import { MiasmaTracker, annotatePathWithMiasma, MIASMA_ACTIVATION_TURN } from './miasma-predictor.js';
+import { annotatePathWithMiasma, MIASMA_ACTIVATION_TURN } from './miasma-predictor.js';
 import { DUNGEON_STATUS_LABELS, NODE_TYPE_LABELS } from '../shared/constants.js';
 
 let renderer = null;
@@ -15,7 +15,6 @@ let currentTurn = 0;
 let currentPath = null;
 let pathStartId = null;
 let prevMiasmic = false;
-const miasmaTracker = new MiasmaTracker();
 
 // --- Init ---
 
@@ -104,7 +103,6 @@ function applyFullMap(mapData) {
   prevMiasmic = !!(currentMiasmaInfo && currentMiasmaInfo.after && currentMiasmaInfo.after.is_miasmic);
 
   if (isNewDungeon) {
-    miasmaTracker.reset();
     clearCurrentPath();
     renderer.setMap(dungeon);
   } else {
@@ -115,10 +113,6 @@ function applyFullMap(mapData) {
     renderer._updateAdjacentSet();
     renderer.render();
   }
-
-  // Feed initial miasma state to tracker
-  if (currentMiasmaInfo) miasmaTracker.update(currentMiasmaInfo);
-  renderer.miasmaTracker = miasmaTracker;
 
   if (filterPanel) filterPanel.setPresentSpecials(getPresentSpecialIds());
   reEvaluatePath();
@@ -166,10 +160,6 @@ function handleWindowMessage(type, payload) {
       currentTurn = payload.totalTurn !== undefined ? payload.totalTurn : currentTurn;
       checkMiasmaTransition(currentMiasmaInfo);
 
-      // Feed miasma data to tracker
-      if (currentMiasmaInfo) miasmaTracker.update(currentMiasmaInfo);
-      renderer.miasmaTracker = miasmaTracker;
-
       // Sync renderer
       renderer.miasmaInfo = currentMiasmaInfo;
       renderer.totalTurn = currentTurn;
@@ -196,11 +186,7 @@ function handleWindowMessage(type, payload) {
         currentTurn = payload.totalTurn;
         if (dungeon) dungeon.total_turn = payload.totalTurn;
       }
-      if (payload.miasmaInfo) {
-        currentMiasmaInfo = payload.miasmaInfo;
-        miasmaTracker.update(currentMiasmaInfo);
-        renderer.miasmaTracker = miasmaTracker;
-      }
+      if (payload.miasmaInfo) currentMiasmaInfo = payload.miasmaInfo;
       checkMiasmaTransition(currentMiasmaInfo);
 
       if (payload.specialIncidentAppearance) {
@@ -290,7 +276,7 @@ function clearCurrentPath() {
 
 function reEvaluatePath() {
   if (!currentPath || !renderer) return;
-  const annotation = annotatePathWithMiasma(currentPath, nodeMap, miasmaTracker);
+  const annotation = annotatePathWithMiasma(currentPath, nodeMap, currentMiasmaInfo, currentTurn);
   renderer.setPath(currentPath, annotation);
   updatePathInfo(currentPath, annotation);
 }
@@ -312,8 +298,9 @@ function updateStatusBar(override) {
   const status = DUNGEON_STATUS_LABELS[dungeon.dungeon_status] || `status:${dungeon.dungeon_status}`;
 
   let miasmaHtml = '';
-  if (miasmaTracker.active) {
-    miasmaHtml = `<span class="status-miasma">☠ Miasma Lv${miasmaTracker.level} · ${miasmaTracker.countdown} turns left · ${miasmaTracker.consumedNodes.size} nodes consumed</span>`;
+  const a = currentMiasmaInfo && currentMiasmaInfo.after;
+  if (a && a.is_miasmic) {
+    miasmaHtml = `<span class="status-miasma">☠ Miasma Lv${a.level} · ${a.miasma_stop_countdown} turns until shrink</span>`;
   } else {
     const turnsUntil = MIASMA_ACTIVATION_TURN - turn;
     if (turnsUntil > 0) {
@@ -350,8 +337,8 @@ function updatePathInfo(path, annotation, error) {
   if (annotation && annotation.dangerSteps.length > 0) {
     const first = annotation.firstDangerStep;
     const details = annotation.dangerSteps.slice(0, 8).map(d => {
-      const label = d.alreadyConsumed ? 'already in miasma' : 'predicted in miasma';
-      return `step ${d.step} (#${d.nodeId}) ${label}`;
+      const phaseLabel = d.phase === 'lv2' || d.phase === 'predicted-lv2' ? 'after Lv2 shrink' : 'in miasma';
+      return `step ${d.step} (#${d.nodeId}) ${phaseLabel}`;
     });
     const more = annotation.dangerSteps.length > 8 ? ` +${annotation.dangerSteps.length - 8} more` : '';
     dangerHtml = `<div class="path-danger">⚠ ${annotation.dangerSteps.length}/${path.length} nodes affected — first at step ${first}<br><small>${details.join('<br>')}${more}</small></div>`;

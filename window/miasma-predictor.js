@@ -1,200 +1,176 @@
-// Miasma prediction engine — data-driven model
+// Miasma (shrinking zone) state prediction engine
 //
-// Key finding: miasma does NOT shrink as a simple circle.
-// It spreads along predefined paths determined by (base_pattern_id, pattern_id).
-// The server tells us which nodes are consumed at each step via shrink_node_ids.
+// Mechanics (from HAR + user feedback):
+// - Miasma activates around turn 9 (is_miasmic: false → true)
+// - miasma_stop_countdown decreases by 1 each turn (unit = turns), starts at 20
+// - The miasma boundary gradually closes in from map edges toward the safe circle
+// - Current miasma inner radius interpolates: at countdown=20 it's at max extent,
+//   at countdown=0 it reaches the level's safe circle radius
+// - When countdown hits 0: level advances (1→2), radius shrinks (670→67)
 //
-// Model:
-// - Track cumulative consumed nodes from shrink_node_ids in each response
-// - For rendering: consumed nodes are "in miasma"
-// - For prediction: extrapolate based on observed consumption rate
-//   (nodes per step), applied to remaining path nodes ordered by their
-//   typical consumption position in the pattern
+// Real-time miasma boundary formula:
+//   innerRadius = safeRadius + (maxRadius - safeRadius) * (countdown / totalCountdown)
+//   A node is in miasma if distance(node, center) > innerRadius
 
 import { MIASMA_RADIUS } from '../shared/constants.js';
 
 /** Estimated turn when miasma first activates (observed: turn 9) */
 export const MIASMA_ACTIVATION_TURN = 9;
 
+/** Total countdown for level 1 (observed: 20) */
+const LEVEL1_TOTAL_COUNTDOWN = 20;
+
+/** Assumed countdown for level 2 (no HAR data; conservative) */
+const LEVEL2_TOTAL_COUNTDOWN = 10;
+
+/** Max miasma radius at activation start (covers entire map ~2680x1830) */
+const MAX_MIASMA_RADIUS = 1600;
+
 /**
- * Miasma tracker — accumulates consumed nodes over time.
- * One instance per dungeon run.
+ * Calculate the current miasma inner boundary radius.
+ * The miasma closes in from MAX_MIASMA_RADIUS toward the safe circle over the countdown.
+ * @param {number} level - miasma level (1 or 2)
+ * @param {number} countdown - current miasma_stop_countdown
+ * @returns {number} current inner radius (nodes beyond this are in miasma)
  */
-export class MiasmaTracker {
-  constructor() {
-    this.reset();
-  }
-
-  reset() {
-    this.active = false;
-    this.level = 0;
-    this.step = 0;
-    this.countdown = 0;
-    this.cx = null;
-    this.cy = null;
-    this.centerNodeId = null;
-    this.patternId = null;
-    this.basePatternId = null;
-    // Cumulative set of consumed node IDs
-    this.consumedNodes = new Set();
-    // History: step → [node_ids] consumed at that step
-    this.history = [];
-    // Activation step (first step where is_miasmic became true)
-    this.activationStep = null;
-  }
-
-  /**
-   * Feed a miasma_info response into the tracker.
-   * @param {object} miasmaInfo - {before, after, shrink_node_ids}
-   */
-  update(miasmaInfo) {
-    if (!miasmaInfo) return;
-    const after = miasmaInfo.after;
-    if (!after) return;
-
-    const wasActive = this.active;
-    this.active = after.is_miasmic;
-    this.level = after.level || 0;
-    this.step = after.step || 0;
-    this.countdown = after.miasma_stop_countdown || 0;
-    this.cx = after.center_position_x;
-    this.cy = after.center_position_y;
-    this.centerNodeId = after.center_node_id;
-    this.patternId = after.pattern_id;
-    this.basePatternId = after.base_pattern_id;
-
-    if (!wasActive && this.active) {
-      this.activationStep = this.step;
-    }
-
-    // Accumulate consumed nodes
-    const ids = miasmaInfo.shrink_node_ids || [];
-    if (ids.length > 0) {
-      this.history.push({ step: this.step, ids: ids.map(Number) });
-      for (const id of ids) {
-        this.consumedNodes.add(Number(id));
-      }
-    }
-  }
-
-  /**
-   * Is a specific node currently in miasma?
-   */
-  isNodeConsumed(nodeId) {
-    return this.consumedNodes.has(Number(nodeId));
-  }
-
-  /**
-   * Get average consumption rate (nodes per step) from history.
-   */
-  getConsumptionRate() {
-    if (this.history.length === 0) return 0;
-    const totalNodes = this.history.reduce((sum, h) => sum + h.ids.length, 0);
-    const stepSpan = this.history[this.history.length - 1].step - this.history[0].step;
-    if (stepSpan <= 0) return totalNodes; // all in one step
-    return totalNodes / stepSpan;
-  }
-
-  /**
-   * Predict which additional nodes will be consumed after N more steps.
-   * Uses observed rate to estimate how many more nodes will be consumed,
-   * then picks the closest unconsumed nodes to the miasma center.
-   *
-   * @param {number} stepsAhead - how many steps into the future
-   * @param {Map<number,object>} nodeMap - all nodes
-   * @returns {Set<number>} - predicted consumed node IDs (cumulative, including already consumed)
-   */
-  predictConsumedAt(stepsAhead, nodeMap) {
-    const predicted = new Set(this.consumedNodes);
-
-    if (!this.active || this.cx == null || this.cy == null) return predicted;
-
-    const rate = this.getConsumptionRate();
-    if (rate <= 0) return predicted;
-
-    // How many more nodes will be consumed
-    const additionalCount = Math.ceil(rate * stepsAhead);
-
-    // Find unconsumed nodes sorted by distance from center (closest consumed last,
-    // so farthest unconsumed get consumed first — miasma closes in)
-    const unconsumed = [];
-    for (const [id, node] of nodeMap) {
-      if (this.consumedNodes.has(id)) continue;
-      const dx = node.position_x - this.cx;
-      const dy = node.position_y - this.cy;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      unconsumed.push({ id, dist });
-    }
-    // Sort farthest first (they get consumed next as miasma closes in)
-    unconsumed.sort((a, b) => b.dist - a.dist);
-
-    for (let i = 0; i < Math.min(additionalCount, unconsumed.length); i++) {
-      predicted.add(unconsumed[i].id);
-    }
-
-    return predicted;
-  }
-
-  /**
-   * Get a safe-radius estimate for rendering the miasma boundary circle.
-   * Based on the distance of the closest consumed node to center.
-   * (The miasma boundary is roughly at the innermost consumed ring.)
-   */
-  getEstimatedBoundaryRadius(nodeMap) {
-    if (!this.active || this.cx == null || this.cy == null) return Infinity;
-    if (this.consumedNodes.size === 0) return 1600; // initial: whole map
-
-    // Find the minimum distance among consumed nodes → that's roughly the inner edge
-    let minDist = Infinity;
-    for (const id of this.consumedNodes) {
-      const node = nodeMap.get(id);
-      if (!node) continue;
-      const dx = node.position_x - this.cx;
-      const dy = node.position_y - this.cy;
-      minDist = Math.min(minDist, Math.sqrt(dx * dx + dy * dy));
-    }
-
-    // The boundary is slightly inside the closest consumed node
-    return Math.max(0, minDist - 30);
-  }
+export function getMiasmaInnerRadius(level, countdown) {
+  const safeRadius = MIASMA_RADIUS[level] || MIASMA_RADIUS[1];
+  const totalCountdown = level === 1 ? LEVEL1_TOTAL_COUNTDOWN : LEVEL2_TOTAL_COUNTDOWN;
+  const progress = Math.max(0, Math.min(1, countdown / totalCountdown));
+  // At countdown=total: innerRadius = MAX (miasma just at edges)
+  // At countdown=0: innerRadius = safeRadius (miasma reached safe circle)
+  return safeRadius + (MAX_MIASMA_RADIUS - safeRadius) * progress;
 }
 
 /**
- * Annotate a path with per-step miasma danger using the tracker.
- * @param {number[]} path - node_id array
- * @param {Map<number,object>} nodeMap
- * @param {MiasmaTracker} tracker
- * @returns {{dangerSteps: Array<{step:number, nodeId:number, alreadyConsumed:boolean}>, firstDangerStep:number|null}}
+ * Get the current real-time miasma state for rendering.
+ * @param {object|null} miasmaInfo
+ * @returns {{active:boolean, level:number, cx:number|null, cy:number|null, countdown:number, innerRadius:number, safeRadius:number}}
  */
-export function annotatePathWithMiasma(path, nodeMap, tracker) {
-  const dangerSteps = [];
+export function getCurrentMiasmaState(miasmaInfo) {
+  const after = miasmaInfo && miasmaInfo.after;
+  if (!after || !after.is_miasmic) {
+    return { active: false, level: 0, cx: null, cy: null, countdown: 0, innerRadius: Infinity, safeRadius: Infinity };
+  }
+  const level = after.level || 1;
+  const countdown = after.miasma_stop_countdown || 0;
+  const safeRadius = MIASMA_RADIUS[level] || MIASMA_RADIUS[1];
+  const innerRadius = getMiasmaInnerRadius(level, countdown);
+  return {
+    active: true,
+    level,
+    cx: after.center_position_x,
+    cy: after.center_position_y,
+    countdown,
+    innerRadius,
+    safeRadius,
+  };
+}
 
-  if (!tracker.active) {
-    return { dangerSteps: [], firstDangerStep: null };
+/**
+ * Predict the miasma state at a future turn.
+ * @param {object|null} miasmaInfo - current miasma_info
+ * @param {number} currentTurn - current total_turn
+ * @param {number} targetTurn - the turn to predict for
+ * @returns {{active:boolean, level:number, innerRadius:number, safeRadius:number, cx:number|null, cy:number|null, countdown:number, phase:string}}
+ */
+export function predictMiasmaAtTurn(miasmaInfo, currentTurn, targetTurn) {
+  const turnsAhead = Math.max(0, targetTurn - currentTurn);
+  const after = miasmaInfo && miasmaInfo.after;
+
+  // Not yet active
+  if (!after || !after.is_miasmic) {
+    const activationIn = Math.max(0, MIASMA_ACTIVATION_TURN - currentTurn);
+    if (turnsAhead < activationIn) {
+      return { active: false, level: 0, innerRadius: Infinity, safeRadius: Infinity, cx: null, cy: null, countdown: 0, phase: 'inactive' };
+    }
+    // Predicted activation
+    const elapsedSince = turnsAhead - activationIn;
+    const countdown = LEVEL1_TOTAL_COUNTDOWN - elapsedSince;
+    if (countdown > 0) {
+      return { active: true, level: 1, innerRadius: getMiasmaInnerRadius(1, countdown), safeRadius: MIASMA_RADIUS[1], cx: null, cy: null, countdown, phase: 'predicted-lv1' };
+    }
+    const lv2Countdown = LEVEL2_TOTAL_COUNTDOWN + countdown;
+    if (lv2Countdown > 0) {
+      return { active: true, level: 2, innerRadius: getMiasmaInnerRadius(2, lv2Countdown), safeRadius: MIASMA_RADIUS[2], cx: null, cy: null, countdown: lv2Countdown, phase: 'predicted-lv2' };
+    }
+    return { active: true, level: 3, innerRadius: 0, safeRadius: 0, cx: null, cy: null, countdown: 0, phase: 'total' };
   }
 
-  const rate = tracker.getConsumptionRate();
+  // Currently active
+  const cx = after.center_position_x;
+  const cy = after.center_position_y;
+  const level = after.level || 1;
+  const countdown = after.miasma_stop_countdown || 0;
+  const totalCountdown = level === 1 ? LEVEL1_TOTAL_COUNTDOWN : LEVEL2_TOTAL_COUNTDOWN;
+
+  const remaining = countdown - turnsAhead;
+
+  if (level === 1) {
+    if (remaining > 0) {
+      return { active: true, level: 1, innerRadius: getMiasmaInnerRadius(1, remaining), safeRadius: MIASMA_RADIUS[1], cx, cy, countdown: remaining, phase: 'lv1' };
+    }
+    // Level 1 expired → level 2
+    const lv2Remaining = LEVEL2_TOTAL_COUNTDOWN + remaining;
+    if (lv2Remaining > 0) {
+      return { active: true, level: 2, innerRadius: getMiasmaInnerRadius(2, lv2Remaining), safeRadius: MIASMA_RADIUS[2], cx, cy, countdown: lv2Remaining, phase: 'lv2' };
+    }
+    return { active: true, level: 3, innerRadius: 0, safeRadius: 0, cx, cy, countdown: 0, phase: 'total' };
+  }
+
+  // Already level 2+
+  if (remaining > 0) {
+    return { active: true, level, innerRadius: getMiasmaInnerRadius(level, remaining), safeRadius: MIASMA_RADIUS[level] || MIASMA_RADIUS[2], cx, cy, countdown: remaining, phase: 'lv2' };
+  }
+  return { active: true, level: level + 1, innerRadius: 0, safeRadius: 0, cx, cy, countdown: 0, phase: 'total' };
+}
+
+/**
+ * Check if a node is in miasma for a given predicted state.
+ */
+export function isNodeInDanger(node, predicted) {
+  if (!predicted.active || predicted.innerRadius === Infinity) return false;
+  if (predicted.cx == null || predicted.cy == null) return false;
+  if (predicted.innerRadius <= 0) return true;
+  const dx = node.position_x - predicted.cx;
+  const dy = node.position_y - predicted.cy;
+  return Math.sqrt(dx * dx + dy * dy) > predicted.innerRadius;
+}
+
+/**
+ * Annotate a path with per-step miasma danger.
+ * @param {number[]} path - node_id array (index 0 = start)
+ * @param {Map<number,object>} nodeMap
+ * @param {object|null} miasmaInfo
+ * @param {number} currentTurn
+ * @param {number} startStepOffset - turn offset for path[0] (0 if starting now)
+ * @returns {{dangerSteps: Array<{step:number, nodeId:number, phase:string, level:number}>, firstDangerStep:number|null, predictions: Map<number,object>}}
+ */
+export function annotatePathWithMiasma(path, nodeMap, miasmaInfo, currentTurn, startStepOffset = 0) {
+  const dangerSteps = [];
+  const predictions = new Map();
+  let lastPhase = null;
 
   for (let i = 0; i < path.length; i++) {
-    const nodeId = path[i];
+    const node = nodeMap.get(path[i]);
+    if (!node) continue;
 
-    // Already consumed?
-    if (tracker.isNodeConsumed(nodeId)) {
-      dangerSteps.push({ step: i, nodeId, alreadyConsumed: true });
-      continue;
+    const turnAtStep = currentTurn + startStepOffset + i;
+    const predicted = predictMiasmaAtTurn(miasmaInfo, currentTurn, turnAtStep);
+
+    if (predicted.phase !== lastPhase) {
+      predictions.set(i, predicted);
+      lastPhase = predicted.phase;
     }
 
-    // Predict: will this node be consumed by the time player reaches step i?
-    if (rate > 0 && tracker.cx != null) {
-      const predicted = tracker.predictConsumedAt(i, nodeMap);
-      if (predicted.has(nodeId)) {
-        dangerSteps.push({ step: i, nodeId, alreadyConsumed: false });
-      }
+    if (isNodeInDanger(node, predicted)) {
+      dangerSteps.push({ step: i, nodeId: path[i], phase: predicted.phase, level: predicted.level });
     }
   }
 
   return {
     dangerSteps,
     firstDangerStep: dangerSteps.length > 0 ? dangerSteps[0].step : null,
+    predictions,
   };
 }

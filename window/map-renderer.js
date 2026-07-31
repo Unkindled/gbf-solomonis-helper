@@ -1,6 +1,7 @@
 // Canvas-based map renderer using original game assets
 
 import { NODE_TYPE_COLORS, MIASMA_RADIUS } from '../shared/constants.js';
+import { getCurrentMiasmaState } from './miasma-predictor.js';
 
 // Game asset dimensions
 const BG_W = 2680, BG_H = 1830;
@@ -23,8 +24,6 @@ export class MapRenderer {
     this.filterSpecial = new Set();
     this.hoveredNode = null;
     this.adjacentSet = new Set(); // nodes adjacent to player (reachable)
-
-    this.miasmaTracker = null;  // MiasmaTracker instance (set by app.js)
 
     // View transform
     this.scale = 0.35;
@@ -256,10 +255,11 @@ export class MapRenderer {
   }
 
   _isNodeInCurrentMiasma(node) {
-    if (this.miasmaTracker && this.miasmaTracker.active) {
-      return this.miasmaTracker.isNodeConsumed(node.node_id);
-    }
-    return false;
+    const state = getCurrentMiasmaState(this.miasmaInfo);
+    if (!state.active || state.cx == null || state.cy == null) return false;
+    const dx = node.position_x - state.cx;
+    const dy = node.position_y - state.cy;
+    return Math.sqrt(dx * dx + dy * dy) > state.innerRadius;
   }
 
   // --- Rendering ---
@@ -314,28 +314,24 @@ export class MapRenderer {
   }
 
   _drawMiasmaOverlay(ctx) {
-    const tracker = this.miasmaTracker;
-    if (!tracker || !tracker.active || tracker.cx == null || tracker.cy == null) return;
+    const state = getCurrentMiasmaState(this.miasmaInfo);
+    if (!state.active || state.cx == null || state.cy == null) return;
 
-    const cx = tracker.cx;
-    const cy = tracker.cy;
-    const boundaryRadius = tracker.getEstimatedBoundaryRadius(this.nodeMap);
+    const { cx, cy, innerRadius, safeRadius } = state;
 
     // Purple miasma fog: area outside the estimated boundary
-    if (boundaryRadius < 1500) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(-200, -200, BG_W + 400, BG_H + 400);
-      ctx.arc(cx, cy, boundaryRadius, 0, Math.PI * 2, true);
-      ctx.fillStyle = 'rgba(90, 20, 120, 0.4)';
-      ctx.fill();
-      ctx.restore();
-    }
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(-200, -200, BG_W + 400, BG_H + 400);
+    ctx.arc(cx, cy, innerRadius, 0, Math.PI * 2, true);
+    ctx.fillStyle = 'rgba(90, 20, 120, 0.4)';
+    ctx.fill();
+    ctx.restore();
 
-    // Miasma boundary circle (estimated inner edge)
+    // Miasma inner boundary
     const t = Date.now() / 1000;
     ctx.beginPath();
-    ctx.arc(cx, cy, boundaryRadius, 0, Math.PI * 2);
+    ctx.arc(cx, cy, innerRadius, 0, Math.PI * 2);
     ctx.strokeStyle = 'rgba(200, 80, 255, 0.85)';
     ctx.lineWidth = 4;
     ctx.setLineDash([16, 10]);
@@ -343,11 +339,16 @@ export class MapRenderer {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Center marker
-    ctx.beginPath();
-    ctx.arc(cx, cy, 8, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(100, 220, 100, 0.7)';
-    ctx.fill();
+    // Safe circle (final boundary)
+    if (safeRadius < innerRadius - 5) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, safeRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(100, 220, 100, 0.5)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 6]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
   }
 
   _drawEdges(ctx) {
