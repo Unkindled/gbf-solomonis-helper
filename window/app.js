@@ -2,23 +2,23 @@
 
 import { MapRenderer } from './map-renderer.js';
 import { FilterPanel } from './filter-panel.js';
-import { findShortestPath, getMiasmaDangerNodes } from './pathfinder.js';
-import { DUNGEON_STATUS_LABELS, NODE_TYPE_LABELS, SPECIAL_NODE_LABELS, MIASMA_RADIUS } from '../shared/constants.js';
+import { findShortestPath } from './pathfinder.js';
+import { annotatePathWithMiasma, MIASMA_ACTIVATION_TURN } from './miasma-predictor.js';
+import { DUNGEON_STATUS_LABELS, NODE_TYPE_LABELS } from '../shared/constants.js';
 
 let renderer = null;
 let filterPanel = null;
 let dungeon = null;
 let nodeMap = new Map();
 let currentMiasmaInfo = null;
+let currentTurn = 0;
+let currentPath = null;
 
 // --- Init ---
 
 function init() {
   const canvas = document.getElementById('map-canvas');
-  const sidebar = document.getElementById('sidebar');
-  const statusEl = document.getElementById('status-bar');
 
-  // Size canvas to container
   function resizeCanvas() {
     const container = document.getElementById('map-container');
     canvas.width = container.clientWidth;
@@ -40,12 +40,9 @@ function init() {
   chrome.runtime.sendMessage({ channel: 'gbf-helper:get-state' }, (state) => {
     if (chrome.runtime.lastError) return;
     if (state && state.map) {
-      dungeon = state.map;
-      buildNodeMap();
-      renderer.setMap(dungeon);
-      currentMiasmaInfo = state.miasmaInfo;
-      updateStatusBar();
+      applyFullMap(state.map);
     }
+    updateStatusBar();
   });
 
   // Listen for live updates
@@ -57,19 +54,27 @@ function init() {
   // Keyboard
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      renderer.clearPath();
-      updatePathInfo(null, null);
+      clearCurrentPath();
     }
+  });
+
+  // Animation loop for pulsing effects
+  requestAnimationFrame(function animLoop() {
+    if (renderer && renderer.nodeMap.size > 0) renderer.render();
+    requestAnimationFrame(animLoop);
   });
 }
 
-function buildNodeMap() {
+function applyFullMap(mapData) {
+  dungeon = mapData;
   nodeMap.clear();
-  if (dungeon && dungeon.node_list) {
-    for (const node of dungeon.node_list) {
-      nodeMap.set(node.node_id, node);
-    }
+  if (dungeon.node_list) {
+    for (const node of dungeon.node_list) nodeMap.set(node.node_id, node);
   }
+  currentMiasmaInfo = dungeon.miasma_info;
+  currentTurn = dungeon.total_turn || 0;
+  renderer.setMap(dungeon);
+  reEvaluatePath();
 }
 
 // --- Message handling ---
@@ -77,10 +82,7 @@ function buildNodeMap() {
 function handleWindowMessage(type, payload) {
   switch (type) {
     case 'map-init':
-      dungeon = payload;
-      buildNodeMap();
-      renderer.setMap(dungeon);
-      currentMiasmaInfo = payload.miasma_info;
+      applyFullMap(payload);
       updateStatusBar();
       break;
 
@@ -92,23 +94,26 @@ function handleWindowMessage(type, payload) {
         const node = nodeMap.get(payload.currentNodeId);
         if (node) node.is_visited = true;
       }
-      currentMiasmaInfo = payload.miasmaInfo;
-      renderer.updatePosition(payload.currentNodeId, payload.miasmaInfo);
+      currentMiasmaInfo = payload.miasmaInfo || currentMiasmaInfo;
+      currentTurn = payload.totalTurn !== undefined ? payload.totalTurn : currentTurn;
+      renderer.updatePosition(payload.currentNodeId, currentMiasmaInfo, currentTurn);
       updateStatusBar();
-      // Re-evaluate path danger if path exists
       reEvaluatePath();
       break;
 
     case 'finish-node':
       if (payload.dungeonStatus && dungeon) dungeon.dungeon_status = payload.dungeonStatus;
-      if (payload.totalTurn !== undefined && dungeon) dungeon.total_turn = payload.totalTurn;
-      currentMiasmaInfo = payload.miasmaInfo;
+      if (payload.totalTurn !== undefined) {
+        currentTurn = payload.totalTurn;
+        if (dungeon) dungeon.total_turn = payload.totalTurn;
+      }
+      if (payload.miasmaInfo) currentMiasmaInfo = payload.miasmaInfo;
       // Update special incident appearances
-      if (payload.specialIncidentAppearance && dungeon) {
+      if (payload.specialIncidentAppearance) {
         const info = payload.specialIncidentAppearance;
         const appearances = Array.isArray(info) ? info : Object.values(info);
         for (const app of appearances) {
-          if (app.appearance_list) {
+          if (app && app.appearance_list) {
             for (const a of app.appearance_list) {
               const node = nodeMap.get(a.node_id);
               if (node) node.special_incident_id = a.special_incident_id;
@@ -117,15 +122,17 @@ function handleWindowMessage(type, payload) {
         }
       }
       renderer.miasmaInfo = currentMiasmaInfo;
-      renderer.render();
+      renderer.totalTurn = currentTurn;
       updateStatusBar();
+      reEvaluatePath();
       break;
 
     case 'proceed':
       if (payload.dungeonStatus && dungeon) dungeon.dungeon_status = payload.dungeonStatus;
       if (payload.miasmaInfo) currentMiasmaInfo = payload.miasmaInfo;
+      if (payload.totalTurn !== undefined) currentTurn = payload.totalTurn;
       renderer.miasmaInfo = currentMiasmaInfo;
-      renderer.render();
+      renderer.totalTurn = currentTurn;
       updateStatusBar();
       break;
   }
@@ -133,17 +140,13 @@ function handleWindowMessage(type, payload) {
 
 // --- Path planning ---
 
-let currentPath = null;
-
 function handleNodeClick(node) {
   if (!dungeon || dungeon.current_node_id == null) return;
   const startId = dungeon.current_node_id;
   const endId = node.node_id;
 
   if (startId === endId) {
-    renderer.clearPath();
-    currentPath = null;
-    updatePathInfo(null, null);
+    clearCurrentPath();
     return;
   }
 
@@ -154,22 +157,24 @@ function handleNodeClick(node) {
   }
 
   currentPath = path;
-  const danger = getMiasmaDangerNodes(path, nodeMap, currentMiasmaInfo, MIASMA_RADIUS);
-  renderer.setPath(path, danger);
-  updatePathInfo(path, danger);
+  reEvaluatePath();
 }
 
 function handleEmptyClick() {
-  renderer.clearPath();
+  clearCurrentPath();
+}
+
+function clearCurrentPath() {
   currentPath = null;
+  renderer.clearPath();
   updatePathInfo(null, null);
 }
 
 function reEvaluatePath() {
-  if (!currentPath) return;
-  const danger = getMiasmaDangerNodes(currentPath, nodeMap, currentMiasmaInfo, MIASMA_RADIUS);
-  renderer.setPath(currentPath, danger);
-  updatePathInfo(currentPath, danger);
+  if (!currentPath || !renderer) return;
+  const annotation = annotatePathWithMiasma(currentPath, nodeMap, currentMiasmaInfo, currentTurn);
+  renderer.setPath(currentPath, annotation);
+  updatePathInfo(currentPath, annotation);
 }
 
 // --- UI updates ---
@@ -177,55 +182,65 @@ function reEvaluatePath() {
 function updateStatusBar() {
   const el = document.getElementById('status-bar');
   if (!dungeon) {
-    el.textContent = 'Waiting for game data...';
+    el.innerHTML = '<span class="status-waiting">Waiting for game data...</span>';
     return;
   }
 
-  const turn = dungeon.total_turn || 0;
+  const turn = currentTurn;
   const status = DUNGEON_STATUS_LABELS[dungeon.dungeon_status] || `status:${dungeon.dungeon_status}`;
-  let miasmaText = '';
 
-  if (currentMiasmaInfo && currentMiasmaInfo.after && currentMiasmaInfo.after.is_miasmic) {
-    const a = currentMiasmaInfo.after;
-    miasmaText = ` | ☠ Miasma Lv${a.level} - ${a.miasma_stop_countdown} turns left`;
+  let miasmaHtml = '';
+  const a = currentMiasmaInfo && currentMiasmaInfo.after;
+  if (a && a.is_miasmic) {
+    miasmaHtml = `<span class="status-miasma">☠ Miasma Lv${a.level} · ${a.miasma_stop_countdown} turns until shrink</span>`;
+  } else {
+    const turnsUntil = MIASMA_ACTIVATION_TURN - turn;
+    if (turnsUntil > 0) {
+      miasmaHtml = `<span class="status-safe">Miasma in ~${turnsUntil} turns</span>`;
+    }
   }
 
-  el.textContent = `Turn: ${turn} | ${status}${miasmaText}`;
+  el.innerHTML = `<span class="status-turn">Turn ${turn}</span><span class="status-sep">·</span><span class="status-state">${status}</span>${miasmaHtml ? '<br>' + miasmaHtml : ''}`;
 }
 
-function updatePathInfo(path, danger, error) {
+function updatePathInfo(path, annotation, error) {
   const el = document.getElementById('path-info');
   if (error) {
     el.innerHTML = `<span class="path-error">${error}</span>`;
     return;
   }
   if (!path) {
-    el.innerHTML = '<span class="path-hint">Click a node to plan a route from your position.</span>';
+    el.innerHTML = '<span class="path-hint">Click a node to plan a route from your position. Press Esc to clear.</span>';
     return;
   }
 
   const steps = path.length - 1;
-  const nodeTypes = path.map(id => {
-    const n = nodeMap.get(id);
-    return n ? (NODE_TYPE_LABELS[n.node_type] || `type:${n.node_type}`) : '?';
-  });
 
-  // Count types
+  // Node type summary
   const counts = {};
-  for (const t of nodeTypes) counts[t] = (counts[t] || 0) + 1;
+  for (const id of path) {
+    const n = nodeMap.get(id);
+    if (!n) continue;
+    const label = NODE_TYPE_LABELS[n.node_type] || `type:${n.node_type}`;
+    counts[label] = (counts[label] || 0) + 1;
+  }
   const summary = Object.entries(counts).map(([k, v]) => `${k}×${v}`).join(', ');
 
   let dangerHtml = '';
-  if (danger && danger.size > 0) {
-    const dangerSteps = path.filter(id => danger.has(id)).map(id => {
-      const idx = path.indexOf(id);
-      return `step ${idx}`;
+  if (annotation && annotation.dangerSteps.length > 0) {
+    const first = annotation.firstDangerStep;
+    const details = annotation.dangerSteps.slice(0, 8).map(d => {
+      const phaseLabel = d.phase === 'lv2' || d.phase === 'predicted-lv2' ? 'after Lv2 shrink' : 'in miasma';
+      return `step ${d.step} (#${d.nodeId}) ${phaseLabel}`;
     });
-    dangerHtml = `<div class="path-danger">⚠ ${danger.size} node(s) in miasma zone: ${dangerSteps.join(', ')}</div>`;
+    const more = annotation.dangerSteps.length > 8 ? ` +${annotation.dangerSteps.length - 8} more` : '';
+    dangerHtml = `<div class="path-danger">⚠ ${annotation.dangerSteps.length}/${path.length} nodes affected — first at step ${first}<br><small>${details.join('<br>')}${more}</small></div>`;
+  } else {
+    dangerHtml = '<div class="path-safe">✓ Route is safe from miasma</div>';
   }
 
   el.innerHTML = `
-    <div class="path-summary">Route: ${steps} step(s) — ${summary}</div>
+    <div class="path-summary"><strong>${steps} step(s)</strong> — ${summary}</div>
     ${dangerHtml}
   `;
 }

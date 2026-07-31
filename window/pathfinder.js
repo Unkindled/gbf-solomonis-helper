@@ -36,37 +36,3 @@ export function findShortestPath(nodeMap, startId, endId) {
 
   return null; // unreachable
 }
-
-/**
- * Check which nodes in a path are outside the miasma safe zone.
- * @param {number[]} path - array of node_ids
- * @param {Map<number, object>} nodeMap
- * @param {object|null} miasmaInfo - { after: { is_miasmic, center_position_x, center_position_y, level } }
- * @param {object} radiusMap - { 1: 670, 2: 67 }
- * @returns {Set<number>} - set of node_ids that are in danger
- */
-export function getMiasmaDangerNodes(path, nodeMap, miasmaInfo, radiusMap) {
-  const danger = new Set();
-  if (!miasmaInfo || !miasmaInfo.after || !miasmaInfo.after.is_miasmic) return danger;
-
-  const after = miasmaInfo.after;
-  const cx = after.center_position_x;
-  const cy = after.center_position_y;
-  const level = after.level || 1;
-  const radius = radiusMap[level] || radiusMap[1];
-
-  if (cx == null || cy == null) return danger;
-
-  for (const nodeId of path) {
-    const node = nodeMap.get(nodeId);
-    if (!node) continue;
-    const dx = node.position_x - cx;
-    const dy = node.position_y - cy;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist > radius) {
-      danger.add(nodeId);
-    }
-  }
-
-  return danger;
-}

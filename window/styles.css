@@ -8,8 +8,8 @@ html, body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #0d1117;
-  color: #e0e0e0;
+  background: #0a0e14;
+  color: #c9d1d9;
   font-family: system-ui, -apple-system, sans-serif;
   font-size: 13px;
 }
@@ -38,38 +38,73 @@ html, body {
 }
 
 #sidebar {
-  width: 240px;
-  min-width: 240px;
+  width: 250px;
+  min-width: 250px;
   height: 100%;
   overflow-y: auto;
-  background: #161b22;
-  border-left: 1px solid #30363d;
+  background: #10151d;
+  border-left: 1px solid #21262d;
   display: flex;
   flex-direction: column;
 }
 
+/* --- Status bar --- */
+
 #status-bar {
   padding: 10px 12px;
-  background: #1c2128;
-  border-bottom: 1px solid #30363d;
+  background: linear-gradient(180deg, #161d27 0%, #10151d 100%);
+  border-bottom: 1px solid #21262d;
   font-size: 12px;
-  color: #8b949e;
-  line-height: 1.5;
+  line-height: 1.7;
 }
+
+.status-turn {
+  font-weight: 700;
+  font-size: 14px;
+  color: #e6edf3;
+}
+
+.status-sep {
+  color: #484f58;
+  margin: 0 6px;
+}
+
+.status-state {
+  color: #8b949e;
+}
+
+.status-miasma {
+  color: #d2a8ff;
+  font-weight: 600;
+}
+
+.status-safe {
+  color: #7ee787;
+}
+
+.status-waiting {
+  color: #6e7681;
+  font-style: italic;
+}
+
+/* --- Path info --- */
 
 #path-info {
   padding: 10px 12px;
-  border-bottom: 1px solid #30363d;
-  min-height: 40px;
+  border-bottom: 1px solid #21262d;
+  min-height: 44px;
+  line-height: 1.6;
 }
 
 .path-hint {
   color: #6e7681;
   font-style: italic;
+  font-size: 12px;
 }
 
 .path-error {
   color: #f85149;
+  font-weight: 600;
 }
 
 .path-summary {
@@ -77,11 +112,31 @@ html, body {
   margin-bottom: 4px;
 }
 
+.path-summary strong {
+  color: #e6edf3;
+  font-size: 14px;
+}
+
 .path-danger {
-  color: #f0883e;
-  font-weight: 500;
+  color: #ffa198;
+  font-weight: 600;
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.path-danger small {
+  font-weight: 400;
+  color: #d29922;
+  line-height: 1.5;
+}
+
+.path-safe {
+  color: #7ee787;
+  font-size: 12px;
   margin-top: 4px;
 }
+
+/* --- Filter panel --- */
 
 #filter-panel {
   flex: 1;
@@ -94,24 +149,25 @@ html, body {
   align-items: center;
   justify-content: space-between;
   padding: 4px 12px 8px;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 13px;
-  color: #c9d1d9;
+  color: #e6edf3;
 }
 
 .btn-small {
-  padding: 2px 8px;
+  padding: 3px 9px;
   font-size: 11px;
   border: 1px solid #30363d;
-  border-radius: 3px;
+  border-radius: 4px;
   background: #21262d;
   color: #8b949e;
   cursor: pointer;
+  transition: background 0.15s, color 0.15s;
 }
 
 .btn-small:hover {
   background: #30363d;
-  color: #c9d1d9;
+  color: #e6edf3;
 }
 
 .filter-section {
@@ -119,20 +175,22 @@ html, body {
 }
 
 .filter-section-title {
-  font-size: 11px;
+  font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
   color: #6e7681;
-  margin: 8px 0 4px;
+  margin: 10px 0 4px;
+  font-weight: 600;
 }
 
 .filter-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 2px 0;
+  gap: 7px;
+  padding: 2.5px 0;
   cursor: pointer;
   font-size: 12px;
+  transition: color 0.1s;
 }
 
 .filter-row:hover {
@@ -143,6 +201,7 @@ html, body {
   width: 14px;
   height: 14px;
   accent-color: #26a69a;
+  cursor: pointer;
 }
 
 .filter-dot {
@@ -150,9 +209,11 @@ html, body {
   height: 10px;
   border-radius: 50%;
   flex-shrink: 0;
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.15);
 }
 
-/* Scrollbar */
+/* --- Scrollbar --- */
+
 #sidebar::-webkit-scrollbar,
 #filter-panel::-webkit-scrollbar {
   width: 6px;
