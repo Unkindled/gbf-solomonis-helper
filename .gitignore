@@ -1,0 +1,16 @@
+# HAR files contain session tokens - NEVER commit
+*.har
+
+# Reference files extracted from game client (analysis only)
+_ref_*
+
+# Reasonix internal
+.reasonix/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
