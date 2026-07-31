@@ -53,6 +53,11 @@ function init() {
     handleWindowMessage(msg.type, msg.payload);
   });
 
+  // Focus button
+  document.getElementById('btn-focus').addEventListener('click', () => {
+    if (renderer) renderer.focusOnPlayer();
+  });
+
   // Keyboard
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
@@ -99,10 +104,17 @@ function checkMiasmaTransition(newMiasmaInfo) {
 
   if (wasMiasmic && !isMiasmic) {
     // Miasma disappeared → new phase/day, map will refresh
-    // The game client re-requests content/index which triggers 'map-init'
-    // Clear stale path since map is about to change
     clearCurrentPath();
     updateStatusBar('New phase — map refreshing...');
+  }
+}
+
+/** Update node is_shrinking flags from miasma_info.shrink_node_ids */
+function applyShrinkNodeIds(miasmaInfo) {
+  if (!miasmaInfo || !miasmaInfo.shrink_node_ids) return;
+  const shrinkSet = new Set(miasmaInfo.shrink_node_ids.map(Number));
+  for (const [id, node] of nodeMap) {
+    node.is_shrinking = shrinkSet.has(id);
   }
 }
 
@@ -126,6 +138,7 @@ function handleWindowMessage(type, payload) {
       currentMiasmaInfo = payload.miasmaInfo || currentMiasmaInfo;
       currentTurn = payload.totalTurn !== undefined ? payload.totalTurn : currentTurn;
       checkMiasmaTransition(currentMiasmaInfo);
+      applyShrinkNodeIds(currentMiasmaInfo);
       renderer.updatePosition(payload.currentNodeId, currentMiasmaInfo, currentTurn);
       updateStatusBar();
       reEvaluatePath();
@@ -139,6 +152,7 @@ function handleWindowMessage(type, payload) {
       }
       if (payload.miasmaInfo) currentMiasmaInfo = payload.miasmaInfo;
       checkMiasmaTransition(currentMiasmaInfo);
+      applyShrinkNodeIds(currentMiasmaInfo);
       // Update special incident appearances
       if (payload.specialIncidentAppearance) {
         const info = payload.specialIncidentAppearance;
@@ -171,7 +185,7 @@ function handleWindowMessage(type, payload) {
   }
 }
 
-// --- Path planning (Issue 5: path from last point, click player to clear) ---
+// --- Path planning ---
 
 function handleNodeClick(node) {
   if (!dungeon || dungeon.current_node_id == null) return;
@@ -183,16 +197,25 @@ function handleNodeClick(node) {
     return;
   }
 
-  // Determine start: if we have a path, extend from its last node; otherwise from player
+  // If we have a path and clicked a node already on it → truncate path to that node
+  if (currentPath && currentPath.length > 0) {
+    const idx = currentPath.indexOf(clickedId);
+    if (idx >= 0) {
+      // Re-target: keep path up to (and including) clicked node
+      currentPath = currentPath.slice(0, idx + 1);
+      if (currentPath.length <= 1) {
+        clearCurrentPath();
+      } else {
+        reEvaluatePath();
+      }
+      return;
+    }
+  }
+
+  // Determine start: extend from last path node, or from player position
   const startId = (currentPath && currentPath.length > 0)
     ? currentPath[currentPath.length - 1]
     : dungeon.current_node_id;
-
-  // Clicking the current path start → clear
-  if (clickedId === startId) {
-    clearCurrentPath();
-    return;
-  }
 
   const segment = findShortestPath(nodeMap, startId, clickedId);
   if (!segment) {
@@ -200,7 +223,7 @@ function handleNodeClick(node) {
     return;
   }
 
-  // Append segment to existing path (avoid duplicating the junction node)
+  // Append segment (avoid duplicating junction node)
   if (currentPath && currentPath.length > 0) {
     currentPath = [...currentPath, ...segment.slice(1)];
   } else {

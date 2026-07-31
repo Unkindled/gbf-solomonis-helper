@@ -7,6 +7,8 @@ import { getCurrentMiasmaState } from './miasma-predictor.js';
 const BG_W = 2680, BG_H = 1830;
 const NODE_W = 90, NODE_H = 100;
 const PIECE_W = 90, PIECE_H = 100;
+// Visual center offset: node icons are 90x100 but the hexagon center is ~5px above geometric center
+const NODE_CENTER_Y_OFFSET = -5;
 
 const ASSET_BASE = '../assets/';
 
@@ -63,6 +65,7 @@ export class MapRenderer {
       icon8: 'node_icon/8.png',
       icon9: 'node_icon/9.png',
       icon10: 'node_icon/10_incident.png',
+      icon10fanatic: 'node_icon/10_fanatic.png',
       icon11: 'node_icon/11.png',
     };
 
@@ -84,8 +87,12 @@ export class MapRenderer {
     }
   }
 
-  _iconForType(nodeType) {
-    const key = 'icon' + nodeType;
+  _iconForNode(node) {
+    // Cult founder (sp:1) and cultists (sp:2,3) use the fanatic icon
+    if (node.node_type === 10 && node.special_incident_id != null && [1, 2, 3].includes(node.special_incident_id)) {
+      return this.images.icon10fanatic || null;
+    }
+    const key = 'icon' + node.node_type;
     return this.images[key] || null;
   }
 
@@ -243,11 +250,8 @@ export class MapRenderer {
   }
 
   _isNodeInCurrentMiasma(node) {
-    const state = getCurrentMiasmaState(this.miasmaInfo);
-    if (!state.active || state.cx == null || state.cy == null) return false;
-    const dx = node.position_x - state.cx;
-    const dy = node.position_y - state.cy;
-    return Math.sqrt(dx * dx + dy * dy) > state.innerRadius;
+    // Use game data as authoritative source
+    return !!node.is_shrinking;
   }
 
   // --- Rendering ---
@@ -306,12 +310,14 @@ export class MapRenderer {
     if (!state.active || state.cx == null || state.cy == null) return;
 
     const { cx, cy, innerRadius, safeRadius } = state;
+    // Apply visual center offset to match game rendering
+    const adjCy = cy + NODE_CENTER_Y_OFFSET;
 
     // Purple miasma fog: area between innerRadius and map edge
     ctx.save();
     ctx.beginPath();
     ctx.rect(-200, -200, BG_W + 400, BG_H + 400);
-    ctx.arc(cx, cy, innerRadius, 0, Math.PI * 2, true);
+    ctx.arc(cx, adjCy, innerRadius, 0, Math.PI * 2, true);
     ctx.fillStyle = 'rgba(90, 20, 120, 0.4)';
     ctx.fill();
     ctx.restore();
@@ -319,7 +325,7 @@ export class MapRenderer {
     // Miasma inner boundary (where the fog currently is)
     const t = Date.now() / 1000;
     ctx.beginPath();
-    ctx.arc(cx, cy, innerRadius, 0, Math.PI * 2);
+    ctx.arc(cx, adjCy, innerRadius, 0, Math.PI * 2);
     ctx.strokeStyle = 'rgba(200, 80, 255, 0.85)';
     ctx.lineWidth = 4;
     ctx.setLineDash([16, 10]);
@@ -330,7 +336,7 @@ export class MapRenderer {
     // Safe circle (final boundary after countdown ends)
     if (safeRadius < innerRadius - 5) {
       ctx.beginPath();
-      ctx.arc(cx, cy, safeRadius, 0, Math.PI * 2);
+      ctx.arc(cx, adjCy, safeRadius, 0, Math.PI * 2);
       ctx.strokeStyle = 'rgba(100, 220, 100, 0.5)';
       ctx.lineWidth = 2;
       ctx.setLineDash([6, 6]);
@@ -340,9 +346,11 @@ export class MapRenderer {
   }
 
   _drawEdges(ctx) {
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = 'rgba(180, 200, 220, 0.25)';
     const drawn = new Set();
+    // Outer glow pass
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = 'rgba(140, 170, 200, 0.12)';
+    ctx.lineCap = 'round';
     for (const [id, node] of this.nodeMap) {
       for (const adjId of (node.adjacent_node_ids || [])) {
         const key = id < adjId ? `${id}-${adjId}` : `${adjId}-${id}`;
@@ -355,6 +363,19 @@ export class MapRenderer {
         ctx.lineTo(adj.position_x, adj.position_y);
         ctx.stroke();
       }
+    }
+    // Core line pass
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(180, 210, 240, 0.4)';
+    for (const key of drawn) {
+      const [idStr, adjStr] = key.split('-');
+      const node = this.nodeMap.get(Number(idStr));
+      const adj = this.nodeMap.get(Number(adjStr));
+      if (!node || !adj) continue;
+      ctx.beginPath();
+      ctx.moveTo(node.position_x, node.position_y);
+      ctx.lineTo(adj.position_x, adj.position_y);
+      ctx.stroke();
     }
   }
 
@@ -480,7 +501,7 @@ export class MapRenderer {
       }
 
       // Type icon
-      const icon = this._iconForType(node.node_type);
+      const icon = this._iconForNode(node);
       if (icon && icon.complete && icon.naturalWidth > 0) {
         ctx.drawImage(icon, x, y, NODE_W, NODE_H);
       }
@@ -575,6 +596,18 @@ export class MapRenderer {
   resize(width, height) {
     this.canvas.width = width;
     this.canvas.height = height;
+    this.render();
+  }
+
+  /** Center the view on the player's current node */
+  focusOnPlayer() {
+    if (this.currentNodeId == null) return;
+    const node = this.nodeMap.get(this.currentNodeId);
+    if (!node) return;
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    this.offsetX = w / 2 - node.position_x * this.scale;
+    this.offsetY = h / 2 - node.position_y * this.scale;
     this.render();
   }
 }

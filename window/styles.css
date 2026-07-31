@@ -37,6 +37,30 @@ html, body {
   cursor: grabbing;
 }
 
+#btn-focus {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(16, 21, 29, 0.85);
+  color: #e6edf3;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+  backdrop-filter: blur(4px);
+}
+
+#btn-focus:hover {
+  background: rgba(38, 166, 154, 0.7);
+  border-color: rgba(38, 166, 154, 0.9);
+}
+
 #sidebar {
   width: 250px;
   min-width: 250px;
