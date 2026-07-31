@@ -2,7 +2,7 @@
 *.har
 
 # Reference files extracted from game client (analysis only)
-_ref_*
+analysis/
 
 # Reasonix internal
 .reasonix/
