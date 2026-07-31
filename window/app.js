@@ -160,11 +160,11 @@ function handleWindowMessage(type, payload) {
       currentTurn = payload.totalTurn !== undefined ? payload.totalTurn : currentTurn;
       checkMiasmaTransition(currentMiasmaInfo);
 
-      // Accumulate shrink_node_ids into node.is_shrinking
-      if (payload.miasmaInfo && payload.miasmaInfo.shrink_node_ids) {
-        for (const id of payload.miasmaInfo.shrink_node_ids) {
-          const node = nodeMap.get(Number(id));
-          if (node) node.is_shrinking = true;
+      // Mark newly consumed nodes as shrinking (exact from server)
+      if (payload.shrinkNodeIds) {
+        for (const sid of payload.shrinkNodeIds) {
+          const sn = nodeMap.get(Number(sid));
+          if (sn) sn.is_shrinking = true;
         }
       }
 
@@ -196,14 +196,6 @@ function handleWindowMessage(type, payload) {
       }
       if (payload.miasmaInfo) currentMiasmaInfo = payload.miasmaInfo;
       checkMiasmaTransition(currentMiasmaInfo);
-
-      // Accumulate shrink_node_ids into node.is_shrinking
-      if (payload.miasmaInfo && payload.miasmaInfo.shrink_node_ids) {
-        for (const id of payload.miasmaInfo.shrink_node_ids) {
-          const node = nodeMap.get(Number(id));
-          if (node) node.is_shrinking = true;
-        }
-      }
 
       if (payload.specialIncidentAppearance) {
         const info = payload.specialIncidentAppearance;

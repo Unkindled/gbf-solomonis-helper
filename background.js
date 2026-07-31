@@ -135,10 +135,17 @@ function handleMoveNode(data) {
   if (data.miasma_info) gameState.miasmaInfo = data.miasma_info;
   recordMiasma('move_node', data);
 
-  // Update node visited status in map
+  // Update node visited status in map + accumulate miasma consumption
   if (gameState.map && gameState.map.node_list) {
     const node = gameState.map.node_list.find(n => n.node_id === data.after_current_node_id);
     if (node) node.is_visited = true;
+
+    // Mark newly consumed nodes as shrinking (exact from server)
+    const shrinkIds = (data.miasma_info && data.miasma_info.shrink_node_ids) || [];
+    for (const sid of shrinkIds) {
+      const sn = gameState.map.node_list.find(n => n.node_id === Number(sid));
+      if (sn) sn.is_shrinking = true;
+    }
   }
 
   broadcastToWindow('move-update', {
@@ -148,6 +155,7 @@ function handleMoveNode(data) {
     totalTurn: data.total_turn,
     miasmaInfo: data.miasma_info,
     dungeonStatus: data.dungeon_status,
+    shrinkNodeIds: (data.miasma_info && data.miasma_info.shrink_node_ids) || [],
   });
 }
 
@@ -164,6 +172,12 @@ function handleFinishNode(data) {
     if (data.is_delete_node && gameState.currentNodeId) {
       // Mark node as deleted (remove from adjacency)
       // For now just mark is_shrinking as indicator
+    }
+    // Accumulate newly consumed nodes (exact from server)
+    const shrinkIds = (data.miasma_info && data.miasma_info.shrink_node_ids) || [];
+    for (const sid of shrinkIds) {
+      const sn = gameState.map.node_list.find(n => n.node_id === Number(sid));
+      if (sn) sn.is_shrinking = true;
     }
     // Update special incident appearances
     if (data.special_incident_appearance_info) {

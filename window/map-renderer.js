@@ -1,7 +1,6 @@
 // Canvas-based map renderer using original game assets
 
 import { NODE_TYPE_COLORS, MIASMA_RADIUS } from '../shared/constants.js';
-import { getCurrentMiasmaState } from './miasma-predictor.js';
 
 // Game asset dimensions
 const BG_W = 2680, BG_H = 1830;
@@ -255,7 +254,7 @@ export class MapRenderer {
   }
 
   _isNodeInCurrentMiasma(node) {
-    // Server-authoritative: is_shrinking is set by the game server
+    // Exact from server: is_shrinking flag on the node itself
     return !!node.is_shrinking;
   }
 
@@ -311,41 +310,22 @@ export class MapRenderer {
   }
 
   _drawMiasmaOverlay(ctx) {
-    const state = getCurrentMiasmaState(this.miasmaInfo);
-    if (!state.active || state.cx == null || state.cy == null) return;
+    // Exact node-level rendering handled via base_miasma icons.
+    // Keep a faint center indicator if miasma is active.
+    const a = this.miasmaInfo && this.miasmaInfo.after;
+    if (!a || !a.is_miasmic || a.center_position_x == null) return;
+    const cx = a.center_position_x;
+    const cy = a.center_position_y;
 
-    const { cx, cy, innerRadius, safeRadius } = state;
-
-    // Purple miasma fog: area outside the estimated boundary
-    ctx.save();
     ctx.beginPath();
-    ctx.rect(-200, -200, BG_W + 400, BG_H + 400);
-    ctx.arc(cx, cy, innerRadius, 0, Math.PI * 2, true);
-    ctx.fillStyle = 'rgba(90, 20, 120, 0.4)';
-    ctx.fill();
-    ctx.restore();
-
-    // Miasma inner boundary
-    const t = Date.now() / 1000;
-    ctx.beginPath();
-    ctx.arc(cx, cy, innerRadius, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(200, 80, 255, 0.85)';
-    ctx.lineWidth = 4;
-    ctx.setLineDash([16, 10]);
-    ctx.lineDashOffset = -t * 30;
+    ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(200, 80, 255, 0.6)';
+    ctx.lineWidth = 3;
     ctx.stroke();
-    ctx.setLineDash([]);
-
-    // Safe circle (final boundary)
-    if (safeRadius < innerRadius - 5) {
-      ctx.beginPath();
-      ctx.arc(cx, cy, safeRadius, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(100, 220, 100, 0.5)';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([6, 6]);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
+    ctx.beginPath();
+    ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(200, 80, 255, 0.8)';
+    ctx.fill();
   }
 
   _drawEdges(ctx) {
