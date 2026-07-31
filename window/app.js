@@ -133,7 +133,27 @@ function handleWindowMessage(type, payload) {
       currentMiasmaInfo = payload.miasmaInfo || currentMiasmaInfo;
       currentTurn = payload.totalTurn !== undefined ? payload.totalTurn : currentTurn;
       checkMiasmaTransition(currentMiasmaInfo);
+
+      // Sync renderer with latest map state
+      renderer.miasmaInfo = currentMiasmaInfo;
+      renderer.totalTurn = currentTurn;
       renderer.updatePosition(payload.currentNodeId, currentMiasmaInfo, currentTurn);
+
+      // Update path: if player moved to next node on path, advance; otherwise clear
+      if (currentPath && currentPath.length > 1) {
+        if (payload.currentNodeId === currentPath[1]) {
+          // Player followed the path — trim the first node
+          currentPath = currentPath.slice(1);
+        } else if (!currentPath.includes(payload.currentNodeId)) {
+          // Player went off-path — clear
+          clearCurrentPath();
+        }
+        // If player moved to a later node on path (skipped), keep path as-is for now
+      } else if (currentPath && currentPath.length === 1) {
+        // Path was just the destination and player arrived
+        if (payload.currentNodeId === currentPath[0]) clearCurrentPath();
+      }
+
       updateStatusBar();
       reEvaluatePath();
       break;

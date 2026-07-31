@@ -64,6 +64,7 @@ export class MapRenderer {
       icon9: 'node_icon/9.png',
       icon10: 'node_icon/10_incident.png',
       icon10fanatic: 'node_icon/10_fanatic.png',
+      icon10guru: 'node_icon/10_guru.png',
       icon11: 'node_icon/11.png',
     };
 
@@ -86,9 +87,10 @@ export class MapRenderer {
   }
 
   _iconForNode(node) {
-    // Cult Founder (sp:1) and Cultists (sp:2,3) use a dedicated icon
-    if (node.node_type === 10 && node.special_incident_id != null && node.special_incident_id <= 3) {
-      return this.images.icon10fanatic || null;
+    // Cult Founder (sp:1) uses guru icon; Cultists (sp:2,3) use fanatic icon
+    if (node.node_type === 10 && node.special_incident_id != null) {
+      if (node.special_incident_id === 1) return this.images.icon10guru || null;
+      if (node.special_incident_id === 2 || node.special_incident_id === 3) return this.images.icon10fanatic || null;
     }
     const key = 'icon' + node.node_type;
     return this.images[key] || null;

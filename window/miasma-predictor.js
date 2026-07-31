@@ -28,18 +28,17 @@ const MAX_MIASMA_RADIUS = 1600;
 
 /**
  * Calculate the current miasma inner boundary radius.
- * The miasma closes in from MAX_MIASMA_RADIUS toward the safe circle over the countdown.
- * @param {number} level - miasma level (1 or 2)
- * @param {number} countdown - current miasma_stop_countdown
- * @returns {number} current inner radius (nodes beyond this are in miasma)
+ * Level 1: closes from MAX_MIASMA_RADIUS (1600) → safe radius (670) over countdown
+ * Level 2: closes from Lv1 safe radius (670) → Lv2 safe radius (67) over countdown
+ * The boundary is continuous across levels.
  */
 export function getMiasmaInnerRadius(level, countdown) {
   const safeRadius = MIASMA_RADIUS[level] || MIASMA_RADIUS[1];
   const totalCountdown = level === 1 ? LEVEL1_TOTAL_COUNTDOWN : LEVEL2_TOTAL_COUNTDOWN;
   const progress = Math.max(0, Math.min(1, countdown / totalCountdown));
-  // At countdown=total: innerRadius = MAX (miasma just at edges)
-  // At countdown=0: innerRadius = safeRadius (miasma reached safe circle)
-  return safeRadius + (MAX_MIASMA_RADIUS - safeRadius) * progress;
+  // Start radius: where this level's miasma begins closing from
+  const startRadius = level === 1 ? MAX_MIASMA_RADIUS : MIASMA_RADIUS[1]; // Lv2 starts at Lv1 safe circle
+  return safeRadius + (startRadius - safeRadius) * progress;
 }
 
 /**
