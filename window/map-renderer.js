@@ -9,6 +9,12 @@ const PIECE_W = 90, PIECE_H = 100;
 
 const ASSET_BASE = '../assets/';
 
+// 游戏里 base 图标的"地面点/pin 尖"位于图标内坐标 (44, 86)
+// （= 游戏 NODE_CONNECT_LINE_OFFSET，连线端点 = coordinate + 此偏移，即连到地面点）。
+// 服务器 center_position 等于中心节点的地面点；而本插件把节点地面点画在 position，
+// 故白圈圆心需减去此偏移，才能与节点坐标系对齐。
+const MIASMA_CENTER_OFFSET = { X: 44, Y: 86 };
+
 export class MapRenderer {
   constructor(canvas) {
     this.canvas = canvas;
@@ -325,8 +331,10 @@ export class MapRenderer {
       const level = a.level || 1;
       const radius = this.miasmaCircleRadius[level] || this.miasmaCircleRadius[1];
       const img = level === 2 ? this.images.miasmaCircle2 : this.images.miasmaCircle1;
-      const cx = a.center_position_x;
-      const cy = a.center_position_y;
+      // center_position 是中心节点的地面点；本插件节点地面点 = position，
+      // 而 position = 地面点 - MIASMA_CENTER_OFFSET，故圆心需减去该偏移对齐。
+      const cx = a.center_position_x - MIASMA_CENTER_OFFSET.X;
+      const cy = a.center_position_y - MIASMA_CENTER_OFFSET.Y;
 
       if (img && img.complete && img.naturalWidth > 0) {
         // Game anchors the circle image so its center sits at (cx, cy)
