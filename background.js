@@ -417,10 +417,12 @@ function handleSpacebookAdd(data) {
 }
 
 function handleIncident(data) {
-  // Same structure as move_node response
-  handleMoveNode(data);
-  // incident_choose may also carry guide book effects
-  if (data.action_scenario_list) handleProceed(data);
+  // incident_choose does NOT move the player — the response has no
+  // current_node_id fields. Handle it as a proceed (scenario/miasma/turn
+  // updates + guide book candidates) WITHOUT touching the position, which
+  // was previously wiped to undefined here (player "disappeared" until the
+  // next real move_node).
+  handleProceed(data);
 }
 
 function handlePartyStatus(data) {
