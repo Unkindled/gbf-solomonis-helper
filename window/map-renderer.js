@@ -71,6 +71,7 @@ export class MapRenderer {
       icon10fanatic: 'node_icon/10_fanatic.png',
       icon10guru: 'node_icon/10_guru.png',
       icon10teleport: 'node_icon/10_teleport.png',
+      icon10research: 'node_icon/10_research.png',
       icon11: 'node_icon/11.png',
       miasmaCircle1: 'miasma_circle_1.png',
       miasmaCircle2: 'miasma_circle_2.png',
@@ -104,6 +105,7 @@ export class MapRenderer {
       if (sp === 2 || sp === 3) return this.images.icon10fanatic || null; // Cultists
       if (sp === 4) return this.images.icon10teleport || null;      // Floating Castle
       if (sp === 5 || sp === 6 || sp === 7) return this.images.icon10teleport || null; // FC Portals
+      if (sp === 8) return this.images.icon10research || null;      // FC Researcher
     }
     const key = 'icon' + node.node_type;
     return this.images[key] || null;
