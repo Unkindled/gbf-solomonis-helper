@@ -29,6 +29,7 @@ export class MapRenderer {
     this.filterSpecial = new Set();
     this.hoveredNode = null;
     this.adjacentSet = new Set(); // nodes adjacent to player (reachable)
+    this.shopStock = {}; // node_id → {items:[{lineup_id,name,price,stock,canBuy}], coinAfter}
 
     // View transform
     this.scale = 0.35;
@@ -784,21 +785,43 @@ export class MapRenderer {
     }
     if (node.is_visited) label += ' ✓';
 
+    // Shop stock lines (if this shop node has been visited and stock captured)
+    const stockLines = [];
+    const stock = this.shopStock[node.node_id];
+    if (node.node_type === 8) {
+      if (stock && stock.items && stock.items.length > 0) {
+        stockLines.push(`— Stock (coin ${stock.coinAfter != null ? stock.coinAfter : '?'}) —`);
+        for (const it of stock.items) {
+          const sold = it.stock <= 0 ? ' [SOLD OUT]' : '';
+          const name = it.name || `item:${it.lineup_id}`;
+          stockLines.push(`${name} · ${it.price}c · x${it.stock}${sold}`);
+        }
+      } else {
+        stockLines.push('— not visited —');
+      }
+    }
+
     ctx.font = '12px system-ui';
-    const tw = ctx.measureText(label).width + 16;
+    const allLines = [label, ...stockLines];
+    const lineH = 16;
+    const tw = Math.max(...allLines.map(l => ctx.measureText(l).width)) + 16;
+    const th = lineH * allLines.length + 8;
     const tx = Math.min(screen.x + 18, this.canvas.width - tw - 5);
-    const ty = Math.max(screen.y - NODE_H * this.scale - 34, 20);
+    const ty = Math.max(screen.y - NODE_H * this.scale - 34 - (allLines.length - 1) * lineH, 20);
 
     ctx.fillStyle = 'rgba(10, 14, 20, 0.92)';
     ctx.strokeStyle = 'rgba(100, 120, 140, 0.5)';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.roundRect(tx, ty, tw, 24, 4);
+    ctx.roundRect(tx, ty, tw, th, 4);
     ctx.fill();
     ctx.stroke();
     ctx.fillStyle = '#e6edf3';
     ctx.textAlign = 'left';
-    ctx.fillText(label, tx + 8, ty + 16);
+    allLines.forEach((ln, i) => {
+      ctx.fillStyle = i === 0 ? '#e6edf3' : (ln.includes('SOLD OUT') ? '#f85149' : '#c9d1d9');
+      ctx.fillText(ln, tx + 8, ty + 16 + i * lineH);
+    });
   }
 
   /** Center view on the player's current node */

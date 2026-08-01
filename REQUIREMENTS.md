@@ -34,12 +34,16 @@
 
 | 端点 | 方法 | 触发时机 | 关键数据 |
 |---|---|---|---|
-| `arcarum3/dungeon/content/index/{0\|1}` | GET | 进入地图页面 | **完整地图**：`option.dungeon.node_list[]`、`miasma_info`、`current_node_id`、`total_turn`、`dungeon_status` |
+| `arcarum3/dungeon/content/index/{0\|1}` | GET | 进入地图页面 | **完整地图**：`option.dungeon.node_list[]`、`miasma_info`、`current_node_id`、`total_turn`、`dungeon_status`、`possession_arcarum3_dungeon_point` |
 | `rest/arcarum3/dungeon/move_node` | POST | 玩家移动一步 | `before/after_current_node_id`、`node_type`、`miasma_info`（含 `shrink_node_ids`）、`total_turn` |
 | `rest/arcarum3/dungeon/proceed_node_event` | POST | 推进节点事件 | `action_scenario_list`、`miasma_info`、`dungeon_status` |
 | `rest/arcarum3/dungeon/finish_node_event` | POST | 结束节点事件 | `miasma_info`、`is_delete_node`、`is_visited_node`、`special_incident_appearance_info`、`dungeon_status` |
 | `rest/arcarum3/dungeon/incident_choose` | POST | 事件中选择选项 | 同 move_node 结构 |
 | `rest/arcarum3/dungeon/party_status` | GET | 查看队伍状态 | 队伍成员 HP |
+| `rest/arcarum3/dungeon/spacebook_status_list` | GET | 打开导本页面 | **当前全部导本** `status_list`（status_id、user_status_id、name、rarity、icon_type） |
+| `rest/arcarum3/dungeon/proceed_node_event_spacebook_status_add` | POST | 三选一选择导本 | 响应无 status_list（导本列表由后续 spacebook_status_list 刷新） |
+| `rest/arcarum3/dungeon/dungeon_shop_lineup/{id}` | GET | 打开商店/切换货架 | 货架 `item_list`（lineup_id、item_name、price、stock_num、can_purchase） |
+| `rest/arcarum3/dungeon/purchase_dungeon_shop_item` | POST | 购物 | `before_coin`、`after_coin`、`is_all_purchased` |
 
 ### 2.3 地图数据结构（`option.dungeon`）
 

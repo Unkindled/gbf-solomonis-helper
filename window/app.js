@@ -46,6 +46,11 @@ function init() {
     }
     if (state && state.partyStatus) renderPartyBar(state.partyStatus);
     if (state && state.guideBooks) renderGuideBooks(state.guideBooks);
+    if (state && state.dungeonPoint != null) renderDungeonPoint(state.dungeonPoint);
+    if (state && state.shopStock) {
+      for (const [k, v] of Object.entries(state.shopStock)) renderer.shopStock[k] = v;
+      renderer.render();
+    }
     updateStatusBar();
   });
 
@@ -257,6 +262,18 @@ function handleWindowMessage(type, payload) {
 
     case 'guide-books':
       renderGuideBooks(payload);
+      break;
+
+    case 'dungeon-point':
+      renderDungeonPoint(payload);
+      break;
+
+    case 'shop-stock':
+      // payload: {nodeId, stock:{items, coinAfter}}
+      if (payload && payload.nodeId != null && payload.stock) {
+        renderer.shopStock[payload.nodeId] = payload.stock;
+        renderer.render();
+      }
       break;
   }
 }

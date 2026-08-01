@@ -11,6 +11,7 @@ let gameState = {
   partyStatus: null,
   dungeonPoint: 0,        // possession_arcarum3_dungeon_point (Sephira coins)
   guideBooks: [],         // collected guide book effects [{status_id,name,rarity,...}]
+  shopStock: new Map(),   // node_id → {coinAfter, items:[{lineup_id,name,price,stock,canBuy}]}
 };
 
 // Miasma data recorder — stores every miasma snapshot for formula analysis
@@ -59,7 +60,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 
   if (msg.channel === 'gbf-helper:get-state') {
-    sendResponse(gameState);
+    // shopStock is a Map — serialize to a plain object for the response
+    const shopStock = {};
+    for (const [k, v] of gameState.shopStock) shopStock[k] = v;
+    sendResponse({ ...gameState, shopStock });
     return true;
   }
 
@@ -90,13 +94,77 @@ function handleGameData(type, data) {
     case 'proceed':
       handleProceed(data);
       break;
+    case 'spacebookList':
+      handleSpacebookList(data);
+      break;
+    case 'spacebookAdd':
+      handleProceed(data); // spacebook_add response also may carry status lists
+      break;
     case 'incident':
       handleIncident(data);
       break;
     case 'partyStatus':
       handlePartyStatus(data);
       break;
+    case 'shopLineup':
+      handleShopLineup(data);
+      break;
+    case 'shopPurchase':
+      handleShopPurchase(data);
+      break;
   }
+}
+
+// --- Guide book (spacebook) ---
+
+function handleSpacebookList(data) {
+  if (!data || !Array.isArray(data.status_list)) return;
+  const books = data.status_list.map(b => ({
+    status_id: b.status_id,
+    user_status_id: b.user_status_id != null ? b.user_status_id : null,
+    name: b.name || `status:${b.status_id}`,
+    rarity: b.rarity,
+    icon_type: b.icon_type,
+    icon_category: b.icon_category,
+    num: b.num,
+  }));
+  gameState.guideBooks = books;
+  broadcastToWindow('guide-books', books);
+}
+
+// --- Shop ---
+
+function handleShopLineup(data) {
+  if (!data || !Array.isArray(data.item_list)) return;
+  // Which shop node are we at? The shop runs on the current node.
+  const nodeId = gameState.currentNodeId;
+  const items = data.item_list.map(it => ({
+    lineup_id: it.lineup_id,
+    item_type: it.item_type,
+    name: it.item_name || `type:${it.item_type}`,
+    price: it.price,
+    stock: it.stock_num,
+    canBuy: it.can_purchase,
+    image: it.item_image,
+  }));
+  const prev = gameState.shopStock.get(nodeId) || { items: [] };
+  gameState.shopStock.set(nodeId, { items, coinAfter: prev.coinAfter });
+  broadcastToWindow('shop-stock', { nodeId, stock: { items, coinAfter: prev.coinAfter } });
+}
+
+function handleShopPurchase(data) {
+  if (!data) return;
+  if (data.after_coin != null) {
+    gameState.dungeonPoint = Number(data.after_coin);
+    broadcastToWindow('dungeon-point', gameState.dungeonPoint);
+  }
+  // Refresh the current shop's stock (server re-sends lineup after purchase)
+  const nodeId = gameState.currentNodeId;
+  const entry = gameState.shopStock.get(nodeId);
+  if (entry) {
+    entry.coinAfter = data.after_coin != null ? Number(data.after_coin) : entry.coinAfter;
+  }
+  // The subsequent shopLineup call will update stock counts.
 }
 
 function handleMapInit(data) {
@@ -114,6 +182,7 @@ function handleMapInit(data) {
   }
 
   broadcastToWindow('map-init', dungeon);
+  broadcastToWindow('dungeon-point', gameState.dungeonPoint);
 }
 
 function recordMiasma(source, data) {
