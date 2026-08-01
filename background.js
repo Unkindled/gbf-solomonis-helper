@@ -341,6 +341,9 @@ function handleFinishNode(data) {
     isDeleteNode: data.is_delete_node,
     isVisitedNode: data.is_visited_node,
     specialIncidentAppearance: data.special_incident_appearance_info,
+    nodeType: data.node_type,
+    nodeId: gameState.currentNodeId,
+    beforeNodeId: data.before_current_node_id != null ? data.before_current_node_id : gameState.currentNodeId,
   });
 }
 

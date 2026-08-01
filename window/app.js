@@ -137,10 +137,21 @@ function applyFullMap(mapData) {
     dungeon.map_id !== mapData.map_id ||
     (mapData.total_turn === 0 && dungeon.total_turn > 0);
 
+  // Preserve local-only flags (is_deleted) across content/index re-fetches
+  const prevDeleted = new Map();
+  if (nodeMap && !isNewDungeon) {
+    for (const [id, n] of nodeMap) {
+      if (n.is_deleted) prevDeleted.set(id, true);
+    }
+  }
+
   dungeon = mapData;
   nodeMap.clear();
   if (dungeon.node_list) {
-    for (const node of dungeon.node_list) nodeMap.set(node.node_id, node);
+    for (const node of dungeon.node_list) {
+      if (prevDeleted.has(node.node_id)) node.is_deleted = true;
+      nodeMap.set(node.node_id, node);
+    }
   }
   currentMiasmaInfo = dungeon.miasma_info;
   currentTurn = dungeon.total_turn || 0;
@@ -277,8 +288,22 @@ function handleWindowMessage(type, payload) {
         }
         if (filterPanel) filterPanel.setPresentSpecials(getPresentSpecialIds());
       }
+
+      // finish_node_event: the player completed the event at their current
+      // node. is_visited_node confirms it's now visited (rendered cleared).
+      if (payload.isVisitedNode && payload.nodeId != null) {
+        const curNode = nodeMap.get(payload.nodeId);
+        if (curNode) curNode.is_visited = true;
+      }
+      // A cleared/deleted node (battle/event consumed) should drop out of
+      // the reachable set — mark it so it's rendered consumed.
+      if (payload.isDeleteNode && payload.nodeId != null) {
+        const cur = nodeMap.get(payload.nodeId);
+        if (cur) cur.is_deleted = true;
+      }
       renderer.miasmaInfo = currentMiasmaInfo;
       renderer.totalTurn = currentTurn;
+      renderer.render();
       updateStatusBar();
       reEvaluatePath();
       break;
@@ -326,7 +351,7 @@ function handleWindowMessage(type, payload) {
 
 function renderDungeonPoint(value) {
   const el = document.getElementById('dungeon-point');
-  el.textContent = `🪙 ${value}`;
+  el.textContent = String(value);
 }
 
 function setGuideBooksStale(stale) {

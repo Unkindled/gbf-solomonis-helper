@@ -691,6 +691,25 @@ export class MapRenderer {
       const x = node.position_x - NODE_W / 2;
       const y = node.position_y - NODE_H;
 
+      // Consumed/deleted node (battle or event cleared it) — render as a
+      // faint burnt-out marker instead of a live icon.
+      if (node.is_deleted) {
+        ctx.beginPath();
+        ctx.arc(node.position_x, node.position_y - NODE_H / 2, 10, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(120, 100, 80, 0.5)';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(node.position_x - 5, node.position_y - NODE_H / 2 - 5);
+        ctx.lineTo(node.position_x + 5, node.position_y - NODE_H / 2 + 5);
+        ctx.moveTo(node.position_x + 5, node.position_y - NODE_H / 2 - 5);
+        ctx.lineTo(node.position_x - 5, node.position_y - NODE_H / 2 + 5);
+        ctx.strokeStyle = 'rgba(120, 100, 80, 0.7)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.globalAlpha = 1.0;
+        continue;
+      }
+
       // Choose base image
       let baseImg;
       if (inMiasma) {

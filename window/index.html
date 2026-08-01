@@ -3,22 +3,36 @@
 <head>
   <meta charset="utf-8">
   <title>GBF Solomonis Map</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div id="app">
     <div id="map-container">
       <div id="hud-top">
-        <div id="dungeon-point" class="hud-chip" title="Sephira Coins">🪙 0</div>
-        <div id="party-bar"></div>
+        <div id="hud-left">
+          <div id="dungeon-point" class="hud-chip coin-chip" title="Sephira Coins">0</div>
+          <div id="party-bar"></div>
+        </div>
+        <div id="hud-right">
+          <button id="btn-focus" class="hud-iconbtn compass" title="Center on player (F)" aria-label="Center on player">
+            <svg viewBox="0 0 24 24" class="compass-svg" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" class="compass-ring"/>
+              <path d="M12 3 L13.6 10.4 L12 9 L10.4 10.4 Z" class="compass-needle-n"/>
+              <path d="M12 21 L10.4 13.6 L12 15 L13.6 13.6 Z" class="compass-needle-s"/>
+              <circle cx="12" cy="12" r="1.6" class="compass-hub"/>
+            </svg>
+          </button>
+          <button id="btn-guidebook" class="hud-iconbtn tome" title="Guide Books" aria-label="Guide Books">
+            <img src="../assets/book_thumb_1.png" alt="Guide Books">
+            <span id="guidebook-badge" class="hud-btn-badge hidden">0</span>
+            <span id="guidebook-stale" class="hud-btn-stale hidden" title="Guide books may be out of date — open the in-game guidebook page to refresh">!</span>
+          </button>
+        </div>
       </div>
       <canvas id="map-canvas"></canvas>
-      <button id="btn-focus" title="Center on player (F)">⌖</button>
-      <button id="btn-guidebook" class="hud-btn" title="Guide Books">
-        <img src="../assets/book_thumb_1.png" alt="Guide Books">
-        <span id="guidebook-badge" class="hud-btn-badge hidden">0</span>
-        <span id="guidebook-stale" class="hud-btn-stale hidden" title="Guide books may be out of date — open the in-game guidebook page to refresh">!</span>
-      </button>
       <div id="guidebook-popup" class="guidebook-popup hidden">
         <div class="guidebook-popup-header">
           <span id="guidebook-popup-title">Guide Books</span>
