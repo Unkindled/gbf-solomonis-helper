@@ -178,7 +178,7 @@ interface MiasmaState {
 - 缩圈激活后，每回合根据 `center_position_x/y`（减去地面点偏移 44,86）定位圆心
 - **毒圈半径分等级模型**：
   - Lv1：用 `is_shrinking` 节点状态拟合边界圆（Lv1 无累计污染，拟合准确）
-  - Lv2：**双圆插值**——圆心和半径同时从 Lv1 安全圈（圆心在 Lv1 期间记录，半径 670）线性过渡到 Lv2 安全圈（圆心 = 当前 center_position，半径 67），countdown 总量 20 回合驱动进度。两个圆**不同心**，插值同时移动圆心和收缩半径
+  - Lv2：**圆心 = 服务器直接提供的 `center_position`**（HAR 实证 Lv2 期间该值恒定），只有**半径**从 Lv1 安全半径（670）线性收缩到 Lv2 安全半径（67），countdown 总量 20 回合驱动进度
 - **紫红色污染特效**：毒圈边界圆外的地图区域填充半透明紫红色渐变 + 动画虚线前沿，模拟游戏 miasmaarea 效果
 - 白色安全圈（miasma_circle_N.png）叠加在毒圈内部，标识最终安全区
 - `miasma_stop_countdown` 直接作为"剩余 N 回合"显示
