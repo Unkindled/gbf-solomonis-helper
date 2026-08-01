@@ -66,7 +66,12 @@ export class MapRenderer {
       icon10guru: 'node_icon/10_guru.png',
       icon10teleport: 'node_icon/10_teleport.png',
       icon11: 'node_icon/11.png',
+      miasmaCircle1: 'miasma_circle_1.png',
+      miasmaCircle2: 'miasma_circle_2.png',
     };
+
+    // Circle image radii (from PNG dimensions / 2)
+    this.miasmaCircleRadius = { 1: 670, 2: 67 };
 
     let pending = Object.keys(defs).length;
     const done = () => {
@@ -311,21 +316,38 @@ export class MapRenderer {
 
   _drawMiasmaOverlay(ctx) {
     // Exact node-level rendering handled via base_miasma icons.
-    // Keep a faint center indicator if miasma is active.
+    // Additionally draw the safe zone circle (game-native white ring)
+    // centered at center_position_x/y.
     const a = this.miasmaInfo && this.miasmaInfo.after;
-    if (!a || !a.is_miasmic || a.center_position_x == null) return;
-    const cx = a.center_position_x;
-    const cy = a.center_position_y;
+    if (!a || !a.is_miasmic) return;
 
-    ctx.beginPath();
-    ctx.arc(cx, cy, 10, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(200, 80, 255, 0.6)';
-    ctx.lineWidth = 3;
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(cx, cy, 4, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(200, 80, 255, 0.8)';
-    ctx.fill();
+    if (a.center_position_x != null && a.center_position_y != null) {
+      const level = a.level || 1;
+      const radius = this.miasmaCircleRadius[level] || this.miasmaCircleRadius[1];
+      const img = level === 2 ? this.images.miasmaCircle2 : this.images.miasmaCircle1;
+      const cx = a.center_position_x;
+      const cy = a.center_position_y;
+
+      if (img && img.complete && img.naturalWidth > 0) {
+        // Game anchors the circle image so its center sits at (cx, cy)
+        ctx.drawImage(img, cx - radius, cy - radius, radius * 2, radius * 2);
+      } else {
+        // Fallback: white dashed ring
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([12, 8]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // Center marker
+      ctx.beginPath();
+      ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.fill();
+    }
   }
 
   _drawEdges(ctx) {
