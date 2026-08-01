@@ -78,6 +78,15 @@ html, body {
   min-width: 60px;
 }
 
+.party-portrait {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  object-fit: cover;
+  border: 1px solid #30363d;
+  flex-shrink: 0;
+}
+
 .party-hpbar {
   flex: 1;
   height: 10px;
@@ -165,6 +174,32 @@ html, body {
 
 .hud-btn-badge.hidden {
   display: none;
+}
+
+.hud-btn-stale {
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #f0883e;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+  animation: stale-blink 1.2s ease-in-out infinite;
+}
+
+.hud-btn-stale.hidden {
+  display: none;
+}
+
+@keyframes stale-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
 
 #btn-guidebook:hover {

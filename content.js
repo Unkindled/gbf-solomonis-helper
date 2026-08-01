@@ -19,6 +19,7 @@
     partyStatus: /rest\/arcarum3\/dungeon\/party_status/,
     shopLineup: /rest\/arcarum3\/dungeon\/dungeon_shop_lineup\//,
     shopPurchase: /rest\/arcarum3\/dungeon\/purchase_dungeon_shop_item/,
+    battleResult: /\/result\/content\/index\//,
   };
 
   function classifyUrl(url) {

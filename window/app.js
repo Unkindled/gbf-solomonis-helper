@@ -47,6 +47,7 @@ function init() {
     if (state && state.partyStatus) renderPartyBar(state.partyStatus);
     if (state && state.guideBooks) renderGuideBooks(state.guideBooks);
     if (state && state.dungeonPoint != null) renderDungeonPoint(state.dungeonPoint);
+    if (state && state.guideBooksStale) setGuideBooksStale(true);
     if (state && state.shopStock) {
       for (const [k, v] of Object.entries(state.shopStock)) renderer.shopStock[k] = v;
       renderer.render();
@@ -277,6 +278,10 @@ function handleWindowMessage(type, payload) {
       renderDungeonPoint(payload);
       break;
 
+    case 'guidebooks-stale':
+      setGuideBooksStale(!!payload);
+      break;
+
     case 'shop-stock':
       // payload: {nodeId, stock:{items, coinAfter}}
       if (payload && payload.nodeId != null && payload.stock) {
@@ -294,6 +299,11 @@ function renderDungeonPoint(value) {
   el.textContent = `🪙 ${value}`;
 }
 
+function setGuideBooksStale(stale) {
+  const el = document.getElementById('guidebook-stale');
+  if (el) el.classList.toggle('hidden', !stale);
+}
+
 function renderPartyBar(party) {
   const el = document.getElementById('party-bar');
   if (!Array.isArray(party) || party.length === 0) {
@@ -306,7 +316,11 @@ function renderPartyBar(party) {
     const pct = Math.max(0, Math.min(100, Math.round(hp / maxHp * 100)));
     const color = pct > 50 ? '#4caf50' : pct > 25 ? '#ffa726' : '#f44336';
     const label = m.is_pc ? 'PC' : `N${i}`;
+    // Character portrait: leader path for the PC, npc path otherwise
+    const base = 'https://prd-game-a-granbluefantasy.akamaized.net/assets_en/img/sp/assets/';
+    const imgUrl = m.image_id ? `${base}${m.is_pc ? 'leader' : 'npc'}/raid_normal/${m.image_id}.jpg` : '';
     return `<div class="party-member" title="${label}">
+      ${imgUrl ? `<img class="party-portrait" src="${imgUrl}" alt="">` : ''}
       <div class="party-hpbar"><div class="party-hpfill" style="width:${pct}%;background:${color}"></div></div>
       <span class="party-hptext">${hp}</span>
     </div>`;

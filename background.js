@@ -12,6 +12,7 @@ let gameState = {
   dungeonPoint: 0,        // possession_arcarum3_dungeon_point (Sephira coins)
   guideBooks: [],         // collected guide book effects [{status_id,name,rarity,...}]
   guideBookCandidates: [], // recent pick candidates [{status_id,name,rarity,icon_type}]
+  guideBooksStale: false, // set true after battle end (drops may be missed)
   shopStock: new Map(),   // node_id → {coinAfter, items:[{lineup_id,name,price,stock,canBuy}]}
 };
 
@@ -113,6 +114,13 @@ function handleGameData(type, data) {
     case 'shopPurchase':
       handleShopPurchase(data);
       break;
+    case 'battleResult':
+      // Battle ended → guidebook drops may have happened silently.
+      // Flag stale so the UI reminds the player to open the in-game
+      // guidebook page (which triggers spacebook_status_list).
+      gameState.guideBooksStale = true;
+      broadcastToWindow('guidebooks-stale', true);
+      break;
   }
 }
 
@@ -130,7 +138,9 @@ function handleSpacebookList(data) {
     num: b.num,
   }));
   gameState.guideBooks = books;
+  gameState.guideBooksStale = false; // full sync → no longer stale
   broadcastToWindow('guide-books', books);
+  broadcastToWindow('guidebooks-stale', false);
 }
 
 // --- Shop ---
