@@ -314,20 +314,45 @@ function renderPartyBar(party) {
 }
 
 function renderGuideBooks(books) {
-  // Update the popup (map top-right)
+  // Update popup (map top-right)
   const body = document.getElementById('guidebook-popup-body');
+  const badge = document.getElementById('guidebook-badge');
   if (!body) return;
+
   if (!Array.isArray(books) || books.length === 0) {
     body.innerHTML = '<div class="guidebook-popup-empty">No guide books yet</div>';
+    if (badge) { badge.classList.add('hidden'); badge.textContent = '0'; }
     return;
   }
-  const rows = books.map(b => {
+
+  // Merge duplicates by status_id (same guidebook can be held multiple times;
+  // server reports `num` for duplicates, e.g. X2/X3)
+  const merged = [];
+  const byId = new Map();
+  for (const b of books) {
+    const key = b.status_id != null ? String(b.status_id) : b.name;
+    if (byId.has(key)) {
+      byId.get(key).num += (b.num || 1);
+    } else {
+      const copy = { ...b, num: b.num || 1 };
+      byId.set(key, copy);
+      merged.push(copy);
+    }
+  }
+  // Sort: rarity desc, then name
+  merged.sort((a, b) => (b.rarity || 0) - (a.rarity || 0) || String(a.name).localeCompare(String(b.name)));
+
+  const total = merged.reduce((s, b) => s + b.num, 0);
+  if (badge) { badge.textContent = String(total); badge.classList.remove('hidden'); }
+
+  const rows = merged.map(b => {
     const iconUrl = b.icon_type ? `../assets/icon_book_effect/book_effect_${b.icon_type}.png` : '';
     const rarLabel = { 1: '★', 2: '★★', 3: '★★★', 99: '?' }[b.rarity] || '';
     const name = (b.name || '').replace(/@@/g, ' ');
+    const countLabel = b.num > 1 ? ` ×${b.num}` : '';
     return `<div class="guidebook-popup-row">
       ${iconUrl ? `<img class="gb-icon" src="${iconUrl}" alt="">` : '<div class="gb-icon"></div>'}
-      <span class="gb-name">${name}</span>
+      <span class="gb-name">${name}<span class="gb-count">${countLabel}</span></span>
       <span class="gb-rarity">${rarLabel}</span>
     </div>`;
   }).join('');
