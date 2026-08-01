@@ -470,12 +470,16 @@ export class MapRenderer {
     ctx.setLineDash([]);
 
     // --- Safe zone white circle (game-native ring) ---
+    // The white ring marks the server-provided safe zone (center_position),
+    // NOT the fitted miasma boundary center.
+    const safeCx = a.center_position_x - OFFSET.X;
+    const safeCy = a.center_position_y - OFFSET.Y;
     if (img && img.complete && img.naturalWidth > 0) {
-      // Game anchors the circle image so its center sits at (cx, cy)
-      ctx.drawImage(img, cx - safeRadius, cy - safeRadius, safeRadius * 2, safeRadius * 2);
+      // Game anchors the circle image so its center sits at (safeCx, safeCy)
+      ctx.drawImage(img, safeCx - safeRadius, safeCy - safeRadius, safeRadius * 2, safeRadius * 2);
     } else {
       ctx.beginPath();
-      ctx.arc(cx, cy, safeRadius, 0, Math.PI * 2);
+      ctx.arc(safeCx, safeCy, safeRadius, 0, Math.PI * 2);
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
       ctx.lineWidth = 3;
       ctx.setLineDash([12, 8]);
@@ -485,7 +489,7 @@ export class MapRenderer {
 
     // Center marker
     ctx.beginPath();
-    ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+    ctx.arc(safeCx, safeCy, 6, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
     ctx.fill();
   }
