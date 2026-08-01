@@ -78,6 +78,9 @@ export class MapRenderer {
 
     // Circle image radii (from PNG dimensions / 2)
     this.miasmaCircleRadius = { 1: 670, 2: 67 };
+    // Lv1 safe-zone center (raw center_position) recorded during Lv1,
+    // used as the starting circle for Lv2's shrink interpolation.
+    this.lv1Center = null;
 
     let pending = Object.keys(defs).length;
     const done = () => {
@@ -321,20 +324,64 @@ export class MapRenderer {
     }
   }
 
-  // Miasma shrink model (verified from game data):
-  //   Lv1: boundary closes from map edge (1600) to Lv1 safe radius (670)
-  //        over the level's total countdown.
-  //   Lv2: boundary closes from Lv1 safe radius (670) to Lv2 safe radius (67)
-  //        — it starts at the Lv1 safe zone, NOT the map edge.
-  // The countdown (turns until next shrink step) drives linear progress.
-  _computeMiasmaRadius(level, countdown) {
-    const cfg = {
-      1: { start: 1600, end: 670 },
-      2: { start: 670, end: 67 },
-    }[level] || { start: 1600, end: 670 };
-    const total = 20; // observed total countdown per level
-    const progress = countdown == null ? 1 : Math.max(0, Math.min(1, 1 - countdown / total));
-    return cfg.start + (cfg.end - cfg.start) * progress;
+  // Miasma shrink model:
+  //   Lv1: fit boundary from is_shrinking state (no cumulative pollution in Lv1).
+  //   Lv2: interpolate between the Lv1 safe circle (center C1, radius 670) and
+  //        the Lv2 safe circle (center C2, radius 67) over 20 turns — both
+  //        center and radius lerp linearly, so the circles are NOT concentric.
+  _fitMiasmaRadius(cx, cy) {
+    const items = [];
+    for (const [, n] of this.nodeMap) {
+      items.push({ d: Math.hypot(n.position_x - cx, n.position_y - cy), s: !!n.is_shrinking });
+    }
+    if (items.length === 0) return null;
+    items.sort((a, b) => a.d - b.d);
+
+    const prefix = new Array(items.length);
+    let cnt = 0;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].s) cnt++;
+      prefix[i] = cnt;
+    }
+    const totalShrink = cnt;
+    const totalSafe = items.length - totalShrink;
+
+    let bestR = null, bestErr = Infinity;
+    for (let i = 0; i < items.length; i++) {
+      const R = items[i].d;
+      const shrinkIn = prefix[i];
+      const safeOut = totalSafe - (i + 1 - shrinkIn);
+      const err = shrinkIn + safeOut;
+      if (err < bestErr) {
+        bestErr = err;
+        bestR = R;
+      }
+    }
+    return { R: bestR, err: bestErr, total: items.length };
+  }
+
+  // Record the Lv1 safe-zone center so Lv2 can interpolate from it.
+  _trackLv1Center(a) {
+    if (a.level === 1 && a.center_position_x != null && a.center_position_y != null) {
+      this.lv1Center = { x: a.center_position_x, y: a.center_position_y };
+    }
+  }
+
+  // Compute Lv2's current circle: center and radius both lerp from the Lv1
+  // safe circle to the Lv2 safe circle over the level's total countdown.
+  _computeLv2Circle(a) {
+    const c2x = a.center_position_x;
+    const c2y = a.center_position_y;
+    const c1 = this.lv1Center || { x: c2x, y: c2y }; // fallback: concentric
+    const total = 20;
+    const progress = a.miasma_stop_countdown == null
+      ? 1
+      : Math.max(0, Math.min(1, 1 - a.miasma_stop_countdown / total));
+    return {
+      x: c1.x + (c2x - c1.x) * progress,
+      y: c1.y + (c2y - c1.y) * progress,
+      r: 670 + (67 - 670) * progress, // Lv1 safe radius → Lv2 safe radius
+    };
   }
 
   _drawMiasmaOverlay(ctx) {
@@ -347,12 +394,25 @@ export class MapRenderer {
     const img = level === 2 ? this.images.miasmaCircle2 : this.images.miasmaCircle1;
     // center_position 是中心节点的地面点；本插件节点地面点 = position，
     // 而 position = 地面点 - MIASMA_CENTER_OFFSET，故圆心需减去该偏移对齐。
-    const cx = a.center_position_x - MIASMA_CENTER_OFFSET.X;
-    const cy = a.center_position_y - MIASMA_CENTER_OFFSET.Y;
+    const OFFSET = MIASMA_CENTER_OFFSET;
 
-    // Miasma boundary radius from the level-based shrink model
-    // (Lv1: 1600→670, Lv2: 670→67, driven by countdown).
-    const miasmaR = this._computeMiasmaRadius(level, a.miasma_stop_countdown);
+    // Track Lv1 center for Lv2 interpolation, then pick the model per level.
+    this._trackLv1Center(a);
+
+    let cx, cy, miasmaR;
+    if (level === 1) {
+      // Lv1: fit the boundary from is_shrinking (accurate, no Lv1 pollution)
+      cx = a.center_position_x - OFFSET.X;
+      cy = a.center_position_y - OFFSET.Y;
+      const fit = this._fitMiasmaRadius(cx, cy);
+      miasmaR = fit ? Math.max(fit.R, safeRadius) : 1600;
+    } else {
+      // Lv2: interpolate center + radius from Lv1 safe circle to Lv2 safe circle
+      const c = this._computeLv2Circle(a);
+      cx = c.x - OFFSET.X;
+      cy = c.y - OFFSET.Y;
+      miasmaR = Math.max(c.r, safeRadius);
+    }
 
     // --- Pollution effect: purple-red haze outside the miasma boundary ---
     // Draw a full-map rect, punch out the safe circle with even-odd fill.
