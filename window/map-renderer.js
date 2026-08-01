@@ -78,9 +78,6 @@ export class MapRenderer {
 
     // Circle image radii (from PNG dimensions / 2)
     this.miasmaCircleRadius = { 1: 670, 2: 67 };
-    // Runtime-fitted miasma boundary radius (from is_shrinking state)
-    this.miasmaFitRadius = null;
-    this._miasmaCacheKey = null;
 
     let pending = Object.keys(defs).length;
     const done = () => {
@@ -324,40 +321,20 @@ export class MapRenderer {
     }
   }
 
-  // Fit the miasma boundary radius from per-node is_shrinking state.
-  // The miasma is NOT a perfect circle (pattern-driven spread), but the
-  // fitted circle minimizes misclassification — good enough for rendering.
-  _fitMiasmaRadius(cx, cy) {
-    const items = [];
-    for (const [, n] of this.nodeMap) {
-      items.push({ d: Math.hypot(n.position_x - cx, n.position_y - cy), s: !!n.is_shrinking });
-    }
-    if (items.length === 0) return null;
-    items.sort((a, b) => a.d - b.d);
-
-    // Prefix counts: shrinkCount[i] = # shrinking with d <= items[i].d
-    const prefix = new Array(items.length);
-    let cnt = 0;
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].s) cnt++;
-      prefix[i] = cnt;
-    }
-    const totalShrink = cnt;
-    const totalSafe = items.length - totalShrink;
-
-    let bestR = null, bestErr = Infinity;
-    for (let i = 0; i < items.length; i++) {
-      const R = items[i].d;
-      // errors: shrinking nodes with d <= R (misclassified inside) + safe nodes with d > R
-      const shrinkIn = prefix[i];
-      const safeOut = totalSafe - (i + 1 - shrinkIn);
-      const err = shrinkIn + safeOut;
-      if (err < bestErr) {
-        bestErr = err;
-        bestR = R;
-      }
-    }
-    return { R: bestR, err: bestErr, total: items.length };
+  // Miasma shrink model (verified from game data):
+  //   Lv1: boundary closes from map edge (1600) to Lv1 safe radius (670)
+  //        over the level's total countdown.
+  //   Lv2: boundary closes from Lv1 safe radius (670) to Lv2 safe radius (67)
+  //        — it starts at the Lv1 safe zone, NOT the map edge.
+  // The countdown (turns until next shrink step) drives linear progress.
+  _computeMiasmaRadius(level, countdown) {
+    const cfg = {
+      1: { start: 1600, end: 670 },
+      2: { start: 670, end: 67 },
+    }[level] || { start: 1600, end: 670 };
+    const total = 20; // observed total countdown per level
+    const progress = countdown == null ? 1 : Math.max(0, Math.min(1, 1 - countdown / total));
+    return cfg.start + (cfg.end - cfg.start) * progress;
   }
 
   _drawMiasmaOverlay(ctx) {
@@ -373,16 +350,9 @@ export class MapRenderer {
     const cx = a.center_position_x - MIASMA_CENTER_OFFSET.X;
     const cy = a.center_position_y - MIASMA_CENTER_OFFSET.Y;
 
-    // Cache-fit the miasma boundary radius (recompute when state changes)
-    const key = level + '|' + cx.toFixed(0) + '|' + cy.toFixed(0) + '|' + this.nodeMap.size + '|' + (a.step || 0);
-    if (key !== this._miasmaCacheKey) {
-      this._miasmaCacheKey = key;
-      this.miasmaFitRadius = this._fitMiasmaRadius(cx, cy);
-    }
-    const fit = this.miasmaFitRadius;
-    // The visible miasma edge sits between safe circle and fitted boundary;
-    // use the fitted radius when available (it reflects actual shrink progress)
-    const miasmaR = fit ? Math.max(fit.R, safeRadius) : 1600;
+    // Miasma boundary radius from the level-based shrink model
+    // (Lv1: 1600→670, Lv2: 670→67, driven by countdown).
+    const miasmaR = this._computeMiasmaRadius(level, a.miasma_stop_countdown);
 
     // --- Pollution effect: purple-red haze outside the miasma boundary ---
     // Draw a full-map rect, punch out the safe circle with even-odd fill.
