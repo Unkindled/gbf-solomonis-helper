@@ -308,7 +308,6 @@ export class MapRenderer {
     this._drawEdges(ctx);
     this._drawTeleporterLinks(ctx);
     this._drawPath(ctx);
-    this._drawPredictedCircles(ctx);
     this._drawNodes(ctx);
     this._drawPlayer(ctx);
 
@@ -594,10 +593,6 @@ export class MapRenderer {
 
   _drawPath(ctx) {
     if (!this.path || this.path.length < 2) return;
-    const dangerSet = new Set();
-    if (this.pathAnnotation) {
-      for (const d of this.pathAnnotation.dangerSteps) dangerSet.add(d.step);
-    }
 
     // Outer glow pass
     ctx.lineCap = 'round';
@@ -606,11 +601,10 @@ export class MapRenderer {
       const a = this.nodeMap.get(this.path[i]);
       const b = this.nodeMap.get(this.path[i + 1]);
       if (!a || !b) continue;
-      const segDanger = dangerSet.has(i) || dangerSet.has(i + 1);
       ctx.beginPath();
       ctx.moveTo(a.position_x, a.position_y);
       ctx.lineTo(b.position_x, b.position_y);
-      ctx.strokeStyle = segDanger ? 'rgba(255, 40, 40, 0.3)' : 'rgba(255, 220, 50, 0.3)';
+      ctx.strokeStyle = 'rgba(255, 220, 50, 0.3)';
       ctx.lineWidth = 14;
       ctx.stroke();
     }
@@ -620,11 +614,10 @@ export class MapRenderer {
       const a = this.nodeMap.get(this.path[i]);
       const b = this.nodeMap.get(this.path[i + 1]);
       if (!a || !b) continue;
-      const segDanger = dangerSet.has(i) || dangerSet.has(i + 1);
       ctx.beginPath();
       ctx.moveTo(a.position_x, a.position_y);
       ctx.lineTo(b.position_x, b.position_y);
-      ctx.strokeStyle = segDanger ? 'rgba(255, 70, 70, 0.95)' : 'rgba(255, 230, 80, 0.95)';
+      ctx.strokeStyle = 'rgba(255, 230, 80, 0.95)';
       ctx.lineWidth = 7;
       ctx.stroke();
     }
@@ -635,11 +628,10 @@ export class MapRenderer {
     for (let i = 1; i < this.path.length; i++) {
       const node = this.nodeMap.get(this.path[i]);
       if (!node) continue;
-      const danger = dangerSet.has(i);
       const label = String(i);
       const tw = ctx.measureText(label).width + 14;
       const ly = node.position_y - NODE_H - 16;
-      ctx.fillStyle = danger ? 'rgba(180, 30, 30, 0.9)' : 'rgba(160, 130, 0, 0.9)';
+      ctx.fillStyle = 'rgba(160, 130, 0, 0.9)';
       ctx.beginPath();
       ctx.roundRect(node.position_x - tw / 2, ly, tw, 26, 6);
       ctx.fill();
@@ -648,35 +640,6 @@ export class MapRenderer {
       ctx.stroke();
       ctx.fillStyle = '#fff';
       ctx.fillText(label, node.position_x, ly + 19);
-    }
-  }
-
-  _drawPredictedCircles(ctx) {
-    if (!this.pathAnnotation || !this.pathAnnotation.predictions) return;
-
-    for (const [step, predicted] of this.pathAnnotation.predictions) {
-      if (!predicted.active || predicted.cx == null || predicted.cy == null) continue;
-      if (predicted.phase === 'inactive') continue;
-      if (predicted.radius <= 0 || predicted.radius === Infinity) continue;
-
-      // Only draw if different from current circle
-      const a = this.miasmaInfo && this.miasmaInfo.after;
-      const isCurrent = a && a.is_miasmic && a.level === predicted.level;
-      if (isCurrent) continue;
-
-      ctx.beginPath();
-      ctx.arc(predicted.cx, predicted.cy, predicted.radius, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(255, 100, 100, 0.6)';
-      ctx.lineWidth = 3;
-      ctx.setLineDash([8, 8]);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      // Label
-      ctx.font = 'bold 20px system-ui';
-      ctx.textAlign = 'center';
-      ctx.fillStyle = 'rgba(255, 120, 120, 0.9)';
-      ctx.fillText(`Lv${predicted.level} @ step ${step}`, predicted.cx, predicted.cy - predicted.radius - 12);
     }
   }
 

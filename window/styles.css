@@ -563,6 +563,51 @@ body::before {
 }
 .sidebar-actions .btn-export { margin: 0; flex: 1; }
 
+/* Hidden debug button, bottom-left of the map stage.
+   Collapsed to a faint dot; expands to a labeled button on hover. */
+.btn-export-hidden {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  z-index: 15;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--gold-3);
+  border-radius: 50%;
+  background: rgba(13, 18, 32, 0.35);
+  color: var(--parch-dim);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.35;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.btn-export-hidden .bex-label {
+  display: none;
+}
+.btn-export-hidden:hover .bex-label {
+  display: inline;
+}
+.btn-export-hidden:hover {
+  width: auto;
+  height: 26px;
+  padding: 0 12px;
+  border-radius: 13px;
+  background: rgba(13, 18, 32, 0.9);
+  color: var(--gold-0);
+  border-color: var(--gold-1);
+  opacity: 1;
+  font-size: 11px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+
 .btn-export,
 .btn-small {
   padding: 6px 10px;

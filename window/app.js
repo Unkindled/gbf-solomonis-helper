@@ -3,7 +3,7 @@
 import { MapRenderer } from './map-renderer.js';
 import { FilterPanel } from './filter-panel.js';
 import { findShortestPath } from './pathfinder.js';
-import { annotatePathWithMiasma, MIASMA_ACTIVATION_TURN } from './miasma-predictor.js';
+import { MIASMA_ACTIVATION_TURN } from './miasma-predictor.js';
 import { DUNGEON_STATUS_LABELS, NODE_TYPE_LABELS } from '../shared/constants.js';
 
 let renderer = null;
@@ -115,7 +115,7 @@ function init() {
     langBtn.textContent = I18N.t('btn.lang');
     langBtn.title = I18N.getLang() === 'zh' ? 'Switch to English' : '切换到中文';
     updateStatusBar();
-    updatePathInfo(currentPath ? currentPath : null, currentPath ? annotatePathWithMiasma(currentPath, nodeMap, currentMiasmaInfo, currentTurn) : null);
+    if (currentPath) updatePathInfo(currentPath); else updatePathInfo(null);
   }
   applyLanguage();
 
@@ -243,15 +243,18 @@ function handleWindowMessage(type, payload) {
       renderer.totalTurn = currentTurn;
       renderer.updatePosition(payload.currentNodeId, currentMiasmaInfo, currentTurn);
 
-      // Path auto-advance
-      if (currentPath && currentPath.length > 1) {
-        if (payload.currentNodeId === currentPath[1]) {
-          currentPath = currentPath.slice(1);
-        } else if (!currentPath.includes(payload.currentNodeId)) {
-          clearCurrentPath();
+      // Path auto-advance: if the player is on the planned path, the route
+      // should start from where they actually are now (handles event-end
+      // teleports, skipped nodes, multi-step moves).
+      if (currentPath && currentPath.length > 0) {
+        const idx = currentPath.indexOf(payload.currentNodeId);
+        if (idx >= 0) {
+          // On the path → trim everything before the current node
+          currentPath = currentPath.slice(idx);
+          if (currentPath.length <= 1) clearCurrentPath(); // reached destination
+        } else {
+          clearCurrentPath(); // off-path → drop the stale route
         }
-      } else if (currentPath && currentPath.length === 1) {
-        if (payload.currentNodeId === currentPath[0]) clearCurrentPath();
       }
 
       updateStatusBar();
@@ -485,7 +488,7 @@ function handleNodeClick(node) {
 
   const segment = findShortestPath(nodeMap, startId, clickedId);
   if (!segment) {
-    updatePathInfo(null, null, 'No path found!');
+    updatePathInfo(null, 'No path found!');
     return;
   }
 
@@ -511,9 +514,8 @@ function clearCurrentPath() {
 
 function reEvaluatePath() {
   if (!currentPath || !renderer) return;
-  const annotation = annotatePathWithMiasma(currentPath, nodeMap, currentMiasmaInfo, currentTurn);
-  renderer.setPath(currentPath, annotation);
-  updatePathInfo(currentPath, annotation);
+  renderer.setPath(currentPath, null);
+  updatePathInfo(currentPath);
 }
 
 // --- UI updates ---
@@ -546,7 +548,7 @@ function updateStatusBar(override) {
   el.innerHTML = `<span class="status-turn">${I18N.t('status.turn', { turn })}</span><span class="status-sep">·</span><span class="status-state">${status}</span>${miasmaHtml ? '<br>' + miasmaHtml : ''}`;
 }
 
-function updatePathInfo(path, annotation, error) {
+function updatePathInfo(path, error) {
   const el = document.getElementById('path-info');
   if (error) {
     el.innerHTML = `<span class="path-error">${error}</span>`;
@@ -568,22 +570,8 @@ function updatePathInfo(path, annotation, error) {
   }
   const summary = Object.entries(counts).map(([k, v]) => `${k}×${v}`).join(', ');
 
-  let dangerHtml = '';
-  if (annotation && annotation.dangerSteps.length > 0) {
-    const first = annotation.firstDangerStep;
-    const details = annotation.dangerSteps.slice(0, 8).map(d => {
-      const phaseLabel = d.phase === 'lv2' || d.phase === 'predicted-lv2' ? I18N.t('path.phaseLv2') : I18N.t('path.phaseMiasma');
-      return `step ${d.step} (#${d.nodeId}) ${phaseLabel}`;
-    });
-    const more = annotation.dangerSteps.length > 8 ? ` +${annotation.dangerSteps.length - 8} more` : '';
-    dangerHtml = `<div class="path-danger">${I18N.t('path.affected', { affected: annotation.dangerSteps.length, total: path.length, first })}<br><small>${details.join('<br>')}${more}</small></div>`;
-  } else {
-    dangerHtml = `<div class="path-safe">${I18N.t('path.safe')}</div>`;
-  }
-
   el.innerHTML = `
     <div class="path-summary"><strong>${I18N.t('path.summary', { steps, summary })}</strong></div>
-    ${dangerHtml}
   `;
 }
 
