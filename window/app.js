@@ -144,12 +144,32 @@ function applyFullMap(mapData) {
     clearCurrentPath();
     renderer.setMap(dungeon);
   } else {
+    // Player position may have changed after finishing an event/battle
+    // (content/index re-fetch returns the new current_node_id).
+    const oldNodeId = renderer.currentNodeId;
     renderer.nodeMap = nodeMap;
     renderer.currentNodeId = dungeon.current_node_id;
     renderer.miasmaInfo = currentMiasmaInfo;
     renderer.totalTurn = currentTurn;
     renderer._updateAdjacentSet();
     renderer.render();
+
+    // If the player moved (event/battle end), re-plan the path from the
+    // NEW position, keeping the original destination.
+    if (oldNodeId != null && oldNodeId !== dungeon.current_node_id && currentPath) {
+      if (currentPath.length <= 1) {
+        // Player already reached the single-node target → clear
+        clearCurrentPath();
+      } else {
+        const destId = currentPath[currentPath.length - 1];
+        const newPath = findShortestPath(nodeMap, dungeon.current_node_id, destId);
+        if (newPath) {
+          currentPath = newPath;
+        } else {
+          clearCurrentPath();
+        }
+      }
+    }
   }
 
   if (filterPanel) filterPanel.setPresentSpecials(getPresentSpecialIds());
