@@ -63,8 +63,9 @@ html, body {
   background: var(--ink-0);
 }
 
-/* Ambient ground: inked night with a slow-drifting gilt aurora and a
-   top light-bar, like the metal rim of the game's own frames. */
+/* Ambient ground: static inked-night gradients. The previous 26s
+   background-position drift repainted the whole window every frame
+   (main perf hit) — now static. */
 body::before {
   content: "";
   position: fixed;
@@ -75,11 +76,6 @@ body::before {
     radial-gradient(60% 50% at 18% 8%, rgba(217,178,90,0.10), transparent 55%),
     radial-gradient(55% 45% at 88% 92%, rgba(122,31,77,0.12), transparent 55%),
     radial-gradient(140% 100% at 50% 0%, #16203a, #0a0e1a 60%, #06080f);
-  animation: aurora-drift 26s ease-in-out infinite alternate;
-}
-@keyframes aurora-drift {
-  0%   { background-position: 0% 0%, 100% 100%, 0 0; }
-  100% { background-position: 6% 4%, 92% 94%, 0 0; }
 }
 
 #app {
@@ -178,7 +174,6 @@ body::before {
   text-shadow: 0 1px 2px rgba(0,0,0,0.7);
   white-space: nowrap;
   height: 44px;
-  animation: coin-breathe 4.5s ease-in-out infinite;
 }
 .coin-chip::before {
   content: "";
@@ -189,10 +184,6 @@ body::before {
   background:
     radial-gradient(circle at 35% 30%, #fff3cf, var(--gold-1) 45%, var(--gold-3) 100%);
   box-shadow: 0 0 8px var(--gold-glow), inset 0 0 0 2px rgba(124,90,30,0.6), inset 0 -2px 3px rgba(0,0,0,0.4);
-}
-@keyframes coin-breathe {
-  0%, 100% { box-shadow: var(--shadow-deep), 0 0 0 rgba(243,226,176,0); }
-  50%      { box-shadow: var(--shadow-deep), 0 0 14px rgba(243,226,176,0.18); }
 }
 
 /* ---------- Party bar — sized to its members, packed left ---------- */
@@ -257,17 +248,21 @@ body::before {
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.35);
 }
 .party-hpfill::after {
-  /* a slow sheen sweeping the gauge */
+  /* sheen sweeps the gauge once on hover only (infinite loops cost frames) */
   content: "";
   position: absolute;
   inset: 0;
   background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.45) 50%, transparent 70%);
   transform: translateX(-100%);
-  animation: gauge-sheen 3.4s ease-in-out infinite;
+  opacity: 0;
+}
+.party-member:hover .party-hpfill::after {
+  opacity: 1;
+  animation: gauge-sheen 0.9s ease-in-out forwards;
 }
 @keyframes gauge-sheen {
-  0%, 60% { transform: translateX(-100%); }
-  100%    { transform: translateX(120%); }
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(120%); }
 }
 .party-hppct {
   position: absolute;

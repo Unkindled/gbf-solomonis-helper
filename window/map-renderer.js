@@ -253,8 +253,9 @@ export class MapRenderer {
   }
 
   _fitView() {
-    const w = this.canvas.width;
-    const h = this.canvas.height;
+    const dpr = this.dpr || 1;
+    const w = this.canvas.width / dpr;
+    const h = this.canvas.height / dpr;
     this.scale = Math.min(w / (BG_W + 80), h / (BG_H + 80)) * 0.95;
     this.offsetX = (w - BG_W * this.scale) / 2;
     this.offsetY = (h - BG_H * this.scale) / 2;
@@ -279,17 +280,22 @@ export class MapRenderer {
     const w = this.canvas.width;
     const h = this.canvas.height;
 
-    ctx.clearRect(0, 0, w, h);
+    // Map logical (CSS px) coordinates onto the physical backing store so
+    // we draw at full device resolution once, not a scaled-up bitmap.
+    const dpr = this.dpr || 1;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    ctx.clearRect(0, 0, w / dpr, h / dpr);
     ctx.fillStyle = '#0a0e14';
-    ctx.fillRect(0, 0, w, h);
+    ctx.fillRect(0, 0, w / dpr, h / dpr);
 
     if (this.nodeMap.size === 0) {
       ctx.fillStyle = '#6e7681';
       ctx.font = '15px system-ui';
       ctx.textAlign = 'center';
-      ctx.fillText('Waiting for game data...', w / 2, h / 2 - 12);
+      ctx.fillText('Waiting for game data...', w / dpr / 2, h / dpr / 2 - 12);
       ctx.font = '12px system-ui';
-      ctx.fillText('Open Evoking Solomonis dungeon in the game tab.', w / 2, h / 2 + 14);
+      ctx.fillText('Open Evoking Solomonis dungeon in the game tab.', w / dpr / 2, h / dpr / 2 + 14);
       return;
     }
 
@@ -869,7 +875,9 @@ export class MapRenderer {
     const lineH = 16;
     const tw = Math.min(Math.max(...displayLines.map(l => ctx.measureText(l).width)) + 16, 480);
     const th = lineH * displayLines.length + 8;
-    const tx = Math.min(screen.x + 18, this.canvas.width - tw - 5);
+    const dpr = this.dpr || 1;
+    const cw = this.canvas.width / dpr;
+    const tx = Math.min(screen.x + 18, cw - tw - 5);
     const ty = Math.max(screen.y - NODE_H * this.scale - 34 - (displayLines.length - 1) * lineH, 20);
 
     ctx.fillStyle = 'rgba(10, 14, 20, 0.92)';
@@ -892,16 +900,18 @@ export class MapRenderer {
     if (this.currentNodeId == null) return;
     const node = this.nodeMap.get(this.currentNodeId);
     if (!node) return;
-    const w = this.canvas.width;
-    const h = this.canvas.height;
+    const dpr = this.dpr || 1;
+    const w = this.canvas.width / dpr;
+    const h = this.canvas.height / dpr;
     this.offsetX = w / 2 - node.position_x * this.scale;
     this.offsetY = h / 2 - (node.position_y - NODE_H / 2) * this.scale;
     this.render();
   }
 
-  resize(width, height) {
+  resize(width, height, dpr) {
     this.canvas.width = width;
     this.canvas.height = height;
+    this.dpr = dpr || 1;
     this.render();
   }
 }

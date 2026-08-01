@@ -23,9 +23,12 @@ function init() {
 
   function resizeCanvas() {
     const container = document.getElementById('map-container');
-    canvas.width = container.clientWidth;
-    canvas.height = container.clientHeight;
-    if (renderer) renderer.resize(canvas.width, canvas.height);
+    const dpr = window.devicePixelRatio || 1;
+    // Allocate backing store at device resolution so the browser doesn't
+    // rescale every frame (blurry + slower at DPI > 100%).
+    canvas.width = Math.round(container.clientWidth * dpr);
+    canvas.height = Math.round(container.clientHeight * dpr);
+    if (renderer) renderer.resize(canvas.width, canvas.height, dpr);
   }
   window.addEventListener('resize', resizeCanvas);
   resizeCanvas();
