@@ -132,6 +132,17 @@ html, body {
   transition: background 0.15s, color 0.15s;
 }
 
+.sidebar-actions {
+  display: flex;
+  gap: 6px;
+  padding: 6px 12px;
+}
+
+.sidebar-actions .btn-export {
+  margin: 0;
+  flex: 1;
+}
+
 .btn-export:hover {
   background: #30363d;
   color: #e6edf3;
@@ -243,6 +254,14 @@ html, body {
   height: 14px;
   accent-color: #26a69a;
   cursor: pointer;
+}
+
+.filter-icon {
+  width: 20px;
+  height: 22px;
+  flex-shrink: 0;
+  object-fit: contain;
+  image-rendering: auto;
 }
 
 .filter-dot {

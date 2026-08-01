@@ -72,6 +72,27 @@ function init() {
     });
   });
 
+  // Language toggle
+  const langBtn = document.getElementById('btn-lang');
+  langBtn.addEventListener('click', () => {
+    const next = I18N.getLang() === 'zh' ? 'en' : 'zh';
+    I18N.setLang(next);
+    applyLanguage();
+  });
+
+  function applyLanguage() {
+    // Rebuild filter panel with new labels
+    filterPanel = new FilterPanel(document.getElementById('filter-panel'), (types, specials) => {
+      renderer.setFilter(types, specials);
+    });
+    if (dungeon) filterPanel.setPresentSpecials(getPresentSpecialIds());
+    langBtn.textContent = I18N.t('btn.lang');
+    langBtn.title = I18N.getLang() === 'zh' ? 'Switch to English' : '切换到中文';
+    updateStatusBar();
+    updatePathInfo(currentPath ? currentPath : null, currentPath ? annotatePathWithMiasma(currentPath, nodeMap, currentMiasmaInfo, currentTurn) : null);
+  }
+  applyLanguage();
+
   // Keyboard
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
@@ -298,7 +319,7 @@ function updateStatusBar(override) {
     return;
   }
   if (!dungeon) {
-    el.innerHTML = '<span class="status-waiting">Waiting for game data...</span>';
+    el.innerHTML = `<span class="status-waiting">${I18N.t('status.waiting')}</span>`;
     return;
   }
 
@@ -308,15 +329,15 @@ function updateStatusBar(override) {
   let miasmaHtml = '';
   const a = currentMiasmaInfo && currentMiasmaInfo.after;
   if (a && a.is_miasmic) {
-    miasmaHtml = `<span class="status-miasma">☠ Miasma Lv${a.level} · ${a.miasma_stop_countdown} turns until shrink</span>`;
+    miasmaHtml = `<span class="status-miasma">${I18N.t('status.miasma', { level: a.level, countdown: a.miasma_stop_countdown })}</span>`;
   } else {
     const turnsUntil = MIASMA_ACTIVATION_TURN - turn;
     if (turnsUntil > 0) {
-      miasmaHtml = `<span class="status-safe">Miasma in ~${turnsUntil} turns</span>`;
+      miasmaHtml = `<span class="status-safe">${I18N.t('status.miasmaBefore', { turns: turnsUntil })}</span>`;
     }
   }
 
-  el.innerHTML = `<span class="status-turn">Turn ${turn}</span><span class="status-sep">·</span><span class="status-state">${status}</span>${miasmaHtml ? '<br>' + miasmaHtml : ''}`;
+  el.innerHTML = `<span class="status-turn">${I18N.t('status.turn', { turn })}</span><span class="status-sep">·</span><span class="status-state">${status}</span>${miasmaHtml ? '<br>' + miasmaHtml : ''}`;
 }
 
 function updatePathInfo(path, annotation, error) {
@@ -326,7 +347,7 @@ function updatePathInfo(path, annotation, error) {
     return;
   }
   if (!path) {
-    el.innerHTML = '<span class="path-hint">Click a node to plan a route. Click again to extend. Click your position or Esc to clear.</span>';
+    el.innerHTML = `<span class="path-hint">${I18N.t('path.hint')}</span>`;
     return;
   }
 
@@ -336,7 +357,7 @@ function updatePathInfo(path, annotation, error) {
   for (const id of path) {
     const n = nodeMap.get(id);
     if (!n) continue;
-    const label = NODE_TYPE_LABELS[n.node_type] || `type:${n.node_type}`;
+    const label = I18N.t('nodeType.' + n.node_type) || NODE_TYPE_LABELS[n.node_type] || `type:${n.node_type}`;
     counts[label] = (counts[label] || 0) + 1;
   }
   const summary = Object.entries(counts).map(([k, v]) => `${k}×${v}`).join(', ');
@@ -345,17 +366,17 @@ function updatePathInfo(path, annotation, error) {
   if (annotation && annotation.dangerSteps.length > 0) {
     const first = annotation.firstDangerStep;
     const details = annotation.dangerSteps.slice(0, 8).map(d => {
-      const phaseLabel = d.phase === 'lv2' || d.phase === 'predicted-lv2' ? 'after Lv2 shrink' : 'in miasma';
+      const phaseLabel = d.phase === 'lv2' || d.phase === 'predicted-lv2' ? I18N.t('path.phaseLv2') : I18N.t('path.phaseMiasma');
       return `step ${d.step} (#${d.nodeId}) ${phaseLabel}`;
     });
     const more = annotation.dangerSteps.length > 8 ? ` +${annotation.dangerSteps.length - 8} more` : '';
-    dangerHtml = `<div class="path-danger">⚠ ${annotation.dangerSteps.length}/${path.length} nodes affected — first at step ${first}<br><small>${details.join('<br>')}${more}</small></div>`;
+    dangerHtml = `<div class="path-danger">${I18N.t('path.affected', { affected: annotation.dangerSteps.length, total: path.length, first })}<br><small>${details.join('<br>')}${more}</small></div>`;
   } else {
-    dangerHtml = '<div class="path-safe">✓ Route is safe from miasma</div>';
+    dangerHtml = `<div class="path-safe">${I18N.t('path.safe')}</div>`;
   }
 
   el.innerHTML = `
-    <div class="path-summary"><strong>${steps} step(s)</strong> — ${summary}</div>
+    <div class="path-summary"><strong>${I18N.t('path.summary', { steps, summary })}</strong></div>
     ${dangerHtml}
   `;
 }

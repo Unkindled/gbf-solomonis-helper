@@ -1,6 +1,26 @@
 // Filter panel - node type and special incident checkboxes
+// Uses game-native icons (scaled) + i18n labels.
 
 import { NODE_TYPE_LABELS, NODE_TYPE_COLORS, SPECIAL_NODE_LABELS } from '../shared/constants.js';
+
+// Node type → icon asset file (type 0 'Path' has no icon; show base plate)
+const NODE_TYPE_ICON = {
+  0: 'base.png',
+  1: '1.png',
+  2: '2.png',
+  3: '3.png',
+  4: '4.png',
+  5: '5.png',
+  6: '6.png',
+  7: '7.png',
+  8: '8.png',
+  9: '9.png',
+  10: '10_incident.png',
+  11: '11.png',
+};
+
+const ASSET_BASE = '../assets/node_icon/';
+const ICON_W = 20, ICON_H = 22; // scaled display size (90x100 → 20x22)
 
 export class FilterPanel {
   constructor(container, onChange) {
@@ -8,8 +28,8 @@ export class FilterPanel {
     this.onChange = onChange;
     this.activeTypes = new Set();
     this.activeSpecials = new Set();
-    this.presentSpecials = new Set(); // special ids present in current run
-    this.specialRows = new Map(); // id → row element
+    this.presentSpecials = new Set();
+    this.specialRows = new Map();
     this._build();
   }
 
@@ -19,9 +39,9 @@ export class FilterPanel {
     // Header
     const header = document.createElement('div');
     header.className = 'filter-header';
-    header.innerHTML = '<span>Filters</span>';
+    header.innerHTML = `<span>${I18N.t('filter.title')}</span>`;
     const btnClear = document.createElement('button');
-    btnClear.textContent = 'Clear All';
+    btnClear.textContent = I18N.t('filter.clearAll');
     btnClear.className = 'btn-small';
     btnClear.addEventListener('click', () => this.clearAll());
     header.appendChild(btnClear);
@@ -30,14 +50,10 @@ export class FilterPanel {
     // Node type section
     const typeSection = document.createElement('div');
     typeSection.className = 'filter-section';
-    typeSection.innerHTML = '<div class="filter-section-title">Node Type</div>';
-    for (const [typeStr, label] of Object.entries(NODE_TYPE_LABELS)) {
+    typeSection.innerHTML = `<div class="filter-section-title">${I18N.t('filter.nodeType')}</div>`;
+    for (const [typeStr] of Object.entries(NODE_TYPE_LABELS)) {
       const type = parseInt(typeStr);
-      const row = this._createCheckbox(label, NODE_TYPE_COLORS[type], () => {
-        if (this.activeTypes.has(type)) this.activeTypes.delete(type);
-        else this.activeTypes.add(type);
-        this._emit();
-      });
+      const row = this._createTypeRow(type);
       typeSection.appendChild(row);
     }
     this.container.appendChild(typeSection);
@@ -45,35 +61,41 @@ export class FilterPanel {
     // Special incident section
     const spSection = document.createElement('div');
     spSection.className = 'filter-section';
-    spSection.innerHTML = '<div class="filter-section-title">Special Event <span class="filter-present-hint">(● = in this run)</span></div>';
+    spSection.innerHTML = `<div class="filter-section-title">${I18N.t('filter.specialEvent')} <span class="filter-present-hint">${I18N.t('filter.presentHint')}</span></div>`;
     this.specialRows.clear();
-    for (const [idStr, label] of Object.entries(SPECIAL_NODE_LABELS)) {
+    for (const [idStr] of Object.entries(SPECIAL_NODE_LABELS)) {
       const id = parseInt(idStr);
-      const row = this._createSpecialCheckbox(id, label);
+      const row = this._createSpecialRow(id);
       spSection.appendChild(row);
       this.specialRows.set(id, row);
     }
     this.container.appendChild(spSection);
   }
 
-  _createCheckbox(label, color, onToggle) {
+  _createTypeRow(type) {
     const row = document.createElement('label');
     row.className = 'filter-row';
     const cb = document.createElement('input');
     cb.type = 'checkbox';
-    cb.addEventListener('change', onToggle);
-    const dot = document.createElement('span');
-    dot.className = 'filter-dot';
-    dot.style.background = color;
+    cb.addEventListener('change', () => {
+      if (this.activeTypes.has(type)) this.activeTypes.delete(type);
+      else this.activeTypes.add(type);
+      this._emit();
+    });
+    const icon = document.createElement('img');
+    icon.className = 'filter-icon';
+    icon.src = ASSET_BASE + NODE_TYPE_ICON[type];
+    icon.width = ICON_W;
+    icon.height = ICON_H;
     const text = document.createElement('span');
-    text.textContent = label;
+    text.textContent = I18N.t('nodeType.' + type) || NODE_TYPE_LABELS[type] || type;
     row.appendChild(cb);
-    row.appendChild(dot);
+    row.appendChild(icon);
     row.appendChild(text);
     return row;
   }
 
-  _createSpecialCheckbox(id, label) {
+  _createSpecialRow(id) {
     const row = document.createElement('label');
     row.className = 'filter-row filter-row-special';
     row.dataset.present = 'false';
@@ -88,7 +110,7 @@ export class FilterPanel {
     dot.className = 'filter-dot filter-dot-special';
     const text = document.createElement('span');
     text.className = 'filter-label';
-    text.textContent = label;
+    text.textContent = I18N.t('sp.' + id) || SPECIAL_NODE_LABELS[id] || `sp:${id}`;
     row.appendChild(cb);
     row.appendChild(dot);
     row.appendChild(text);
@@ -97,7 +119,6 @@ export class FilterPanel {
 
   /**
    * Update which special events are present in the current run.
-   * Present events get highlighted; absent ones are dimmed.
    */
   setPresentSpecials(presentIds) {
     this.presentSpecials = presentIds;

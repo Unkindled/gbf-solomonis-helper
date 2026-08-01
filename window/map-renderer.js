@@ -300,6 +300,7 @@ export class MapRenderer {
     this._drawBackground(ctx);
     this._drawMiasmaOverlay(ctx);
     this._drawEdges(ctx);
+    this._drawTeleporterLinks(ctx);
     this._drawPath(ctx);
     this._drawPredictedCircles(ctx);
     this._drawNodes(ctx);
@@ -452,6 +453,48 @@ export class MapRenderer {
         ctx.lineCap = 'round';
         ctx.stroke();
       }
+    }
+  }
+
+  // When hovering a teleporter node, draw thick blue gradient links to all
+  // other teleporter nodes (they form warp pairs).
+  _drawTeleporterLinks(ctx) {
+    if (!this.hoveredNode || this.hoveredNode.node_type !== 9) return;
+    const src = this.hoveredNode;
+    const srcX = src.position_x;
+    const srcY = src.position_y;
+
+    for (const [, node] of this.nodeMap) {
+      if (node.node_type !== 9 || node.node_id === src.node_id) continue;
+
+      const dx = node.position_x - srcX;
+      const dy = node.position_y - srcY;
+      const len = Math.hypot(dx, dy);
+      if (len < 1) continue;
+
+      // Gradient: cyan-blue across the link
+      const grad = ctx.createLinearGradient(srcX, srcY, node.position_x, node.position_y);
+      grad.addColorStop(0, 'rgba(0, 180, 255, 0.15)');
+      grad.addColorStop(0.5, 'rgba(0, 220, 255, 0.9)');
+      grad.addColorStop(1, 'rgba(0, 120, 255, 0.15)');
+
+      // Outer glow pass
+      ctx.beginPath();
+      ctx.moveTo(srcX, srcY);
+      ctx.lineTo(node.position_x, node.position_y);
+      ctx.strokeStyle = 'rgba(0, 150, 255, 0.25)';
+      ctx.lineWidth = 12;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+
+      // Main gradient line
+      ctx.beginPath();
+      ctx.moveTo(srcX, srcY);
+      ctx.lineTo(node.position_x, node.position_y);
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 6;
+      ctx.lineCap = 'round';
+      ctx.stroke();
     }
   }
 
