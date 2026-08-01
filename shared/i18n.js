@@ -36,6 +36,7 @@
       'filter.nodeType': 'Node Type',
       'filter.specialEvent': 'Special Event',
       'filter.presentHint': '(● = in this run)',
+      'filter.guideBooks': 'Guide Books',
       // node types
       'nodeType.0': 'Path',
       'nodeType.1': 'Boss',
@@ -98,6 +99,7 @@
       'filter.nodeType': '节点类型',
       'filter.specialEvent': '特殊事件',
       'filter.presentHint': '(● = 本局出现)',
+      'filter.guideBooks': '导本',
       // node types
       'nodeType.0': '通路',
       'nodeType.1': '首领',

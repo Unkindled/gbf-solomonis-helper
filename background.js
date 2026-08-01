@@ -9,6 +9,8 @@ let gameState = {
   dungeonStatus: null,
   miasmaInfo: null,
   partyStatus: null,
+  dungeonPoint: 0,        // possession_arcarum3_dungeon_point (Sephira coins)
+  guideBooks: [],         // collected guide book effects [{status_id,name,rarity,...}]
 };
 
 // Miasma data recorder — stores every miasma snapshot for formula analysis
@@ -107,6 +109,9 @@ function handleMapInit(data) {
   gameState.totalTurn = dungeon.total_turn;
   gameState.dungeonStatus = dungeon.dungeon_status;
   gameState.miasmaInfo = dungeon.miasma_info;
+  if (dungeon.possession_arcarum3_dungeon_point != null) {
+    gameState.dungeonPoint = Number(dungeon.possession_arcarum3_dungeon_point);
+  }
 
   broadcastToWindow('map-init', dungeon);
 }
@@ -210,6 +215,25 @@ function handleProceed(data) {
   if (data.miasma_info) gameState.miasmaInfo = data.miasma_info;
   if (data.total_turn !== undefined) gameState.totalTurn = data.total_turn;
 
+  // Collect guide book effects from scenario status lists
+  const books = data.action_scenario_list
+    ? data.action_scenario_list.flatMap(s => s.status_list || [])
+    : [];
+  if (books.length > 0) {
+    for (const b of books) {
+      if (b.status_id != null && !gameState.guideBooks.some(g => g.status_id === b.status_id)) {
+        gameState.guideBooks.push({
+          status_id: b.status_id,
+          name: b.name || `status:${b.status_id}`,
+          rarity: b.rarity,
+          icon_type: b.icon_type,
+          icon_category: b.icon_category,
+        });
+      }
+    }
+    broadcastToWindow('guide-books', gameState.guideBooks);
+  }
+
   broadcastToWindow('proceed', {
     dungeonStatus: data.dungeon_status,
     miasmaInfo: data.miasma_info,
@@ -220,6 +244,8 @@ function handleProceed(data) {
 function handleIncident(data) {
   // Same structure as move_node response
   handleMoveNode(data);
+  // incident_choose may also carry guide book effects
+  if (data.action_scenario_list) handleProceed(data);
 }
 
 function handlePartyStatus(data) {

@@ -44,6 +44,8 @@ function init() {
     if (state && state.map) {
       applyFullMap(state.map);
     }
+    if (state && state.partyStatus) renderPartyBar(state.partyStatus);
+    if (state && state.guideBooks) renderGuideBooks(state.guideBooks);
     updateStatusBar();
   });
 
@@ -136,6 +138,9 @@ function applyFullMap(mapData) {
   }
 
   if (filterPanel) filterPanel.setPresentSpecials(getPresentSpecialIds());
+  if (mapData.possession_arcarum3_dungeon_point != null) {
+    renderDungeonPoint(mapData.possession_arcarum3_dungeon_point);
+  }
   reEvaluatePath();
 }
 
@@ -245,7 +250,57 @@ function handleWindowMessage(type, payload) {
       renderer.totalTurn = currentTurn;
       updateStatusBar();
       break;
+
+    case 'party-status':
+      renderPartyBar(payload);
+      break;
+
+    case 'guide-books':
+      renderGuideBooks(payload);
+      break;
   }
+}
+
+// --- HUD rendering: dungeon point / party / guide books ---
+
+function renderDungeonPoint(value) {
+  const el = document.getElementById('dungeon-point');
+  el.textContent = `🪙 ${value}`;
+}
+
+function renderPartyBar(party) {
+  const el = document.getElementById('party-bar');
+  if (!Array.isArray(party) || party.length === 0) {
+    el.innerHTML = '';
+    return;
+  }
+  el.innerHTML = party.map((m, i) => {
+    const hp = Number(m.hp) || 0;
+    const maxHp = Number(m.max_hp) || 1;
+    const pct = Math.max(0, Math.min(100, Math.round(hp / maxHp * 100)));
+    const color = pct > 50 ? '#4caf50' : pct > 25 ? '#ffa726' : '#f44336';
+    const label = m.is_pc ? 'PC' : `N${i}`;
+    return `<div class="party-member" title="${label}">
+      <div class="party-hpbar"><div class="party-hpfill" style="width:${pct}%;background:${color}"></div></div>
+      <span class="party-hptext">${hp}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderGuideBooks(books) {
+  const el = document.getElementById('guide-book-panel');
+  const badge = document.getElementById('guide-books');
+  if (!Array.isArray(books) || books.length === 0) {
+    el.innerHTML = '';
+    badge.textContent = '📖 0';
+    return;
+  }
+  badge.textContent = `📖 ${books.length}`;
+  const rows = books.map(b => {
+    const rar = b.rarity ? ` (r${b.rarity})` : '';
+    return `<div class="guide-book-row">📖 ${b.name}${rar}</div>`;
+  }).join('');
+  el.innerHTML = `<details open><summary class="filter-section-title">${I18N.t('filter.guideBooks')}</summary><div class="filter-section-body">${rows}</div></details>`;
 }
 
 // --- Path planning ---

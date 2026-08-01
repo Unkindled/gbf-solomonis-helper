@@ -47,26 +47,30 @@ export class FilterPanel {
     header.appendChild(btnClear);
     this.container.appendChild(header);
 
-    // Node type section
-    const typeSection = document.createElement('div');
+    // Node type section (collapsible)
+    const typeSection = document.createElement('details');
     typeSection.className = 'filter-section';
-    typeSection.innerHTML = `<div class="filter-section-title">${I18N.t('filter.nodeType')}</div>`;
+    typeSection.open = true; // default expanded
+    typeSection.innerHTML = `<summary class="filter-section-title">${I18N.t('filter.nodeType')}</summary><div class="filter-section-body"></div>`;
+    const typeBody = typeSection.querySelector('.filter-section-body');
     for (const [typeStr] of Object.entries(NODE_TYPE_LABELS)) {
       const type = parseInt(typeStr);
       const row = this._createTypeRow(type);
-      typeSection.appendChild(row);
+      typeBody.appendChild(row);
     }
     this.container.appendChild(typeSection);
 
-    // Special incident section
-    const spSection = document.createElement('div');
+    // Special incident section (collapsible)
+    const spSection = document.createElement('details');
     spSection.className = 'filter-section';
-    spSection.innerHTML = `<div class="filter-section-title">${I18N.t('filter.specialEvent')} <span class="filter-present-hint">${I18N.t('filter.presentHint')}</span></div>`;
+    spSection.open = false; // collapsed by default (long list)
+    spSection.innerHTML = `<summary class="filter-section-title">${I18N.t('filter.specialEvent')} <span class="filter-present-hint">${I18N.t('filter.presentHint')}</span></summary><div class="filter-section-body"></div>`;
+    const spBody = spSection.querySelector('.filter-section-body');
     this.specialRows.clear();
     for (const [idStr] of Object.entries(SPECIAL_NODE_LABELS)) {
       const id = parseInt(idStr);
       const row = this._createSpecialRow(id);
-      spSection.appendChild(row);
+      spBody.appendChild(row);
       this.specialRows.set(id, row);
     }
     this.container.appendChild(spSection);

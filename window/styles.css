@@ -37,6 +37,68 @@ html, body {
   cursor: grabbing;
 }
 
+/* --- HUD overlay (top of map) --- */
+
+#hud-top {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  z-index: 20;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.hud-chip {
+  background: rgba(16, 21, 29, 0.85);
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: #e6edf3;
+  white-space: nowrap;
+}
+
+#party-bar {
+  flex: 1;
+  display: flex;
+  gap: 6px;
+  background: rgba(16, 21, 29, 0.85);
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+.party-member {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 60px;
+}
+
+.party-hpbar {
+  flex: 1;
+  height: 10px;
+  background: #21262d;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.party-hpfill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.3s;
+}
+
+.party-hptext {
+  font-size: 11px;
+  color: #c9d1d9;
+  min-width: 34px;
+  text-align: right;
+}
+
 #btn-focus {
   position: absolute;
   bottom: 16px;
@@ -188,6 +250,18 @@ html, body {
   margin-top: 4px;
 }
 
+#guide-book-panel {
+  padding: 4px 12px;
+  border-bottom: 1px solid #21262d;
+}
+
+.guide-book-row {
+  font-size: 12px;
+  color: #d2a8ff;
+  padding: 2px 0;
+  line-height: 1.5;
+}
+
 /* --- Filter panel --- */
 
 #filter-panel {
@@ -224,6 +298,34 @@ html, body {
 
 .filter-section {
   padding: 4px 12px;
+}
+
+.filter-section summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-section summary::-webkit-details-marker {
+  display: none;
+}
+
+.filter-section summary::before {
+  content: '▸';
+  font-size: 10px;
+  color: #6e7681;
+  transition: transform 0.15s;
+}
+
+.filter-section[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.filter-section-body {
+  margin-top: 2px;
 }
 
 .filter-section-title {
