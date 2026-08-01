@@ -360,9 +360,10 @@ export class MapRenderer {
   }
 
   // Lv2 shrink model: the center_position is NOT the miasma circle center.
-  // Fit both the center AND radius from the is_shrinking node states:
-  //   center = centroid of the safe (unpolluted) nodes,
-  //   radius = boundary that minimizes misclassification.
+  // Fit center + radius with a STRICT guarantee: every polluted node must be
+  // OUTSIDE the circle and every safe node INSIDE. This requires
+  // max(dist(safe,center)) < min(dist(polluted,center)). We search the center
+  // to maximize that gap, then pick R at the midpoint of the gap.
   _fitMiasmaCircle() {
     const items = [];
     for (const [, n] of this.nodeMap) {
@@ -371,15 +372,46 @@ export class MapRenderer {
     if (items.length === 0) return null;
 
     const safe = items.filter(i => !i.s);
-    if (safe.length === 0) return { x: 0, y: 0, R: 0, err: items.length };
+    const shr = items.filter(i => i.s);
+    if (safe.length === 0 || shr.length === 0) {
+      return { x: 0, y: 0, R: 0, err: items.length, strict: false };
+    }
 
-    // Center = centroid of unpolluted nodes
-    let cx = 0, cy = 0;
-    for (const s of safe) { cx += s.x; cy += s.y; }
-    cx /= safe.length;
-    cy /= safe.length;
+    // Start from safe-node centroid, then hill-climb / grid-search the center
+    // to maximize gap = min(dist(shr)) - max(dist(safe)).
+    let cx = safe.reduce((a, s) => a + s.x, 0) / safe.length;
+    let cy = safe.reduce((a, s) => a + s.y, 0) / safe.length;
 
-    // Radius = minimize misclassification (polluted inside + safe outside)
+    const gapAt = (x, y) => {
+      let maxSafe = 0, minShr = Infinity;
+      for (const s of safe) { const d = Math.hypot(s.x - x, s.y - y); if (d > maxSafe) maxSafe = d; }
+      for (const s of shr) { const d = Math.hypot(s.x - x, s.y - y); if (d < minShr) minShr = d; }
+      return { gap: minShr - maxSafe, maxSafe, minShr };
+    };
+
+    // Grid search around the centroid (coarse then fine).
+    let best = { gap: -Infinity, x: cx, y: cy };
+    const scan = (step) => {
+      for (let dx = -400; dx <= 400; dx += step) {
+        for (let dy = -400; dy <= 400; dy += step) {
+          const g = gapAt(cx + dx, cy + dy);
+          if (g.gap > best.gap) {
+            best = { gap: g.gap, x: cx + dx, y: cy + dy, maxSafe: g.maxSafe, minShr: g.minShr };
+          }
+        }
+      }
+    };
+    scan(40);  // coarse
+    scan(8);   // fine around best
+    // Refine at the best center
+    const g = gapAt(best.x, best.y);
+
+    // Strict separation possible?
+    if (g.gap > 0) {
+      const R = (g.maxSafe + g.minShr) / 2; // midpoint of the valid range
+      return { x: best.x, y: best.y, R, err: 0, strict: true, gap: g.gap };
+    }
+    // No strict circle possible (overlapping sets) — fall back to centroid + min-err
     const dists = items.map(i => ({ d: Math.hypot(i.x - cx, i.y - cy), s: i.s })).sort((a, b) => a.d - b.d);
     const prefix = new Array(dists.length);
     let cnt = 0;
@@ -389,19 +421,16 @@ export class MapRenderer {
     }
     const totalShrink = cnt;
     const totalSafe = dists.length - totalShrink;
-
     let bestR = null, bestErr = Infinity;
     for (let i = 0; i < dists.length; i++) {
       const R = dists[i].d;
-      const shrinkIn = prefix[i];
-      const safeOut = totalSafe - (i + 1 - shrinkIn);
-      const err = shrinkIn + safeOut;
+      const err = prefix[i] + (totalSafe - (i + 1 - prefix[i]));
       if (err < bestErr) {
         bestErr = err;
         bestR = R;
       }
     }
-    return { x: cx, y: cy, R: bestR, err: bestErr };
+    return { x: cx, y: cy, R: bestR, err: bestErr, strict: false };
   }
 
   _drawMiasmaOverlay(ctx) {
@@ -425,12 +454,12 @@ export class MapRenderer {
       miasmaR = fit ? Math.max(fit.R, safeRadius) : 1600;
     } else {
       // Lv2: center_position is NOT the circle center — fit center + radius
-      // from the polluted/unpolluted node states.
+      // from the polluted/unpolluted node states (strict: no misclassification).
       const fit = this._fitMiasmaCircle();
       if (fit && fit.R > 0) {
         cx = fit.x;
         cy = fit.y;
-        miasmaR = Math.max(fit.R, safeRadius);
+        miasmaR = fit.R;
       } else {
         cx = a.center_position_x - OFFSET.X;
         cy = a.center_position_y - OFFSET.Y;
