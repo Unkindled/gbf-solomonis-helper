@@ -310,17 +310,14 @@ function handleFinishNode(data) {
   // Update map nodes
   if (gameState.map && gameState.map.node_list) {
     // finish_node_event confirms the current node was cleared (battle/event
-    // consumed): the game renders it as deleted/empty afterwards.
-    if (data.is_delete_node && gameState.currentNodeId != null) {
+    // consumed). The node is NOT destroyed — it becomes a Path (node_type=0)
+    // and stays traversable, exactly like the game.
+    if ((data.is_delete_node || data.is_visited_node) && gameState.currentNodeId != null) {
       const cleared = gameState.map.node_list.find(n => n.node_id === gameState.currentNodeId);
       if (cleared) {
-        cleared.is_deleted = true;
+        cleared.node_type = 0;
         cleared.is_visited = true;
       }
-    }
-    if (data.is_visited_node && gameState.currentNodeId != null) {
-      const v = gameState.map.node_list.find(n => n.node_id === gameState.currentNodeId);
-      if (v) v.is_visited = true;
     }
     // Accumulate newly consumed nodes (exact from server)
     const shrinkIds = (data.miasma_info && data.miasma_info.shrink_node_ids) || [];

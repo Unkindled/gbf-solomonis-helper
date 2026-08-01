@@ -230,10 +230,7 @@ export class MapRenderer {
     if (this.currentNodeId == null) return;
     const cur = this.nodeMap.get(this.currentNodeId);
     if (cur && cur.adjacent_node_ids) {
-      for (const id of cur.adjacent_node_ids) {
-        const adj = this.nodeMap.get(id);
-        if (adj && !adj.is_deleted) this.adjacentSet.add(id);
-      }
+      for (const id of cur.adjacent_node_ids) this.adjacentSet.add(id);
     }
   }
 
@@ -536,13 +533,12 @@ export class MapRenderer {
   _drawEdges(ctx) {
     const drawn = new Set();
     for (const [id, node] of this.nodeMap) {
-      if (node.is_deleted) continue; // consumed nodes drop their links
       for (const adjId of (node.adjacent_node_ids || [])) {
         const key = id < adjId ? `${id}-${adjId}` : `${adjId}-${id}`;
         if (drawn.has(key)) continue;
         drawn.add(key);
         const adj = this.nodeMap.get(adjId);
-        if (!adj || adj.is_deleted) continue;
+        if (!adj) continue;
         ctx.beginPath();
         ctx.moveTo(node.position_x, node.position_y);
         ctx.lineTo(adj.position_x, adj.position_y);
@@ -700,25 +696,6 @@ export class MapRenderer {
       // Anchor at bottom-center: coordinate is the "ground", icon sits on top
       const x = node.position_x - NODE_W / 2;
       const y = node.position_y - NODE_H;
-
-      // Consumed/deleted node (battle or event cleared it) — render as a
-      // faint burnt-out marker instead of a live icon.
-      if (node.is_deleted) {
-        ctx.beginPath();
-        ctx.arc(node.position_x, node.position_y - NODE_H / 2, 10, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(120, 100, 80, 0.5)';
-        ctx.fill();
-        ctx.beginPath();
-        ctx.moveTo(node.position_x - 5, node.position_y - NODE_H / 2 - 5);
-        ctx.lineTo(node.position_x + 5, node.position_y - NODE_H / 2 + 5);
-        ctx.moveTo(node.position_x + 5, node.position_y - NODE_H / 2 - 5);
-        ctx.lineTo(node.position_x - 5, node.position_y - NODE_H / 2 + 5);
-        ctx.strokeStyle = 'rgba(120, 100, 80, 0.7)';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        ctx.globalAlpha = 1.0;
-        continue;
-      }
 
       // Choose base image
       let baseImg;

@@ -24,8 +24,7 @@ export function findShortestPath(nodeMap, startId, endId) {
     const neighbors = node.adjacent_node_ids || [];
     for (const nextId of neighbors) {
       if (visited.has(nextId)) continue;
-      const next = nodeMap.get(nextId);
-      if (!next || next.is_deleted) continue; // consumed nodes are impassable
+      if (!nodeMap.has(nextId)) continue;
 
       const newPath = [...path, nextId];
       if (nextId === endId) return newPath;
