@@ -78,6 +78,9 @@ export class MapRenderer {
 
     // Circle image radii (from PNG dimensions / 2)
     this.miasmaCircleRadius = { 1: 670, 2: 67 };
+    // Runtime-fitted miasma boundary radius (from is_shrinking state)
+    this.miasmaFitRadius = null;
+    this._miasmaCacheKey = null;
 
     let pending = Object.keys(defs).length;
     const done = () => {
@@ -320,42 +323,116 @@ export class MapRenderer {
     }
   }
 
+  // Fit the miasma boundary radius from per-node is_shrinking state.
+  // The miasma is NOT a perfect circle (pattern-driven spread), but the
+  // fitted circle minimizes misclassification — good enough for rendering.
+  _fitMiasmaRadius(cx, cy) {
+    const items = [];
+    for (const [, n] of this.nodeMap) {
+      items.push({ d: Math.hypot(n.position_x - cx, n.position_y - cy), s: !!n.is_shrinking });
+    }
+    if (items.length === 0) return null;
+    items.sort((a, b) => a.d - b.d);
+
+    // Prefix counts: shrinkCount[i] = # shrinking with d <= items[i].d
+    const prefix = new Array(items.length);
+    let cnt = 0;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].s) cnt++;
+      prefix[i] = cnt;
+    }
+    const totalShrink = cnt;
+    const totalSafe = items.length - totalShrink;
+
+    let bestR = null, bestErr = Infinity;
+    for (let i = 0; i < items.length; i++) {
+      const R = items[i].d;
+      // errors: shrinking nodes with d <= R (misclassified inside) + safe nodes with d > R
+      const shrinkIn = prefix[i];
+      const safeOut = totalSafe - (i + 1 - shrinkIn);
+      const err = shrinkIn + safeOut;
+      if (err < bestErr) {
+        bestErr = err;
+        bestR = R;
+      }
+    }
+    return { R: bestR, err: bestErr, total: items.length };
+  }
+
   _drawMiasmaOverlay(ctx) {
-    // Exact node-level rendering handled via base_miasma icons.
-    // Additionally draw the safe zone circle (game-native white ring)
-    // centered at center_position_x/y.
     const a = this.miasmaInfo && this.miasmaInfo.after;
     if (!a || !a.is_miasmic) return;
+    if (a.center_position_x == null || a.center_position_y == null) return;
 
-    if (a.center_position_x != null && a.center_position_y != null) {
-      const level = a.level || 1;
-      const radius = this.miasmaCircleRadius[level] || this.miasmaCircleRadius[1];
-      const img = level === 2 ? this.images.miasmaCircle2 : this.images.miasmaCircle1;
-      // center_position 是中心节点的地面点；本插件节点地面点 = position，
-      // 而 position = 地面点 - MIASMA_CENTER_OFFSET，故圆心需减去该偏移对齐。
-      const cx = a.center_position_x - MIASMA_CENTER_OFFSET.X;
-      const cy = a.center_position_y - MIASMA_CENTER_OFFSET.Y;
+    const level = a.level || 1;
+    const safeRadius = this.miasmaCircleRadius[level] || this.miasmaCircleRadius[1];
+    const img = level === 2 ? this.images.miasmaCircle2 : this.images.miasmaCircle1;
+    // center_position 是中心节点的地面点；本插件节点地面点 = position，
+    // 而 position = 地面点 - MIASMA_CENTER_OFFSET，故圆心需减去该偏移对齐。
+    const cx = a.center_position_x - MIASMA_CENTER_OFFSET.X;
+    const cy = a.center_position_y - MIASMA_CENTER_OFFSET.Y;
 
-      if (img && img.complete && img.naturalWidth > 0) {
-        // Game anchors the circle image so its center sits at (cx, cy)
-        ctx.drawImage(img, cx - radius, cy - radius, radius * 2, radius * 2);
-      } else {
-        // Fallback: white dashed ring
-        ctx.beginPath();
-        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
-        ctx.lineWidth = 3;
-        ctx.setLineDash([12, 8]);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      }
-
-      // Center marker
-      ctx.beginPath();
-      ctx.arc(cx, cy, 6, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-      ctx.fill();
+    // Cache-fit the miasma boundary radius (recompute when state changes)
+    const key = level + '|' + cx.toFixed(0) + '|' + cy.toFixed(0) + '|' + this.nodeMap.size + '|' + (a.step || 0);
+    if (key !== this._miasmaCacheKey) {
+      this._miasmaCacheKey = key;
+      this.miasmaFitRadius = this._fitMiasmaRadius(cx, cy);
     }
+    const fit = this.miasmaFitRadius;
+    // The visible miasma edge sits between safe circle and fitted boundary;
+    // use the fitted radius when available (it reflects actual shrink progress)
+    const miasmaR = fit ? Math.max(fit.R, safeRadius) : 1600;
+
+    // --- Pollution effect: purple-red haze outside the miasma boundary ---
+    // Draw a full-map rect, punch out the safe circle with even-odd fill.
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(-200, -200, BG_W + 400, BG_H + 400);
+    ctx.arc(cx, cy, miasmaR, 0, Math.PI * 2, true); // counter-clockwise => hole
+    ctx.fillStyle = 'rgba(150, 30, 160, 0.30)';
+    ctx.fill('evenodd');
+    ctx.restore();
+
+    // Soft inner edge glow (miasma creep front)
+    const t = Date.now() / 1000;
+    const grad = ctx.createRadialGradient(cx, cy, miasmaR - 40, cx, cy, miasmaR + 40);
+    grad.addColorStop(0, 'rgba(200, 60, 220, 0)');
+    grad.addColorStop(0.5, 'rgba(200, 60, 220, 0.45)');
+    grad.addColorStop(1, 'rgba(160, 40, 190, 0)');
+    ctx.beginPath();
+    ctx.arc(cx, cy, miasmaR + 40, 0, Math.PI * 2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Animated miasma front ring
+    ctx.beginPath();
+    ctx.arc(cx, cy, miasmaR, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(220, 90, 240, 0.7)';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([14, 10]);
+    ctx.lineDashOffset = -t * 30;
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // --- Safe zone white circle (game-native ring) ---
+    if (img && img.complete && img.naturalWidth > 0) {
+      // Game anchors the circle image so its center sits at (cx, cy)
+      ctx.drawImage(img, cx - safeRadius, cy - safeRadius, safeRadius * 2, safeRadius * 2);
+    } else {
+      ctx.beginPath();
+      ctx.arc(cx, cy, safeRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([12, 8]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Center marker
+    ctx.beginPath();
+    ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.fill();
   }
 
   _drawEdges(ctx) {
