@@ -141,6 +141,49 @@ function handleSpacebookList(data) {
   gameState.guideBooksStale = false; // full sync → no longer stale
   broadcastToWindow('guide-books', books);
   broadcastToWindow('guidebooks-stale', false);
+  // Auto-fetch any guidebook icons we don't have bundled yet
+  const iconTypes = [...new Set(books.map(b => b.icon_type).filter(t => t != null))];
+  fetchMissingBookIcons(iconTypes);
+}
+
+// Fetch guidebook icon images from the game CDN that aren't bundled in the
+// extension, store them as base64 data URLs in chrome.storage.local, and
+// notify the helper window. Read-only: only fetches static image resources.
+const BOOK_ICON_CACHE_KEY = 'gbf-helper-book-icons';
+
+async function fetchMissingBookIcons(iconTypes) {
+  try {
+    const stored = await chrome.storage.local.get(BOOK_ICON_CACHE_KEY);
+    const cache = stored[BOOK_ICON_CACHE_KEY] || {};
+    const missing = iconTypes.filter(t => !cache[t]);
+    if (missing.length === 0) return;
+
+    const fetched = {};
+    for (const t of missing) {
+      const url = `https://prd-game-a-granbluefantasy.akamaized.net/assets_en/img/sp/arcarum3/assets/icon_book_effect/book_effect_${t}.png`;
+      try {
+        const resp = await fetch(url);
+        if (!resp.ok) continue;
+        const blob = await resp.blob();
+        const dataUrl = await blobToDataURL(blob);
+        fetched[t] = dataUrl;
+      } catch (e) { /* ignore individual failures */ }
+    }
+    if (Object.keys(fetched).length === 0) return;
+
+    const next = { ...cache, ...fetched };
+    await chrome.storage.local.set({ [BOOK_ICON_CACHE_KEY]: next });
+    broadcastToWindow('guidebook-icons', fetched);
+  } catch (e) { /* storage may be unavailable */ }
+}
+
+function blobToDataURL(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 }
 
 // --- Shop ---

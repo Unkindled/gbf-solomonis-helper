@@ -30,6 +30,12 @@ function init() {
   window.addEventListener('resize', resizeCanvas);
   resizeCanvas();
 
+  // Restore cached guidebook icons from storage
+  chrome.storage.local.get('gbf-helper-book-icons').then((stored) => {
+    const icons = stored && stored['gbf-helper-book-icons'];
+    if (icons) cacheBookIcons(icons);
+  }).catch(() => {});
+
   renderer = new MapRenderer(canvas);
   renderer.onNodeClick = handleNodeClick;
   renderer.onEmptyClick = handleEmptyClick;
@@ -294,6 +300,10 @@ function handleWindowMessage(type, payload) {
       renderGuideBooks(payload);
       break;
 
+    case 'guidebook-icons':
+      cacheBookIcons(payload);
+      break;
+
     case 'dungeon-point':
       renderDungeonPoint(payload);
       break;
@@ -353,7 +363,30 @@ function renderPartyBar(party) {
   }).join('');
 }
 
+// Guidebook icon cache: icon_type → data URL (fetched from CDN on demand).
+const bookIconCache = {};
+let latestGuideBooks = [];
+
+function getBookIconUrl(iconType) {
+  if (iconType == null) return '';
+  // 1) bundled asset
+  return `../assets/icon_book_effect/book_effect_${iconType}.png`;
+}
+
+// If the bundled file is missing, the img onerror swaps to the cached
+// data URL fetched by the background.
+function bookIconImg(iconType) {
+  if (iconType == null) return '<div class="gb-icon"></div>';
+  const local = `../assets/icon_book_effect/book_effect_${iconType}.png`;
+  const cached = bookIconCache[iconType];
+  if (cached) {
+    return `<img class="gb-icon" src="${cached}" alt="">`;
+  }
+  return `<img class="gb-icon" src="${local}" alt="" onerror="this.onerror=null;var c=window.__bookIconCache&&window.__bookIconCache['${iconType}'];if(c)this.src=c;">`;
+}
+
 function renderGuideBooks(books) {
+  latestGuideBooks = Array.isArray(books) ? books : [];
   // Update popup (map top-right)
   const body = document.getElementById('guidebook-popup-body');
   const badge = document.getElementById('guidebook-badge');
@@ -386,17 +419,25 @@ function renderGuideBooks(books) {
   if (badge) { badge.textContent = String(total); badge.classList.remove('hidden'); }
 
   const rows = merged.map(b => {
-    const iconUrl = b.icon_type ? `../assets/icon_book_effect/book_effect_${b.icon_type}.png` : '';
     const rarLabel = { 1: '★', 2: '★★', 3: '★★★', 99: '?' }[b.rarity] || '';
     const name = (b.name || '').replace(/@@/g, ' ');
     const countLabel = b.num > 1 ? ` ×${b.num}` : '';
     return `<div class="guidebook-popup-row">
-      ${iconUrl ? `<img class="gb-icon" src="${iconUrl}" alt="">` : '<div class="gb-icon"></div>'}
+      ${bookIconImg(b.icon_type)}
       <span class="gb-name">${name}<span class="gb-count">${countLabel}</span></span>
       <span class="gb-rarity">${rarLabel}</span>
     </div>`;
   }).join('');
   body.innerHTML = rows;
+}
+
+// Cache guidebook icons fetched by the background (icon_type → data URL)
+function cacheBookIcons(icons) {
+  if (!icons || typeof icons !== 'object') return;
+  Object.assign(bookIconCache, icons);
+  window.__bookIconCache = bookIconCache;
+  // Re-render to pick up newly available icons
+  if (latestGuideBooks.length > 0) renderGuideBooks(latestGuideBooks);
 }
 
 // --- Path planning ---
