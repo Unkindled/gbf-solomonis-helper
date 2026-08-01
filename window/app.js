@@ -320,9 +320,11 @@ function renderPartyBar(party) {
     const base = 'https://prd-game-a-granbluefantasy.akamaized.net/assets_en/img/sp/assets/';
     const imgUrl = m.image_id ? `${base}${m.is_pc ? 'leader' : 'npc'}/raid_normal/${m.image_id}.jpg` : '';
     return `<div class="party-member" title="${label}">
-      ${imgUrl ? `<img class="party-portrait" src="${imgUrl}" alt="">` : ''}
-      <div class="party-hpbar"><div class="party-hpfill" style="width:${pct}%;background:${color}"></div></div>
-      <span class="party-hptext">${hp}</span>
+      ${imgUrl ? `<img class="party-portrait" src="${imgUrl}" alt="">` : '<div class="party-portrait party-portrait-empty"></div>'}
+      <div class="party-hpwrap">
+        <div class="party-hpbar"><div class="party-hpfill" style="width:${pct}%;background:${color}"></div></div>
+        <span class="party-hptext">${hp}<span class="party-hpmax">/${maxHp}</span></span>
+      </div>
     </div>`;
   }).join('');
 }

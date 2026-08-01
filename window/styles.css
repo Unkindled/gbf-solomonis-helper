@@ -64,32 +64,46 @@ html, body {
 #party-bar {
   flex: 1;
   display: flex;
-  gap: 6px;
+  gap: 10px;
   background: rgba(16, 21, 29, 0.85);
   border: 1px solid #30363d;
   border-radius: 6px;
-  padding: 4px 8px;
+  padding: 6px 10px;
+  align-items: stretch;
 }
 
 .party-member {
   display: flex;
   align-items: center;
-  gap: 5px;
-  min-width: 60px;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
 }
 
 .party-portrait {
-  width: 28px;
-  height: 28px;
-  border-radius: 4px;
+  width: 40px;
+  height: 40px;
+  border-radius: 5px;
   object-fit: cover;
   border: 1px solid #30363d;
   flex-shrink: 0;
 }
 
+.party-portrait-empty {
+  background: #21262d;
+}
+
+.party-hpwrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .party-hpbar {
   flex: 1;
-  height: 10px;
+  min-height: 10px;
   background: #21262d;
   border-radius: 5px;
   overflow: hidden;
@@ -104,8 +118,12 @@ html, body {
 .party-hptext {
   font-size: 11px;
   color: #c9d1d9;
-  min-width: 34px;
-  text-align: right;
+  white-space: nowrap;
+}
+
+.party-hpmax {
+  color: #6e7681;
+  font-size: 10px;
 }
 
 #btn-focus {

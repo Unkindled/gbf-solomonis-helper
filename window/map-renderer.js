@@ -811,6 +811,10 @@ export class MapRenderer {
     // Shop stock lines (if this shop node has been visited and stock captured)
     const stockLines = [];
     const stock = this.shopStock[node.node_id];
+    const MAX_LINE = 46; // max chars per line; longer text is truncated
+    const truncate = (s) => (s.length > MAX_LINE ? s.slice(0, MAX_LINE - 1) + '…' : s);
+    // Guidebook names use '@@' as an in-game line break — collapse to a space
+    const cleanName = (s) => truncate((s || '').replace(/@@/g, ' '));
     if (node.node_type === 8) {
       if (stock && stock.items && stock.items.length > 0) {
         stockLines.push(`— Stock (coin ${stock.coinAfter != null ? stock.coinAfter : '?'}) —`);
@@ -819,13 +823,13 @@ export class MapRenderer {
         if (books.length > 0) stockLines.push('📖 Guidebooks:');
         for (const it of books) {
           const sold = it.stock <= 0 ? ' [SOLD OUT]' : '';
-          stockLines.push(`  ${it.name} · ${it.price}c · x${it.stock}${sold}`);
+          stockLines.push(`  ${cleanName(it.name)} · ${it.price}c · x${it.stock}${sold}`);
         }
         if (items.length > 0) stockLines.push('🎒 Items:');
         for (const it of items) {
           const sold = it.stock <= 0 ? ' [SOLD OUT]' : '';
           const name = it.name || `item:${it.lineup_id}`;
-          stockLines.push(`  ${name} · ${it.price}c · x${it.stock}${sold}`);
+          stockLines.push(`  ${cleanName(name)} · ${it.price}c · x${it.stock}${sold}`);
         }
       } else {
         stockLines.push('— not visited —');
@@ -834,11 +838,20 @@ export class MapRenderer {
 
     ctx.font = '12px system-ui';
     const allLines = [label, ...stockLines];
+    // Cap tooltip height: show at most MAX_TOOLTIP_LINES, fold the rest
+    const MAX_TOOLTIP_LINES = 10;
+    let displayLines = allLines;
+    let folded = 0;
+    if (allLines.length > MAX_TOOLTIP_LINES) {
+      displayLines = allLines.slice(0, MAX_TOOLTIP_LINES - 1);
+      folded = allLines.length - displayLines.length;
+      displayLines.push(`  … +${folded} more`);
+    }
     const lineH = 16;
-    const tw = Math.max(...allLines.map(l => ctx.measureText(l).width)) + 16;
-    const th = lineH * allLines.length + 8;
+    const tw = Math.min(Math.max(...displayLines.map(l => ctx.measureText(l).width)) + 16, 360);
+    const th = lineH * displayLines.length + 8;
     const tx = Math.min(screen.x + 18, this.canvas.width - tw - 5);
-    const ty = Math.max(screen.y - NODE_H * this.scale - 34 - (allLines.length - 1) * lineH, 20);
+    const ty = Math.max(screen.y - NODE_H * this.scale - 34 - (displayLines.length - 1) * lineH, 20);
 
     ctx.fillStyle = 'rgba(10, 14, 20, 0.92)';
     ctx.strokeStyle = 'rgba(100, 120, 140, 0.5)';
@@ -849,7 +862,7 @@ export class MapRenderer {
     ctx.stroke();
     ctx.fillStyle = '#e6edf3';
     ctx.textAlign = 'left';
-    allLines.forEach((ln, i) => {
+    displayLines.forEach((ln, i) => {
       ctx.fillStyle = i === 0 ? '#e6edf3' : (ln.includes('SOLD OUT') ? '#f85149' : '#c9d1d9');
       ctx.fillText(ln, tx + 8, ty + 16 + i * lineH);
     });
