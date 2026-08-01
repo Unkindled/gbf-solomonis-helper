@@ -230,7 +230,10 @@ export class MapRenderer {
     if (this.currentNodeId == null) return;
     const cur = this.nodeMap.get(this.currentNodeId);
     if (cur && cur.adjacent_node_ids) {
-      for (const id of cur.adjacent_node_ids) this.adjacentSet.add(id);
+      for (const id of cur.adjacent_node_ids) {
+        const adj = this.nodeMap.get(id);
+        if (adj && !adj.is_deleted) this.adjacentSet.add(id);
+      }
     }
   }
 
@@ -533,12 +536,13 @@ export class MapRenderer {
   _drawEdges(ctx) {
     const drawn = new Set();
     for (const [id, node] of this.nodeMap) {
+      if (node.is_deleted) continue; // consumed nodes drop their links
       for (const adjId of (node.adjacent_node_ids || [])) {
         const key = id < adjId ? `${id}-${adjId}` : `${adjId}-${id}`;
         if (drawn.has(key)) continue;
         drawn.add(key);
         const adj = this.nodeMap.get(adjId);
-        if (!adj) continue;
+        if (!adj || adj.is_deleted) continue;
         ctx.beginPath();
         ctx.moveTo(node.position_x, node.position_y);
         ctx.lineTo(adj.position_x, adj.position_y);
