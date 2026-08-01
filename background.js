@@ -11,6 +11,7 @@ let gameState = {
   partyStatus: null,
   dungeonPoint: 0,        // possession_arcarum3_dungeon_point (Sephira coins)
   guideBooks: [],         // collected guide book effects [{status_id,name,rarity,...}]
+  guideBookCandidates: [], // recent pick candidates [{status_id,name,rarity,icon_type}]
   shopStock: new Map(),   // node_id → {coinAfter, items:[{lineup_id,name,price,stock,canBuy}]}
 };
 
@@ -98,7 +99,7 @@ function handleGameData(type, data) {
       handleSpacebookList(data);
       break;
     case 'spacebookAdd':
-      handleProceed(data); // spacebook_add response also may carry status lists
+      handleSpacebookAdd(data);
       break;
     case 'incident':
       handleIncident(data);
@@ -138,7 +139,9 @@ function handleShopLineup(data) {
   if (!data || !Array.isArray(data.item_list)) return;
   // Which shop node are we at? The shop runs on the current node.
   const nodeId = gameState.currentNodeId;
-  const items = data.item_list.map(it => ({
+  // The shop has two tabs: book (lineup/1) and item (lineup/2), both map to
+  // the SAME node. Merge by lineup_id so one tab doesn't overwrite the other.
+  const incoming = data.item_list.map(it => ({
     lineup_id: it.lineup_id,
     item_type: it.item_type,
     // Book tab (type 4) carries the guidebook name in `name`;
@@ -149,8 +152,15 @@ function handleShopLineup(data) {
     canBuy: it.can_purchase,
     image: it.item_image,
     isGuidebook: it.status_id != null,
+    tab: it.item_type === '4' ? 'book' : 'item',
   }));
+
   const prev = gameState.shopStock.get(nodeId) || { items: [] };
+  // Merge: keep existing items not in this response, replace those present
+  const mergedMap = new Map(prev.items.map(it => [String(it.lineup_id), it]));
+  for (const it of incoming) mergedMap.set(String(it.lineup_id), it);
+  const items = [...mergedMap.values()].sort((a, b) => a.lineup_id - b.lineup_id);
+
   gameState.shopStock.set(nodeId, { items, coinAfter: prev.coinAfter });
   broadcastToWindow('shop-stock', { nodeId, stock: { items, coinAfter: prev.coinAfter } });
 }
@@ -287,23 +297,26 @@ function handleProceed(data) {
   if (data.miasma_info) gameState.miasmaInfo = data.miasma_info;
   if (data.total_turn !== undefined) gameState.totalTurn = data.total_turn;
 
-  // Collect guide book effects from scenario status lists
-  const books = data.action_scenario_list
-    ? data.action_scenario_list.flatMap(s => s.status_list || [])
-    : [];
-  if (books.length > 0) {
-    for (const b of books) {
-      if (b.status_id != null && !gameState.guideBooks.some(g => g.status_id === b.status_id)) {
-        gameState.guideBooks.push({
-          status_id: b.status_id,
-          name: b.name || `status:${b.status_id}`,
-          rarity: b.rarity,
-          icon_type: b.icon_type,
-          icon_category: b.icon_category,
-        });
-      }
+  // Collect guide book candidates from scenario status lists (3-way pick UI:
+  // action_scenario_list[] with scenario_type CHOICE + status_list candidates)
+  const candidates = [];
+  const scenarioLists = (data.action_scenario_list || []).flatMap(s => {
+    const lists = s.status_list || [];
+    return lists;
+  });
+  for (const b of scenarioLists) {
+    if (b.status_id != null) {
+      candidates.push({
+        status_id: b.status_id,
+        name: b.name || `status:${b.status_id}`,
+        rarity: b.rarity,
+        icon_type: b.icon_type,
+        icon_category: b.icon_category,
+      });
     }
-    broadcastToWindow('guide-books', gameState.guideBooks);
+  }
+  if (candidates.length > 0) {
+    gameState.guideBookCandidates = candidates;
   }
 
   broadcastToWindow('proceed', {
@@ -311,6 +324,34 @@ function handleProceed(data) {
     miasmaInfo: data.miasma_info,
     totalTurn: data.total_turn,
   });
+}
+
+// spacebook_status_add: the 3-way pick confirm. The response body is empty of
+// the book list, but the REQUEST carries status_ids of what the player picked.
+// Resolve those against the cached candidates and add them to guideBooks.
+function handleSpacebookAdd(data) {
+  handleProceed(data); // still update common state
+
+  const body = data && data._requestBody;
+  const pickedIds = (body && Array.isArray(body.status_ids)) ? body.status_ids.map(Number) : [];
+  if (pickedIds.length === 0) return;
+
+  const candidates = gameState.guideBookCandidates;
+  let added = false;
+  for (const sid of pickedIds) {
+    const cand = candidates.find(c => Number(c.status_id) === sid);
+    if (!cand) continue;
+    const existing = gameState.guideBooks.find(g => Number(g.status_id) === sid);
+    if (existing) {
+      existing.num = (existing.num || 1) + 1;
+    } else {
+      gameState.guideBooks.push({ ...cand, num: 1 });
+    }
+    added = true;
+  }
+  if (added) {
+    broadcastToWindow('guide-books', gameState.guideBooks);
+  }
 }
 
 function handleIncident(data) {

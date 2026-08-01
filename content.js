@@ -61,16 +61,23 @@
 
   XMLHttpRequest.prototype.open = function (method, url, ...rest) {
     this._gbfHelperUrl = typeof url === 'string' ? url : '';
+    this._gbfHelperMethod = method;
     return originalOpen.call(this, method, url, ...rest);
   };
 
   XMLHttpRequest.prototype.send = function (...args) {
     const type = classifyUrl(this._gbfHelperUrl || '');
     if (type) {
+      const body = typeof args[0] === 'string' ? args[0] : (args[0] ? JSON.stringify(args[0]) : '');
       this.addEventListener('load', function () {
         try {
           const json = JSON.parse(this.responseText);
           postToExtension(type, json);
+          // Also forward the request body for actions that need it
+          // (e.g. spacebook_status_add carries the picked status_ids)
+          if (body) {
+            try { json._requestBody = JSON.parse(body); } catch (e) { /* not json */ }
+          }
         } catch (e) { /* ignore */ }
       });
     }

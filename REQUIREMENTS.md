@@ -41,7 +41,7 @@
 | `rest/arcarum3/dungeon/incident_choose` | POST | 事件中选择选项 | 同 move_node 结构 |
 | `rest/arcarum3/dungeon/party_status` | GET | 查看队伍状态 | 队伍成员 HP |
 | `rest/arcarum3/dungeon/spacebook_status_list` | GET | 打开导本页面 | **当前全部导本** `status_list`（status_id、user_status_id、name、rarity、icon_type） |
-| `rest/arcarum3/dungeon/proceed_node_event_spacebook_status_add` | POST | 三选一选择导本 | 响应无 status_list（导本列表由后续 spacebook_status_list 刷新） |
+| `rest/arcarum3/dungeon/proceed_node_event_spacebook_status_add` | POST | 三选一选择导本 | 请求体 `status_ids` = 选中导本；候选列表来自前述 `proceed_node_event` 的 `status_list`（scenario_type=3/action_type=401） |
 | `rest/arcarum3/dungeon/dungeon_shop_lineup/{id}` | GET | 打开商店/切换货架 | 货架 `item_list`（lineup_id、item_name、price、stock_num、can_purchase） |
 | `rest/arcarum3/dungeon/purchase_dungeon_shop_item` | POST | 购物 | `before_coin`、`after_coin`、`is_all_purchased` |
 

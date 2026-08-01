@@ -814,10 +814,18 @@ export class MapRenderer {
     if (node.node_type === 8) {
       if (stock && stock.items && stock.items.length > 0) {
         stockLines.push(`— Stock (coin ${stock.coinAfter != null ? stock.coinAfter : '?'}) —`);
-        for (const it of stock.items) {
+        const books = stock.items.filter(it => it.tab === 'book');
+        const items = stock.items.filter(it => it.tab !== 'book');
+        if (books.length > 0) stockLines.push('📖 Guidebooks:');
+        for (const it of books) {
+          const sold = it.stock <= 0 ? ' [SOLD OUT]' : '';
+          stockLines.push(`  ${it.name} · ${it.price}c · x${it.stock}${sold}`);
+        }
+        if (items.length > 0) stockLines.push('🎒 Items:');
+        for (const it of items) {
           const sold = it.stock <= 0 ? ' [SOLD OUT]' : '';
           const name = it.name || `item:${it.lineup_id}`;
-          stockLines.push(`${name} · ${it.price}c · x${it.stock}${sold}`);
+          stockLines.push(`  ${name} · ${it.price}c · x${it.stock}${sold}`);
         }
       } else {
         stockLines.push('— not visited —');
