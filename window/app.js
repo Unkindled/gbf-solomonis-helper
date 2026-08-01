@@ -65,6 +65,15 @@ function init() {
     if (renderer) renderer.focusPlayer();
   });
 
+  // Guide book popup toggle
+  const popup = document.getElementById('guidebook-popup');
+  document.getElementById('btn-guidebook').addEventListener('click', () => {
+    popup.classList.toggle('hidden');
+  });
+  document.getElementById('guidebook-popup-close').addEventListener('click', () => {
+    popup.classList.add('hidden');
+  });
+
   // Export miasma log button
   document.getElementById('btn-export-miasma').addEventListener('click', () => {
     chrome.runtime.sendMessage({ channel: 'gbf-helper:get-miasma-log' }, (log) => {
@@ -305,19 +314,24 @@ function renderPartyBar(party) {
 }
 
 function renderGuideBooks(books) {
-  const el = document.getElementById('guide-book-panel');
-  const badge = document.getElementById('guide-books');
+  // Update the popup (map top-right)
+  const body = document.getElementById('guidebook-popup-body');
+  if (!body) return;
   if (!Array.isArray(books) || books.length === 0) {
-    el.innerHTML = '';
-    badge.textContent = '📖 0';
+    body.innerHTML = '<div class="guidebook-popup-empty">No guide books yet</div>';
     return;
   }
-  badge.textContent = `📖 ${books.length}`;
   const rows = books.map(b => {
-    const rar = b.rarity ? ` (r${b.rarity})` : '';
-    return `<div class="guide-book-row">📖 ${b.name}${rar}</div>`;
+    const iconUrl = b.icon_type ? `../assets/icon_book_effect/book_effect_${b.icon_type}.png` : '';
+    const rarLabel = { 1: '★', 2: '★★', 3: '★★★', 99: '?' }[b.rarity] || '';
+    const name = (b.name || '').replace(/@@/g, ' ');
+    return `<div class="guidebook-popup-row">
+      ${iconUrl ? `<img class="gb-icon" src="${iconUrl}" alt="">` : '<div class="gb-icon"></div>'}
+      <span class="gb-name">${name}</span>
+      <span class="gb-rarity">${rarLabel}</span>
+    </div>`;
   }).join('');
-  el.innerHTML = `<details open><summary class="filter-section-title">${I18N.t('filter.guideBooks')}</summary><div class="filter-section-body">${rows}</div></details>`;
+  body.innerHTML = rows;
 }
 
 // --- Path planning ---

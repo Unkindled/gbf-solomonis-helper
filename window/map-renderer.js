@@ -624,21 +624,24 @@ export class MapRenderer {
     }
 
     // Step number labels on path nodes (above the icon)
-    ctx.font = 'bold 18px system-ui';
+    ctx.font = 'bold 24px system-ui';
     ctx.textAlign = 'center';
     for (let i = 1; i < this.path.length; i++) {
       const node = this.nodeMap.get(this.path[i]);
       if (!node) continue;
       const danger = dangerSet.has(i);
       const label = String(i);
-      const tw = ctx.measureText(label).width + 10;
-      const ly = node.position_y - NODE_H - 10;
-      ctx.fillStyle = danger ? 'rgba(180, 30, 30, 0.85)' : 'rgba(160, 130, 0, 0.85)';
+      const tw = ctx.measureText(label).width + 14;
+      const ly = node.position_y - NODE_H - 16;
+      ctx.fillStyle = danger ? 'rgba(180, 30, 30, 0.9)' : 'rgba(160, 130, 0, 0.9)';
       ctx.beginPath();
-      ctx.roundRect(node.position_x - tw / 2, ly, tw, 20, 4);
+      ctx.roundRect(node.position_x - tw / 2, ly, tw, 26, 6);
       ctx.fill();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
       ctx.fillStyle = '#fff';
-      ctx.fillText(label, node.position_x, ly + 15);
+      ctx.fillText(label, node.position_x, ly + 19);
     }
   }
 
@@ -712,6 +715,26 @@ export class MapRenderer {
       const icon = this._iconForNode(node);
       if (icon && icon.complete && icon.naturalWidth > 0) {
         ctx.drawImage(icon, x, y, NODE_W, NODE_H);
+      }
+
+      // Visited shop → checkmark badge
+      if (node.node_type === 8 && node.is_visited) {
+        const bx = node.position_x + NODE_W / 2 - 4;
+        const by = node.position_y - NODE_H + 4;
+        ctx.beginPath();
+        ctx.arc(bx, by, 10, 0, Math.PI * 2);
+        ctx.fillStyle = '#26a69a';
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(bx - 4, by);
+        ctx.lineTo(bx - 1, by + 3);
+        ctx.lineTo(bx + 4, by - 3);
+        ctx.stroke();
       }
 
       // Path highlight ring (centered on icon body)

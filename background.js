@@ -141,11 +141,14 @@ function handleShopLineup(data) {
   const items = data.item_list.map(it => ({
     lineup_id: it.lineup_id,
     item_type: it.item_type,
-    name: it.item_name || `type:${it.item_type}`,
+    // Book tab (type 4) carries the guidebook name in `name`;
+    // item tab carries it in `item_name`.
+    name: it.item_name || it.name || (it.status_id != null ? `guidebook:${it.status_id}` : `type:${it.item_type}`),
     price: it.price,
     stock: it.stock_num,
     canBuy: it.can_purchase,
     image: it.item_image,
+    isGuidebook: it.status_id != null,
   }));
   const prev = gameState.shopStock.get(nodeId) || { items: [] };
   gameState.shopStock.set(nodeId, { items, coinAfter: prev.coinAfter });

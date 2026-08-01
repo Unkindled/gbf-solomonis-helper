@@ -11,10 +11,19 @@
       <div id="hud-top">
         <div id="dungeon-point" class="hud-chip" title="Sephira Coins">🪙 0</div>
         <div id="party-bar"></div>
-        <div id="guide-books" class="hud-chip" title="Guide Books">📖 0</div>
       </div>
       <canvas id="map-canvas"></canvas>
       <button id="btn-focus" title="Center on player (F)">⌖</button>
+      <button id="btn-guidebook" class="hud-btn" title="Guide Books">
+        <img src="../assets/book_thumb_1.png" alt="Guide Books">
+      </button>
+      <div id="guidebook-popup" class="guidebook-popup hidden">
+        <div class="guidebook-popup-header">
+          <span id="guidebook-popup-title">Guide Books</span>
+          <button id="guidebook-popup-close" class="btn-small">×</button>
+        </div>
+        <div id="guidebook-popup-body"></div>
+      </div>
     </div>
     <div id="sidebar">
       <div id="status-bar">Waiting for game data...</div>
@@ -25,7 +34,6 @@
         <button id="btn-export-miasma" class="btn-export" title="Download recorded miasma data for analysis">📋 Export Miasma Log</button>
         <button id="btn-lang" class="btn-export" title="Switch language">中文</button>
       </div>
-      <div id="guide-book-panel"></div>
       <div id="filter-panel"></div>
     </div>
   </div>
