@@ -314,7 +314,8 @@ function renderPartyBar(party) {
     const hp = Number(m.hp) || 0;
     const maxHp = Number(m.max_hp) || 1;
     const pct = Math.max(0, Math.min(100, Math.round(hp / maxHp * 100)));
-    const color = pct > 50 ? '#4caf50' : pct > 25 ? '#ffa726' : '#f44336';
+    // Game rule: hpPercent <= 25 → red gauge, otherwise green
+    const color = pct <= 25 ? '#e03131' : '#4caf50';
     const label = m.is_pc ? 'PC' : `N${i}`;
     // Character portrait: leader path for the PC, npc path otherwise
     const base = 'https://prd-game-a-granbluefantasy.akamaized.net/assets_en/img/sp/assets/';
@@ -323,7 +324,7 @@ function renderPartyBar(party) {
       ${imgUrl ? `<img class="party-portrait" src="${imgUrl}" alt="">` : '<div class="party-portrait party-portrait-empty"></div>'}
       <div class="party-hpwrap">
         <div class="party-hpbar"><div class="party-hpfill" style="width:${pct}%;background:${color}"></div></div>
-        <span class="party-hptext">${hp}<span class="party-hpmax">/${maxHp}</span></span>
+        <span class="party-hptext">${hp}<span class="party-hpmax">/${maxHp}</span> <span class="party-hppct">${pct}%</span></span>
       </div>
     </div>`;
   }).join('');

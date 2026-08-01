@@ -64,12 +64,12 @@ html, body {
 #party-bar {
   flex: 1;
   display: flex;
-  gap: 10px;
+  gap: 6px;
   background: rgba(16, 21, 29, 0.85);
   border: 1px solid #30363d;
   border-radius: 6px;
-  padding: 6px 10px;
-  align-items: stretch;
+  padding: 4px 8px;
+  align-items: center;
 }
 
 .party-member {
@@ -81,10 +81,12 @@ html, body {
 }
 
 .party-portrait {
+  /* Game renders character icons as 40x80 portrait strips */
   width: 40px;
-  height: 40px;
-  border-radius: 5px;
+  height: 80px;
+  border-radius: 4px;
   object-fit: cover;
+  object-position: center top;
   border: 1px solid #30363d;
   flex-shrink: 0;
 }
@@ -98,7 +100,7 @@ html, body {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .party-hpbar {
@@ -119,10 +121,16 @@ html, body {
   font-size: 11px;
   color: #c9d1d9;
   white-space: nowrap;
+  line-height: 1.3;
 }
 
 .party-hpmax {
   color: #6e7681;
+  font-size: 10px;
+}
+
+.party-hppct {
+  color: #8b949e;
   font-size: 10px;
 }
 
