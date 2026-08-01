@@ -359,16 +359,49 @@ export class MapRenderer {
     return { R: bestR, err: bestErr, total: items.length };
   }
 
-  // Lv2 shrink model: the center stays at the server-provided center_position
-  // (observed constant across all Lv2 responses in HAR-2); only the radius
-  // contracts from the Lv1 safe radius (670) to the Lv2 safe radius (67)
-  // over the level's total countdown.
-  _computeLv2Radius(countdown) {
-    const total = 20;
-    const progress = countdown == null
-      ? 1
-      : Math.max(0, Math.min(1, 1 - countdown / total));
-    return 670 + (67 - 670) * progress; // Lv1 safe radius → Lv2 safe radius
+  // Lv2 shrink model: the center_position is NOT the miasma circle center.
+  // Fit both the center AND radius from the is_shrinking node states:
+  //   center = centroid of the safe (unpolluted) nodes,
+  //   radius = boundary that minimizes misclassification.
+  _fitMiasmaCircle() {
+    const items = [];
+    for (const [, n] of this.nodeMap) {
+      items.push({ x: n.position_x, y: n.position_y, s: !!n.is_shrinking });
+    }
+    if (items.length === 0) return null;
+
+    const safe = items.filter(i => !i.s);
+    if (safe.length === 0) return { x: 0, y: 0, R: 0, err: items.length };
+
+    // Center = centroid of unpolluted nodes
+    let cx = 0, cy = 0;
+    for (const s of safe) { cx += s.x; cy += s.y; }
+    cx /= safe.length;
+    cy /= safe.length;
+
+    // Radius = minimize misclassification (polluted inside + safe outside)
+    const dists = items.map(i => ({ d: Math.hypot(i.x - cx, i.y - cy), s: i.s })).sort((a, b) => a.d - b.d);
+    const prefix = new Array(dists.length);
+    let cnt = 0;
+    for (let i = 0; i < dists.length; i++) {
+      if (dists[i].s) cnt++;
+      prefix[i] = cnt;
+    }
+    const totalShrink = cnt;
+    const totalSafe = dists.length - totalShrink;
+
+    let bestR = null, bestErr = Infinity;
+    for (let i = 0; i < dists.length; i++) {
+      const R = dists[i].d;
+      const shrinkIn = prefix[i];
+      const safeOut = totalSafe - (i + 1 - shrinkIn);
+      const err = shrinkIn + safeOut;
+      if (err < bestErr) {
+        bestErr = err;
+        bestR = R;
+      }
+    }
+    return { x: cx, y: cy, R: bestR, err: bestErr };
   }
 
   _drawMiasmaOverlay(ctx) {
@@ -385,17 +418,24 @@ export class MapRenderer {
 
     let cx, cy, miasmaR;
     if (level === 1) {
-      // Lv1: fit the boundary from is_shrinking (accurate, no Lv1 pollution)
+      // Lv1: fit boundary from is_shrinking (center = center_position)
       cx = a.center_position_x - OFFSET.X;
       cy = a.center_position_y - OFFSET.Y;
       const fit = this._fitMiasmaRadius(cx, cy);
       miasmaR = fit ? Math.max(fit.R, safeRadius) : 1600;
     } else {
-      // Lv2: center is exactly the server-provided center_position;
-      // only the radius contracts 670 → 67 over the countdown.
-      cx = a.center_position_x - OFFSET.X;
-      cy = a.center_position_y - OFFSET.Y;
-      miasmaR = Math.max(this._computeLv2Radius(a.miasma_stop_countdown), safeRadius);
+      // Lv2: center_position is NOT the circle center — fit center + radius
+      // from the polluted/unpolluted node states.
+      const fit = this._fitMiasmaCircle();
+      if (fit && fit.R > 0) {
+        cx = fit.x;
+        cy = fit.y;
+        miasmaR = Math.max(fit.R, safeRadius);
+      } else {
+        cx = a.center_position_x - OFFSET.X;
+        cy = a.center_position_y - OFFSET.Y;
+        miasmaR = safeRadius;
+      }
     }
 
     // --- Pollution effect: purple-red haze outside the miasma boundary ---
