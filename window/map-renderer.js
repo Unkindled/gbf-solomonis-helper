@@ -811,7 +811,7 @@ export class MapRenderer {
     // Shop stock lines (if this shop node has been visited and stock captured)
     const stockLines = [];
     const stock = this.shopStock[node.node_id];
-    const MAX_LINE = 46; // max chars per line; longer text is truncated
+    const MAX_LINE = 64; // max chars per line; longer text is truncated
     const truncate = (s) => (s.length > MAX_LINE ? s.slice(0, MAX_LINE - 1) + '…' : s);
     // Guidebook names use '@@' as an in-game line break — collapse to a space
     const cleanName = (s) => truncate((s || '').replace(/@@/g, ' '));
@@ -839,7 +839,7 @@ export class MapRenderer {
     ctx.font = '12px system-ui';
     const allLines = [label, ...stockLines];
     // Cap tooltip height: show at most MAX_TOOLTIP_LINES, fold the rest
-    const MAX_TOOLTIP_LINES = 10;
+    const MAX_TOOLTIP_LINES = 15;
     let displayLines = allLines;
     let folded = 0;
     if (allLines.length > MAX_TOOLTIP_LINES) {
@@ -848,7 +848,7 @@ export class MapRenderer {
       displayLines.push(`  … +${folded} more`);
     }
     const lineH = 16;
-    const tw = Math.min(Math.max(...displayLines.map(l => ctx.measureText(l).width)) + 16, 360);
+    const tw = Math.min(Math.max(...displayLines.map(l => ctx.measureText(l).width)) + 16, 480);
     const th = lineH * displayLines.length + 8;
     const tx = Math.min(screen.x + 18, this.canvas.width - tw - 5);
     const ty = Math.max(screen.y - NODE_H * this.scale - 34 - (displayLines.length - 1) * lineH, 20);
