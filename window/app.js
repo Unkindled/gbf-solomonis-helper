@@ -492,6 +492,12 @@ function handleWindowMessage(type, payload) {
       }
       break;
 
+    case 'report-books':
+      // payload: guidebooks obtained in a battle-report run (record page).
+      // Feed into the learning pool only — no overlay.
+      if (Array.isArray(payload)) absorbBookInfo(payload);
+      break;
+
     case 'pick-done':
       hidePickOverlay();
       break;

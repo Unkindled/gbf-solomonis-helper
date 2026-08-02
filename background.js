@@ -111,6 +111,24 @@ function handleGameData(type, data) {
     case 'spacebookList':
       handleSpacebookList(data);
       break;
+    case 'reportBook':
+      // Battle-report page: per-run guidebook list. Do NOT overwrite the
+      // owned list — just feed the books into the learning pool so the
+      // codex gains mappings/icons/JA text (and fetch their icons).
+      if (data && Array.isArray(data.status_list)) {
+        const books = data.status_list.map(b => ({
+          status_id: b.status_id,
+          name: b.name || `status:${b.status_id}`,
+          rarity: b.rarity,
+          icon_type: b.icon_type,
+        }));
+        if (books.length > 0) {
+          broadcastToWindow('report-books', books);
+          const iconTypes = [...new Set(books.map(b => b.icon_type).filter(t => t != null))];
+          fetchMissingBookIcons(iconTypes);
+        }
+      }
+      break;
     case 'spacebookAdd':
       handleSpacebookAdd(data);
       break;
