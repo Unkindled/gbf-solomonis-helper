@@ -150,19 +150,17 @@ function isFarmNode(node) {
 export function findFarmRoute(nodeMap, startId, maxLen = 9) {
   if (!nodeMap.has(startId) || maxLen <= 0) return null;
 
-  // DFS over walks (revisiting nodes IS allowed — crossing an already-visited
-  // node may lead to fresh farm nodes). Scoring is de-duplicated: a farm
-  // node (battle/event/chest) counts only the FIRST time it is visited.
-  // Battle priority: farmNodes total first, battles second, steps third.
-  // Optimistic pruning: remaining steps bound how many new farm nodes can
-  // still be collected, cutting branches that cannot beat the current best.
-  let best = null; // { path, farmNodes, battles }
+  // DFS over walks. Revisiting a node is allowed only when it leads to a
+  // fresh farm node (scoring is de-duplicated: each farm node counts once).
+  // The winner maximizes (distinctFarmNodes, distinctBattles); ties are
+  // broken by the SMALLEST number of distinct nodes visited (fewest
+  // wasted backtracking steps). Pruning: remaining steps bound how many
+  // new farm nodes can still be collected.
+  let best = null; // { path, farmNodes, battles, distinctNodes }
 
   const path = [startId];
-  const farmCollected = new Set(); // farm node ids already counted
-  // The player's own node is "already visited" — if it's a farm node, mark
-  // it collected so backtracking through it never double-counts. It does
-  // NOT contribute to the score (the player stands on it already).
+  const pathSet = new Set([startId]);       // distinct nodes on the walk
+  const farmCollected = new Set();          // farm ids already counted
   if (isFarmNode(nodeMap.get(startId))) farmCollected.add(startId);
   let farmNodes = 0;
   let battles = 0;
@@ -173,23 +171,26 @@ export function findFarmRoute(nodeMap, startId, maxLen = 9) {
       const better = !best
         || farmNodes > best.farmNodes
         || (farmNodes === best.farmNodes && battles > best.battles)
-        || (farmNodes === best.farmNodes && battles === best.battles && path.length < best.path.length);
-      if (better) best = { path: [...path], farmNodes, battles };
+        || (farmNodes === best.farmNodes && battles === best.battles && pathSet.size < best.distinctNodes);
+      if (better) best = { path: [...path], farmNodes, battles, distinctNodes: pathSet.size };
     }
 
     if (steps >= maxLen) return;
 
-    // Prune: even collecting a farm node on every remaining step cannot
-    // beat the current best.
+    // Prune (SAFE): even collecting a farm node on every remaining step
+    // cannot beat the current best. farmNodes grows by at most 1 per step,
+    // so this is a valid upper bound.
     const rem = maxLen - steps;
     if (best && farmNodes + rem < best.farmNodes) return;
-    if (best && farmNodes === best.farmNodes && battles + rem <= best.battles) return;
 
     for (const nx of (node.adjacent_node_ids || [])) {
       if (!nodeMap.has(nx)) continue;
       const nn = nodeMap.get(nx);
       const isNewFarm = isFarmNode(nn) && !farmCollected.has(nx);
+      const isNewNode = !pathSet.has(nx);
+
       path.push(nx);
+      if (isNewNode) pathSet.add(nx);
       if (isNewFarm) {
         farmCollected.add(nx);
         farmNodes++;
@@ -201,6 +202,7 @@ export function findFarmRoute(nodeMap, startId, maxLen = 9) {
         farmNodes--;
         farmCollected.delete(nx);
       }
+      if (isNewNode) pathSet.delete(nx);
       path.pop();
     }
   })(startId, 0);
