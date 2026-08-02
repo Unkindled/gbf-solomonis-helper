@@ -473,34 +473,45 @@ function handleWindowMessage(type, payload) {
       // payload: status_id → {status_id,name,icon_type,rarity} seen in shop
       // lineups. Feed them into the learned pools: icons, JA text, and try
       // to teach a status_id → wiki mapping when the name matches.
-      if (payload && typeof payload === 'object') {
-        let reRender = false;
-        for (const [sid, rec] of Object.entries(payload)) {
-          if (rec.icon_type != null && seenBookIcons[sid] !== rec.icon_type) {
-            seenBookIcons[sid] = rec.icon_type;
-            reRender = true;
-          }
-          if (rec.name && /[\u3040-\u30ff\u4e00-\u9fff]/.test(rec.name) && learnedJaText['status:' + sid] !== rec.name) {
-            learnedJaText['status:' + sid] = rec.name;
-            reRender = true;
-          }
-          if (rec.name) {
-            // Try to teach a mapping (works when the name matches wiki text)
-            const hit = matchCodexEntry({ status_id: rec.status_id, name: rec.name, rarity: rec.rarity, icon_type: rec.icon_type });
-            if (hit && hit.id != null) reRender = true;
-          }
-        }
-        if (reRender) {
-          chrome.storage.local.set({
-            gbfHelperSeenBookIcons: seenBookIcons,
-            gbfHelperLearnedJaText: learnedJaText,
-            gbfHelperStatusIdMap: learnedMap,
-          });
-          renderGuideBooks(latestGuideBooks);
-          if (!document.getElementById('guidebook-codex')?.classList.contains('hidden')) renderCodex();
-        }
-      }
+      if (payload && typeof payload === 'object') absorbBookInfo(Object.values(payload));
       break;
+
+    case 'pick-candidates':
+      // payload: [{status_id,name,icon_type,rarity}] from the 3-way pick UI
+      if (Array.isArray(payload)) absorbBookInfo(payload);
+      break;
+  }
+}
+
+/** Absorb guidebook info seen from any source (shop, 3-way pick, etc.) into
+ *  the learned pools: icons, JA text, and status_id → wiki mappings. */
+function absorbBookInfo(recs) {
+  let reRender = false;
+  for (const rec of recs) {
+    const sid = rec.status_id != null ? String(rec.status_id) : null;
+    if (sid == null) continue;
+    if (rec.icon_type != null && seenBookIcons[sid] !== rec.icon_type) {
+      seenBookIcons[sid] = rec.icon_type;
+      reRender = true;
+    }
+    if (rec.name && /[\u3040-\u30ff\u4e00-\u9fff]/.test(rec.name) && learnedJaText['status:' + sid] !== rec.name) {
+      learnedJaText['status:' + sid] = rec.name;
+      reRender = true;
+    }
+    if (rec.name) {
+      // Try to teach a mapping (works when the name matches wiki text)
+      const hit = matchCodexEntry({ status_id: rec.status_id, name: rec.name, rarity: rec.rarity, icon_type: rec.icon_type });
+      if (hit && hit.id != null) reRender = true;
+    }
+  }
+  if (reRender) {
+    chrome.storage.local.set({
+      gbfHelperSeenBookIcons: seenBookIcons,
+      gbfHelperLearnedJaText: learnedJaText,
+      gbfHelperStatusIdMap: learnedMap,
+    });
+    renderGuideBooks(latestGuideBooks);
+    if (!document.getElementById('guidebook-codex')?.classList.contains('hidden')) renderCodex();
   }
 }
 

@@ -496,6 +496,10 @@ function handleProceed(data) {
   }
   if (candidates.length > 0) {
     gameState.guideBookCandidates = candidates;
+    // The 3-way pick UI reveals up to 3 guidebooks (status_id + name +
+    // icon + rarity) — including ones the player doesn't own. Feed them
+    // to the helper window for icon/JA-text/mapping collection.
+    broadcastToWindow('pick-candidates', candidates);
   }
 
   broadcastToWindow('proceed', {
