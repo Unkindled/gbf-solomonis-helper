@@ -151,6 +151,7 @@ function init() {
   loadFavorites(() => { renderGuideBooks(latestGuideBooks); });
   loadUnknownBooks();
   loadLearnedStatusId();
+  loadLearnedJaText();
 
   // Export miasma log button
   document.getElementById('btn-export-miasma').addEventListener('click', () => {
@@ -454,10 +455,11 @@ function renderPartyBar(party) {
     return;
   }
   el.innerHTML = party.map((m, i) => {
-    const dead = m.alive === 0;
-    const hp = dead ? 0 : (Number(m.hp) || 0);
+    const hp = Number(m.hp) || 0;
     const maxHp = Number(m.max_hp) || 1;
-    // Minimum 1% while alive (never show an empty bar unless dead)
+    const dead = hp <= 0; // no `alive` field in party_status — dead == 0 HP
+    // Minimum 1% while alive (never show an empty bar unless dead);
+    // dead characters show a flat 0%
     const rawPct = Math.round(hp / maxHp * 100);
     const pct = dead ? 0 : Math.max(1, Math.min(100, rawPct));
     // Game rule: hpPercent <= 25 → red gauge, otherwise green; dead → gray
@@ -535,7 +537,7 @@ function renderGuideBooks(books) {
     const fa = favoriteBookIds.has(String(matchCodexEntry(a)?.id ?? -1));
     const fb = favoriteBookIds.has(String(matchCodexEntry(b)?.id ?? -1));
     if (fa !== fb) return fa ? -1 : 1;
-    return (rarityOrder[b.rarity] ?? 9) - (rarityOrder[a.rarity] ?? 9) || String(a.name).localeCompare(String(b.name));
+    return (rarityOrder[a.rarity] ?? 9) - (rarityOrder[b.rarity] ?? 9) || String(a.name).localeCompare(String(b.name));
   });
 
   const rows = merged.map(b => {
@@ -577,7 +579,9 @@ let favoriteBookIds = new Set();
 function normText(s) {
   return String(s || '')
     .toLowerCase()
-    .replace(/[^a-z0-9+% ]/g, ' ')
+    // Keep ASCII letters/digits, +/%, and CJK (Japanese) text; drop symbols
+    // like '/', '(', ')', '@', '・' etc. \p{L} covers all letters (incl. JA).
+    .replace(/[^\p{L}\p{N}+% ]/gu, ' ')
     .replace(/\s*([+%])\s*/g, (m, c) => c)
     .replace(/\s+/g, ' ')
     .trim();
@@ -627,8 +631,28 @@ function matchCodexEntry(gameBook) {
     }
     if (hit) break;
   }
-  if (hit) learnStatusId(gameBook, hit.id);
+  if (hit) {
+    learnStatusId(gameBook, hit.id);
+    learnJaText(hit.id, gameBook.name); // collect JA text for searching
+  }
   return hit || null;
+}
+
+// Runtime-collected JA effect text per entry id, so the codex search can
+// match Japanese queries even though the bundled DB has no ja field yet.
+// Persisted; grows as the player runs the JA client.
+let learnedJaText = {};
+function learnJaText(entryId, name) {
+  if (!name || !/[\u3040-\u30ff\u4e00-\u9fff]/.test(name)) return;
+  const key = String(entryId);
+  if (learnedJaText[key] === name) return;
+  learnedJaText[key] = name;
+  chrome.storage.local.set({ gbfHelperLearnedJaText: learnedJaText });
+}
+function loadLearnedJaText() {
+  chrome.storage.local.get('gbfHelperLearnedJaText', (res) => {
+    learnedJaText = res.gbfHelperLearnedJaText || {};
+  });
 }
 
 /** Remove "(Remaining uses: x/y)" style suffixes for fuzzy matching. */
@@ -785,7 +809,7 @@ function renderCodex() {
     if (own === 'missing' && isOwned) continue;
     if (fav === 'fav' && !isFav) continue;
     if (q) {
-      const hay = [entry.text, entry.ja, entry.zh].filter(Boolean).map(normText).join(' ');
+      const hay = [entry.text, entry.ja, entry.zh, learnedJaText[entry.id]].filter(Boolean).map(normText).join(' ');
       if (!hay.includes(q)) continue;
     }
     rows.push({ entry, isOwned, isFav });
@@ -794,7 +818,7 @@ function renderCodex() {
   const rarityOrder = { 3: 0, 2: 1, 1: 2, 99: 3 }; // Unique > Rare > Normal > Cursed
   rows.sort((a, b) => {
     if (a.isFav !== b.isFav) return a.isFav ? -1 : 1;
-    return (rarityOrder[b.entry.rarity] ?? 9) - (rarityOrder[a.entry.rarity] ?? 9)
+    return (rarityOrder[a.entry.rarity] ?? 9) - (rarityOrder[b.entry.rarity] ?? 9)
       || String(a.entry.text).localeCompare(String(b.entry.text));
   });
   const rarLabel = { 1: '★', 2: '★★', 3: '★★★', 99: '☠' };
