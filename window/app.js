@@ -548,7 +548,7 @@ function absorbBookInfo(recs) {
         // sessions teach translations for mappings made in EN sessions).
         const jaText = learnedJaText['status:' + sid] || (hit.ja || null);
         if (jaText && hit.ja !== jaText) {
-          hit.ja = jaText;
+          hit.ja = jaText.replace(/@@/g, ' '); // strip @@ separators
           newJa++;
         }
       } else if (/[\u3040-\u30ff\u4e00-\u9fff]/.test(rec.name)) {

@@ -30,7 +30,7 @@ export const GUIDEBOOK_DB = [
   "icon": "ca cap",
   "text": "100% boost to special C.A. DMG cap",
   "id": 2,
-  "ja": null,
+  "ja": "奥義ダメージ特殊上限UP(100%)",
   "zh": null
  },
  {
@@ -44,7 +44,7 @@ export const GUIDEBOOK_DB = [
   "icon": "amp",
   "text": "Amplify all allies' DMG based on total HP lost after this guidebook effect was obtained (Max: 100%)",
   "id": 3,
-  "ja": null,
+  "ja": "この導本効果を入手して以降に味方全体で消費し たHPの合計量に応じて味方全体の与ダメージ UP(100%/最大100%)",
   "zh": null
  },
  {
@@ -70,7 +70,7 @@ export const GUIDEBOOK_DB = [
   "icon": "uplift",
   "text": "All allies have a maximum charge bar limit of 200% (Can't be stacked)",
   "id": 5,
-  "ja": null,
+  "ja": "味方全体の奥義ゲージ最大値が200になる(重複不 可)",
   "zh": null
  },
  {
@@ -84,7 +84,7 @@ export const GUIDEBOOK_DB = [
   "icon": "shield",
   "text": "At battle start: All allies' HP is reduced to 1 / Shield effect to each ally worth 500% of the HP they consumed (Can't be stacked)",
   "id": 6,
-  "ja": null,
+  "ja": "バトル開始時にバトルメンバーのHPが1になる が、自身が消費したHPの5倍分のバリア効果(重 複不可)",
   "zh": null
  },
  {
@@ -108,7 +108,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "Summon cooldowns become 1 turn (Can't be stacked)",
   "id": 8,
-  "ja": null,
+  "ja": "召喚石の使用間隔が1ターンになる(重複不可)",
   "zh": null
  },
  {
@@ -122,7 +122,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "\"Can't recast\" skills and 'Can't resummon\" summon calls become reusable again at the start of each battle (Can't be stacked)",
   "id": 9,
-  "ja": null,
+  "ja": "バトル開始時に味方全体の再使用不可状態のアビ リティが使用可能になる/再召喚不可状態の召喚 石が使用可能になる(重複不可)",
   "zh": null
  },
  {
@@ -137,7 +137,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "Obtain a random number of Sephira coins and 1 random guidebook effect upon clearing a battle",
   "id": 10,
-  "ja": null,
+  "ja": "バトル勝利時にランダムな数のセフィラコインと ランダムな導本効果を1つ獲得する",
   "zh": null
  },
  {
@@ -151,7 +151,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "Amplify DMG for allies with max HP above 24,999 +30% (Above 49,999: Bonus Elemental DMG effect [30%] / Above 99,999: Boost specs for the Bonus DMG and DMG amplify)",
   "id": 11,
-  "ja": null,
+  "ja": "最大HPが25000以上の味方の与ダメージ UP(30%)　◆50000以上の場合自属性追撃効果 (30%)/100000以上の場合与ダメージUPと自属性 追撃効果の性能UP",
   "zh": null
  },
  {
@@ -219,7 +219,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "Upon an ally using a charge attack: 2-turn cut their skill cooldowns (Can't be stacked)",
   "id": 16,
-  "ja": null,
+  "ja": "味方全体が奥義発動時、自分のアビリティ再使用 間隔を2ターン短縮(重複不可)",
   "zh": null
  },
  {
@@ -230,7 +230,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "At end of turn when all allies' charge bars are at least 100%: Consume 100% of all allies' charge bars / First-position ally deals 10-hit elemental DMG to all foes (1000% total) (Can't be stacked)",
   "id": 17,
-  "ja": null,
+  "ja": "ターン終了時に味方全体の奥義ゲージが100%以 上の時、先頭のキャラが味方全体の奥義ゲージを 100%消費して敵全体に10回合計100倍自属性ダメ ージ(重複不可)",
   "zh": null
  },
  {
@@ -243,7 +243,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "At the end of each turn allies dealt 100 hits of DMG: 2-turn cut to all allies' skill cooldowns (Can't be stacked)",
   "id": 18,
-  "ja": null,
+  "ja": "味方全体で100ヒット与えたターン終了時、味方 全体のアビリティ再使用間隔を2ターン短縮(重複 不可)",
   "zh": null
  },
  {
@@ -283,7 +283,7 @@ export const GUIDEBOOK_DB = [
   "icon": "amp",
   "text": "Amplify DMG 50%",
   "id": 21,
-  "ja": null,
+  "ja": "与ダメージUP(50%)",
   "zh": null
  },
  {
@@ -294,7 +294,7 @@ export const GUIDEBOOK_DB = [
   "icon": "def",
   "text": "20% DMG reduction",
   "id": 22,
-  "ja": null,
+  "ja": "被ダメージ軽減(20%)",
   "zh": null
  },
  {
@@ -307,7 +307,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "2-turn reduction to skill cooldowns",
   "id": 23,
-  "ja": null,
+  "ja": "アビリティ使用間隔短縮(2ターン)",
   "zh": null
  },
  {
@@ -362,7 +362,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "Lower foe's stats on battle, strong foe, and terrifying foe spaces (Can't be stacked)",
   "id": 27,
-  "ja": null,
+  "ja": "戦闘マス/強敵マス/超強敵マスにおいて、敵のス テータス減少(重複不可)",
   "zh": null
  },
  {
@@ -377,7 +377,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "At battle start (1st ally): Earth/wind DMG to foes / Hit to ATK, DEF, and M.A. rate / Bonus Earth DMG to allies / End of turn: Restore HP / 10% boost to charge bars (Can't be stacked)",
   "id": 28,
-  "ja": null,
+  "ja": "バトル開始時、先頭のキャラが敵全体に土・風属 性ダメージ/攻防DOWN/連続攻撃確率DOWN/ 味方全体に土属性追撃効果/ターン終了時、先頭 のキャラが味方全体のHPを回復/奥義ゲージ UP(10%)(重複不可)",
   "zh": null
  },
  {
@@ -390,7 +390,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "To all allies for 2 turns after battle start: DMG immunity, debuff immunity, and buffs can't be removed (Can't be stacked)",
   "id": 29,
-  "ja": null,
+  "ja": "バトル開始から2ターンの間、味方全体に被ダメ ージ無効/弱体効果無効/強化効果が無効化されな い(重複不可)",
   "zh": null
  },
  {
@@ -415,7 +415,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "1-turn reduction to all allies' skill cooldowns / Heal all allies by 10% of max HP at battle start",
   "id": 31,
-  "ja": null,
+  "ja": "味方全体のアビリティの使用間隔を1ターン短縮/ バトル開始時に味方全体が最大HPの10%分を回 復",
   "zh": null
  },
  {
@@ -429,7 +429,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "At battle start: Maria Theresa activates The Empress Upright / If all allies' HP is full before attacking: Sharp boost to all allies' ATK (1 time) (Only if Maria Theresa is a main ally) (Can't be stacked)",
   "id": 32,
-  "ja": null,
+  "ja": "バトル開始時にマリア・テレサが「女帝の正位 置」を発動/攻撃開始時に味方全体のHPが最大の 時、味方全体に攻撃大幅UP(1回)　◆マリア・テ レサがバトルメンバーにいる時のみ発動(重複不 可)",
   "zh": null
  },
  {
@@ -457,7 +457,7 @@ export const GUIDEBOOK_DB = [
   "icon": "flurry",
   "text": "Normal attack hit count +1",
   "id": 34,
-  "ja": null,
+  "ja": "通常攻撃のヒット数増加(＋1)",
   "zh": null
  },
  {
@@ -471,7 +471,7 @@ export const GUIDEBOOK_DB = [
   "icon": "flurry",
   "text": "Normal attack hit count for Erune and Levleath allies +1",
   "id": 35,
-  "ja": null,
+  "ja": "エルーン族とレヴリス族の通常攻撃のヒット数増 加(＋1)",
   "zh": null
  },
  {
@@ -484,7 +484,7 @@ export const GUIDEBOOK_DB = [
   "icon": "flurry",
   "text": "Increase all allies' normal attack hit count based on number of cursed guidebooks held (Max: +10)",
   "id": 36,
-  "ja": null,
+  "ja": "所持している呪われた導本効果の数に応じて味方 全体の通常攻撃のヒット数増加(＋0/最大＋10)",
   "zh": null
  },
  {
@@ -497,7 +497,7 @@ export const GUIDEBOOK_DB = [
   "icon": "echo",
   "text": "Bonus Elemental DMG effect (20%)",
   "id": 37,
-  "ja": null,
+  "ja": "自属性追撃効果(20%)",
   "zh": null
  },
  {
@@ -524,7 +524,7 @@ export const GUIDEBOOK_DB = [
   "icon": "rigor",
   "text": "Elemental Rigor effect (20%)",
   "id": 39,
-  "ja": null,
+  "ja": "自属性冴手効果(20%)",
   "zh": null
  },
  {
@@ -537,7 +537,7 @@ export const GUIDEBOOK_DB = [
   "icon": "ca echo",
   "text": "Bonus Elemental C.A. DMG effect (20%)",
   "id": 40,
-  "ja": null,
+  "ja": "自属性奥義追撃効果(20%)",
   "zh": null
  },
  {
@@ -591,7 +591,7 @@ export const GUIDEBOOK_DB = [
   "icon": "cap",
   "text": "Primal and Other allies' DMG cap +50%",
   "id": 44,
-  "ja": null,
+  "ja": "星晶獣とその他種族のダメージ上限UP(50%)",
   "zh": null
  },
  {
@@ -631,7 +631,7 @@ export const GUIDEBOOK_DB = [
   "icon": "amp",
   "text": "Amplify Human and Geonoid allies' DMG +30%",
   "id": 47,
-  "ja": null,
+  "ja": "ヒューマン族とゼオノイド族の与ダメージ UP(30%)",
   "zh": null
  },
  {
@@ -644,7 +644,7 @@ export const GUIDEBOOK_DB = [
   "icon": "skill amp",
   "text": "Amplify skill DMG +30%",
   "id": 48,
-  "ja": null,
+  "ja": "アビリティ与ダメージUP(30%)",
   "zh": null
  },
  {
@@ -670,7 +670,7 @@ export const GUIDEBOOK_DB = [
   "icon": "cb amp",
   "text": "Amplify chain DMG +100%",
   "id": 50,
-  "ja": null,
+  "ja": "チェイン与ダメージUP(100%)",
   "zh": null
  },
  {
@@ -692,7 +692,7 @@ export const GUIDEBOOK_DB = [
   "icon": "uplift",
   "text": "Charge bar gain +20%",
   "id": 52,
-  "ja": null,
+  "ja": "奥義ゲージ上昇量UP(20%)",
   "zh": null
  },
  {
@@ -703,7 +703,7 @@ export const GUIDEBOOK_DB = [
   "icon": "def",
   "text": "Mitigate DMG taken (500)",
   "id": 53,
-  "ja": null,
+  "ja": "被ダメージ減少(500)",
   "zh": null
  },
  {
@@ -716,7 +716,7 @@ export const GUIDEBOOK_DB = [
   "icon": "guts",
   "text": "At battle start: Undying effect to all allies (1 time) (Can't be stacked)",
   "id": 54,
-  "ja": null,
+  "ja": "バトル開始時、味方全体に不死身効果(1回)(重複 不可)",
   "zh": null
  },
  {
@@ -729,7 +729,7 @@ export const GUIDEBOOK_DB = [
   "icon": "veil",
   "text": "At battle start: Dispel Cancel effect (1 time) / Debuff immunity (1 time) (Can't be stacked)",
   "id": 55,
-  "ja": null,
+  "ja": "バトル開始時、味方全体にディスペルガード効果 (1回)/弱体効果無効(1回)(重複不可)",
   "zh": null
  },
  {
@@ -755,7 +755,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "Gain a random guidebook effect when resting at a healing space",
   "id": 57,
-  "ja": null,
+  "ja": "回復マスで休憩した時、ランダムな導本効果を獲 得する",
   "zh": null
  },
  {
@@ -782,7 +782,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "Sephira coin drop amount upon clearing battles +30%",
   "id": 59,
-  "ja": null,
+  "ja": "バトル勝利時のセフィラコインの獲得量UP(30%)",
   "zh": null
  },
  {
@@ -793,7 +793,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "Allies' attacks won't miss regardless of accuracy, foe dodge rates, Mirror Image effects, or similar (Can't be stacked)",
   "id": 60,
-  "ja": null,
+  "ja": "敵の回避や幻影、味方の命中率DOWNに関わら ず攻撃が命中する(重複不可)",
   "zh": null
  },
  {
@@ -806,7 +806,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "When an ally uses a skill: Amplify caster's DMG based on the skill's cooldown (Max: 50% / Can't be stacked)",
   "id": 61,
-  "ja": null,
+  "ja": "味方全体がアビリティ使用時、そのアビリティの 使用間隔に応じて自分の与ダメージUP(最大50%) (重複不可)",
   "zh": null
  },
  {
@@ -833,7 +833,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "Upon obtaining a guidebook effect from a treasure chest space: Gain 1 additional guidebook effect (Remaining uses: 2/2)",
   "id": 63,
-  "ja": null,
+  "ja": "宝箱マスから導本効果を獲得した時、導本効果を 追加で1つ獲得する(残り2/2回)",
   "zh": null
  },
  {
@@ -860,7 +860,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "50% hit to DMG dealt against foes appearing on battle spaces / Amplify DMG against foes appearing on strong foe, terrifying foe, ruler, and boss spaces +50%",
   "id": 65,
-  "ja": null,
+  "ja": "戦闘マスで出現する敵に対して与ダメージ DOWN(50%)/強敵マス/超強敵マス/君臨者マス/ ボスマスで出現する敵に対して与ダメージ UP(50%)",
   "zh": null
  },
  {
@@ -873,7 +873,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "Chance for all allies' normal attacks, skill DMG, and charge attacks to miss / 100% boost to ATK / 50% boost to DMG cap",
   "id": 66,
-  "ja": null,
+  "ja": "味方全体の通常攻撃とアビリティダメージと奥義 が命中しないことがあるが、攻撃力UP(100%)/ダ メージ上限UP(50%)",
   "zh": null
  },
  {
@@ -899,7 +899,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "Number of summon calls per turn +1",
   "id": 68,
-  "ja": null,
+  "ja": "1ターン中の召喚可能回数増加(1回)",
   "zh": null
  },
  {
@@ -912,7 +912,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "Upon an ally using a debuff skill: 2 random debuffs to a foe",
   "id": 69,
-  "ja": null,
+  "ja": "味方全体が弱体アビリティ使用時、敵にランダム な弱体効果を2つ付与",
   "zh": null
  },
  {
@@ -936,7 +936,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "Next obtained cursed guidebook effect is counteracted (Remaining uses: 1/1)",
   "id": 71,
-  "ja": null,
+  "ja": "次に獲得する呪われた導本効果を打ち消す(残り 1/1回)",
   "zh": null
  },
  {
@@ -949,7 +949,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "At battle start: 40% boost to all allies' charge bars",
   "id": 72,
-  "ja": null,
+  "ja": "バトル開始時、味方全体の奥義ゲージUP(40%)",
   "zh": null
  },
  {
@@ -960,7 +960,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "When an ally uses a damage skill: Plain DMG to a foe based on its current HP",
   "id": 73,
-  "ja": null,
+  "ja": "味方全体がダメージアビリティ使用時、敵の現 HPに応じた無属性ダメージ",
   "zh": null
  },
  {
@@ -971,7 +971,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "Elemental DMG dealt will be treated as superior to the target's element (Can't be stacked)",
   "id": 74,
-  "ja": null,
+  "ja": "敵の属性に関わらず弱点をつく(重複不可)",
   "zh": null
  },
  {
@@ -984,7 +984,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "At battle start: Dodge/Tank-and-Counter effect to all allies (3 hits) (Can't be stacked)",
   "id": 75,
-  "ja": null,
+  "ja": "バトル開始時、味方全体にカウンター効果(回 避・被ダメージ/3回)(重複不可)",
   "zh": null
  },
  {
@@ -998,7 +998,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "1-turn cut to all allies' skill cooldowns after every 5 spaces moved (0/5 spaces)",
   "id": 76,
-  "ja": null,
+  "ja": "5マス移動する度に味方全体のアビリティ再使用 間隔を1ターン短縮(0/5マス)",
   "zh": null
  },
  {
@@ -1024,7 +1024,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "Party members gain all weapons types as specialty weapons (Can't be stacked)",
   "id": 78,
-  "ja": null,
+  "ja": "パーティメンバーの得意武器に全ての武器種を追 加する(重複不可)",
   "zh": null
  },
  {
@@ -1087,7 +1087,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "Boost to chance of obtaining rare guidebook effects upon clearing a battle (Can't be stacked)",
   "id": 83,
-  "ja": null,
+  "ja": "バトル勝利時にレアリティの高い導本効果を獲得 できる確率UP(重複不可)",
   "zh": null
  },
  {
@@ -1114,7 +1114,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "At end of turn: First-position ally deals elemental DMG to all foes / Blind effect / Supplement DMG taken / Remove 1 buff",
   "id": 85,
-  "ja": null,
+  "ja": "ターン終了時、先頭のキャラが敵全体に自属性ダ メージ/暗闇効果/被ダメージ上昇/強化効果を1つ 無効化",
   "zh": null
  },
  {
@@ -1188,7 +1188,7 @@ export const GUIDEBOOK_DB = [
   "icon": "atk",
   "text": "ATK +20%",
   "id": 91,
-  "ja": null,
+  "ja": "攻撃力UP(20%)",
   "zh": null
  },
  {
@@ -1199,7 +1199,7 @@ export const GUIDEBOOK_DB = [
   "icon": "atk",
   "text": "Elemental ATK + 20%",
   "id": 92,
-  "ja": null,
+  "ja": "自属性攻撃UP(20%)",
   "zh": null
  },
  {
@@ -1267,7 +1267,7 @@ export const GUIDEBOOK_DB = [
   "icon": "ca cap",
   "text": "C.A. DMG +20% / C.A. DMG cap +10%",
   "id": 98,
-  "ja": null,
+  "ja": "奥義ダメージUP(20%)/奥義ダメージ上限 UP(10%)",
   "zh": null
  },
  {
@@ -1293,7 +1293,7 @@ export const GUIDEBOOK_DB = [
   "icon": "cb cap",
   "text": "Chain burst DMG +50% / Chain burst DMG cap +30%",
   "id": 100,
-  "ja": null,
+  "ja": "チェインバーストダメージUP(50%)/チェインバ ーストダメージ上限UP(30%)",
   "zh": null
  },
  {
@@ -1352,7 +1352,7 @@ export const GUIDEBOOK_DB = [
   "icon": "curse hp",
   "text": "20% hit to max HP",
   "id": 105,
-  "ja": null,
+  "ja": "最大HPDOWN(20%)",
   "zh": null
  },
  {
@@ -1450,7 +1450,7 @@ export const GUIDEBOOK_DB = [
   "icon": "curse special",
   "text": "Omen cancel requirements on ruler spaces and boss spaces are increased",
   "id": 113,
-  "ja": null,
+  "ja": "君臨者マス/ボスマスで出現する敵の予兆解除条 件が増加",
   "zh": null
  },
  {
@@ -1510,6 +1510,7 @@ export const GUIDEBOOK_STATUS_ID = {
  "42": 54,
  "43": 43,
  "44": 55,
+ "45": 36,
  "46": 80,
  "47": 61,
  "48": 81,
