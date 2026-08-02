@@ -354,6 +354,7 @@ function handleWindowMessage(type, payload) {
       currentMiasmaInfo = payload.miasmaInfo || currentMiasmaInfo;
       currentTurn = payload.totalTurn !== undefined ? payload.totalTurn : currentTurn;
       checkMiasmaTransition(currentMiasmaInfo);
+      hidePickOverlay(); // player moved — shop overlay (if any) closes
 
       // Mark newly consumed nodes as shrinking (exact from server)
       if (payload.shrinkNodeIds) {
@@ -477,9 +478,13 @@ function handleWindowMessage(type, payload) {
 
     case 'shop-guidebooks':
       // payload: status_id → {status_id,name,icon_type,rarity} seen in shop
-      // lineups. Feed them into the learned pools: icons, JA text, and try
-      // to teach a status_id → wiki mapping when the name matches.
-      if (payload && typeof payload === 'object') absorbBookInfo(Object.values(payload));
+      // lineups. Feed them into the learned pools AND show the shop's
+      // guidebooks in the options overlay (translations via status map).
+      if (payload && typeof payload === 'object') {
+        const recs = Object.values(payload);
+        absorbBookInfo(recs);
+        if (recs.length > 0) showPickOverlay(recs);
+      }
       break;
 
     case 'pick-candidates':

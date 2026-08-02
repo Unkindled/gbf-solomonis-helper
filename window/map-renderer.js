@@ -26,6 +26,7 @@ export class MapRenderer {
     this.path = null;            // number[] | null
     this.pathAnnotation = null;  // {dangerSteps, predictions} | null
     this.customWaypoints = [];   // node ids picked in custom-path mode
+    this.focusArrowUntil = 0;    // timestamp; >now → draw blinking arrow
     this.filterActive = new Set();
     this.filterSpecial = new Set();
     this.hoveredNode = null;
@@ -317,6 +318,7 @@ export class MapRenderer {
     this._drawPath(ctx);
     this._drawNodes(ctx);
     this._drawPlayer(ctx);
+    this._drawFocusArrow(ctx);
 
     ctx.restore();
 
@@ -793,6 +795,33 @@ export class MapRenderer {
     }
   }
 
+  /** Blinking large arrow above the player for a few seconds after focus. */
+  _drawFocusArrow(ctx) {
+    const now = Date.now();
+    if (now >= this.focusArrowUntil || this.currentNodeId == null) return;
+    const node = this.nodeMap.get(this.currentNodeId);
+    if (!node) return;
+    // Blink at ~2.5 Hz
+    const t = now / 1000;
+    const alpha = 0.45 + 0.55 * Math.abs(Math.sin(t * 5));
+    const x = node.position_x;
+    const y = node.position_y - PIECE_H - 46;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    // Down-pointing triangle (arrow) pointing at the player
+    const s = 26; // half-size
+    ctx.beginPath();
+    ctx.moveTo(x, y + s * 1.6);       // tip
+    ctx.lineTo(x - s, y - s);         // left
+    ctx.lineTo(x + s, y - s);         // right
+    ctx.closePath();
+    ctx.fillStyle = '#ffd54a';
+    ctx.shadowColor = 'rgba(255,213,74,0.9)';
+    ctx.shadowBlur = 18;
+    ctx.fill();
+    ctx.restore();
+  }
+
   _drawTooltip(ctx) {
     if (!this.hoveredNode) return;
     const node = this.hoveredNode;
@@ -883,6 +912,7 @@ export class MapRenderer {
     const h = this.canvas.height / dpr;
     this.offsetX = w / 2 - node.position_x * this.scale;
     this.offsetY = h / 2 - (node.position_y - NODE_H / 2) * this.scale;
+    this.focusArrowUntil = Date.now() + 2500; // show blinking arrow 2.5s
     this.render();
   }
 
