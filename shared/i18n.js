@@ -17,6 +17,9 @@
       'status.turn': 'Turn {turn}',
       'status.miasma': '☠ Miasma Lv{level} · {countdown} turns until shrink',
       'status.miasmaBefore': '☠ Miasma in ~{turns} turns',
+      'status.lv2Soon': '☠ Lv2 shrink in ~{turns} turns',
+      'status.nextCycleSoon': '☠ Next Lv1 in ~{turns} turns',
+      'status.miasmaDone': '☠ Miasma Lv{level} fully closed',
       'status.newPhase': 'New phase — map refreshing...',
       // window — path info
       'path.hint': 'Click a node to plan a route. Click again to extend. Click your position or Esc to clear.',
@@ -86,6 +89,9 @@
       'status.turn': '回合 {turn}',
       'status.miasma': '☠ 瘴气 Lv{level} · {countdown} 回合后缩圈',
       'status.miasmaBefore': '☠ 约 {turns} 回合后出现瘴气',
+      'status.lv2Soon': '☠ 约 {turns} 回合后 Lv2 缩圈',
+      'status.nextCycleSoon': '☠ 约 {turns} 回合后下一轮 Lv1',
+      'status.miasmaDone': '☠ 瘴气 Lv{level} 已完全收缩',
       'status.newPhase': '新阶段 — 地图刷新中...',
       // window — path info
       'path.hint': '点击节点规划路线，再次点击延伸。点击自己位置或按 Esc 清除。',

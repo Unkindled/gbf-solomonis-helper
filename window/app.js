@@ -3,7 +3,7 @@
 import { MapRenderer } from './map-renderer.js';
 import { FilterPanel } from './filter-panel.js';
 import { findShortestPath, findFarmRoute, findNearestShop, findSafeZoneRoute, findHardRoute } from './pathfinder.js';
-import { MIASMA_ACTIVATION_TURN } from './miasma-predictor.js';
+import { MiasmaCalibration } from './miasma-predictor.js';
 import { DUNGEON_STATUS_LABELS, NODE_TYPE_LABELS } from '../shared/constants.js';
 
 let renderer = null;
@@ -15,6 +15,8 @@ let currentTurn = 0;
 let currentPath = null;
 let pathStartId = null;
 let prevMiasmic = false;
+// Calibrated miasma phase timing for the current run (see MiasmaCalibration).
+const miasmaCal = new MiasmaCalibration();
 
 // --- Init ---
 
@@ -180,6 +182,8 @@ function applyFullMap(mapData) {
   currentMiasmaInfo = dungeon.miasma_info;
   currentTurn = dungeon.total_turn || 0;
   prevMiasmic = !!(currentMiasmaInfo && currentMiasmaInfo.after && currentMiasmaInfo.after.is_miasmic);
+  if (isNewDungeon) miasmaCal.reset();
+  miasmaCal.observe(currentMiasmaInfo, currentTurn);
 
   if (isNewDungeon) {
     clearCurrentPath();
@@ -656,14 +660,10 @@ function updateStatusBar(override) {
   const status = DUNGEON_STATUS_LABELS[dungeon.dungeon_status] || `status:${dungeon.dungeon_status}`;
 
   let miasmaHtml = '';
-  const a = currentMiasmaInfo && currentMiasmaInfo.after;
-  if (a && a.is_miasmic) {
-    miasmaHtml = `<span class="status-miasma">${I18N.t('status.miasma', { level: a.level, countdown: a.miasma_stop_countdown })}</span>`;
-  } else {
-    const turnsUntil = MIASMA_ACTIVATION_TURN - turn;
-    if (turnsUntil > 0) {
-      miasmaHtml = `<span class="status-safe">${I18N.t('status.miasmaBefore', { turns: turnsUntil })}</span>`;
-    }
+  const miasmaDesc = miasmaCal.describe(currentMiasmaInfo, turn);
+  if (miasmaDesc) {
+    const cls = miasmaDesc.key === 'status.miasma' ? 'status-miasma' : 'status-safe';
+    miasmaHtml = `<span class="${cls}">${I18N.t(miasmaDesc.key, miasmaDesc.data)}</span>`;
   }
 
   el.innerHTML = `<span class="status-turn">${I18N.t('status.turn', { turn })}</span><span class="status-sep">·</span><span class="status-state">${status}</span>${miasmaHtml ? '<br>' + miasmaHtml : ''}`;

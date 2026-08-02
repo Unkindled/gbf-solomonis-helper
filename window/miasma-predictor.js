@@ -174,3 +174,106 @@ export function annotatePathWithMiasma(path, nodeMap, miasmaInfo, currentTurn, s
     predictions,
   };
 }
+
+/**
+ * Miasma timing calibration.
+ *
+ * The game does NOT announce when the miasma will appear — while inactive
+ * every miasma_info field is null. But the moment a phase activates, the
+ * SAME response carries it (is_miasmic=true, level, miasma_stop_countdown).
+ * So we passively record the real activation turns as the player plays;
+ * once a phase's activation turn is known we can show an accurate countdown
+ * for it (and, via the observed level-1→2 gap, predict the next phase too).
+ *
+ * Recorded per run:
+ *   - lv1ActivationTurn : first inactive → active (level 1)
+ *   - lv2ActivationTurn : level 1 → level 2 transition
+ *   - round2Lv1Turn     : second-cycle level 1 (level 2 → 1), if any
+ * Call observe(miasmaInfo, totalTurn) on every dungeon response.
+ * Call reset() when a new dungeon (map) starts.
+ */
+export class MiasmaCalibration {
+  constructor() {
+    this.reset();
+  }
+
+  reset() {
+    this.lv1ActivationTurn = null;
+    this.lv2ActivationTurn = null;
+    this.round2Lv1Turn = null;
+    this._prev = null; // { mic, level, cd, turn } of the last observe()
+  }
+
+  observe(miasmaInfo, totalTurn) {
+    if (!miasmaInfo) return;
+    const after = miasmaInfo.after || {};
+    const mic = !!after.is_miasmic;
+    const level = after.level;
+    const cd = after.miasma_stop_countdown;
+
+    const prev = this._prev;
+    this._prev = { mic, level, cd, turn: totalTurn };
+    if (!prev) return; // first observation: nothing to compare against
+
+    const prevMic = prev.mic;
+
+    // inactive → active : level-1 activation (first time or 2nd cycle)
+    if (!prevMic && mic) {
+      if (this.lv1ActivationTurn == null) {
+        this.lv1ActivationTurn = totalTurn;
+      } else if (this.lv2ActivationTurn != null && this.round2Lv1Turn == null) {
+        this.round2Lv1Turn = totalTurn;
+      }
+      return;
+    }
+
+    // active → active, level 1 → 2 : level-2 activation
+    if (prevMic && mic && prev.level === 1 && level === 2 && this.lv2ActivationTurn == null) {
+      this.lv2ActivationTurn = totalTurn;
+    }
+
+    // active → active, level 2 → 1 : second-cycle Lv1 activation
+    if (prevMic && mic && prev.level === 2 && level === 1 && this.round2Lv1Turn == null) {
+      this.round2Lv1Turn = totalTurn;
+    }
+  }
+
+  /**
+   * Given the current turn and the current miasma after-state, return a
+   * human-readable countdown line (or null when nothing to show).
+   *   - miasma active with a countdown → same as the raw cd display
+   *   - miasma active but cd null (shrink finished) → predict next phase
+   *   - miasma inactive → predict first/next Lv1 activation
+   * @param {object|null} miasmaInfo
+   * @param {number} currentTurn
+   * @returns {{key:string, data:object}|null}
+   */
+  describe(miasmaInfo, currentTurn) {
+    const after = miasmaInfo && miasmaInfo.after;
+    const mic = !!(after && after.is_miasmic);
+
+    if (mic) {
+      const level = after.level || 1;
+      const cd = after.miasma_stop_countdown;
+      if (cd != null) {
+        return { key: 'status.miasma', data: { level, countdown: cd } };
+      }
+      // Shrink finished; predict when the next phase starts.
+      const nextTurn = level === 1 ? this.lv2ActivationTurn : this.round2Lv1Turn;
+      if (nextTurn != null && nextTurn > currentTurn) {
+        return {
+          key: level === 1 ? 'status.lv2Soon' : 'status.nextCycleSoon',
+          data: { turns: nextTurn - currentTurn },
+        };
+      }
+      return { key: 'status.miasmaDone', data: { level } };
+    }
+
+    // Inactive: predict the upcoming Lv1 activation.
+    const nextTurn = this.lv1ActivationTurn;
+    if (nextTurn != null && nextTurn > currentTurn) {
+      return { key: 'status.miasmaBefore', data: { turns: nextTurn - currentTurn } };
+    }
+    return null; // nothing calibrated yet — show "unknown"
+  }
+}
