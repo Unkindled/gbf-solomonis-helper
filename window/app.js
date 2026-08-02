@@ -174,6 +174,7 @@ function init() {
   loadUnknownBooks();
   loadLearnedStatusId();
   loadLearnedJaText();
+  loadSeenBookIcons();
 
   // Export / import learned guidebook data (JA text, id maps, unknowns)
   document.getElementById('gb-export-data').addEventListener('click', exportGuidebookData);
@@ -752,10 +753,11 @@ function loadLearnedJaText() {
  */
 function exportGuidebookData() {
   const payload = {
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     jaText: learnedJaText,            // 'entry:<id>' | 'status:<sid>' → JA text
     idMaps: learnedMap,               // { user: {uid→id}, status: {sid→id} }
+    bookIcons: seenBookIcons,         // status_id → icon_type (real icons)
     unknownBooks: [...unknownBooks.values()],
     favorites: [...favoriteBookIds],
   };
@@ -803,6 +805,11 @@ function importGuidebookData(file) {
         for (const id of data.favorites) favoriteBookIds.add(String(id));
         changed = true;
       }
+      if (data.bookIcons && typeof data.bookIcons === 'object') {
+        for (const [k, v] of Object.entries(data.bookIcons)) {
+          if (seenBookIcons[k] !== v) { seenBookIcons[k] = v; changed = true; }
+        }
+      }
 
       if (changed) {
         chrome.storage.local.set({
@@ -810,6 +817,7 @@ function importGuidebookData(file) {
           gbfHelperStatusIdMap: learnedMap,
           gbfHelperUnknownBooks: [...unknownBooks.values()],
           gbfHelperFavoriteBooks: [...favoriteBookIds],
+          gbfHelperSeenBookIcons: seenBookIcons,
         });
       }
       renderCodex();
@@ -871,12 +879,28 @@ function ownedCodexMap(books) {
   return m;
 }
 
+/** Reverse-lookup a wiki entry's game status_id (built-in or runtime maps). */
+function statusIdOfEntry(entryId) {
+  for (const [sid, eid] of Object.entries(GUIDEBOOK_STATUS_ID)) {
+    if (eid === entryId) return sid;
+  }
+  for (const [sid, eid] of Object.entries(learnedMap.status || {})) {
+    if (eid === entryId) return sid;
+  }
+  return null;
+}
+
 function bookCodexIcon(entry, ownedInfo) {
-  // Owned books have a real game icon_type (accurate art). For unowned
-  // entries we don't know the exact icon — show a neutral book icon.
+  // 1) Owned books have a real game icon_type (accurate art).
   if (ownedInfo && ownedInfo.gameBook && ownedInfo.gameBook.icon_type != null) {
     return bookIconImg(ownedInfo.gameBook.icon_type);
   }
+  // 2) Books we've SEEN before (even if not owned now): status_id →
+  //    icon_type recorded from past status_list responses.
+  const sid = statusIdOfEntry(entry.id);
+  const seenIcon = sid != null ? seenBookIcons[sid] : null;
+  if (seenIcon != null) return bookIconImg(seenIcon);
+  // 3) Never seen → neutral placeholder.
   return `<img class="gb-icon" src="../assets/book_thumb_1.png" alt="">`;
 }
 
@@ -913,6 +937,25 @@ function updateGuidebookBadges() {
   }
 }
 
+// Icon types seen from the game: status_id → icon_type. Recorded for EVERY
+// book that appears in status_list (matched or not), so exported data can
+// fill in real game icons for codex entries the player has encountered —
+// even if they don't own them right now. The game only reveals icon_type
+// for books it actually returns, so never-owned books stay placeholders.
+let seenBookIcons = {}; // status_id → icon_type
+function recordSeenIcon(b) {
+  if (b == null || b.status_id == null || b.icon_type == null) return;
+  const k = String(b.status_id);
+  if (seenBookIcons[k] === b.icon_type) return;
+  seenBookIcons[k] = b.icon_type;
+  chrome.storage.local.set({ gbfHelperSeenBookIcons: seenBookIcons });
+}
+function loadSeenBookIcons() {
+  chrome.storage.local.get('gbfHelperSeenBookIcons', (res) => {
+    seenBookIcons = res.gbfHelperSeenBookIcons || {};
+  });
+}
+
 // Unknown books: guidebooks seen in spacebook_status_list that don't match
 // any wiki DB entry (new additions / localized text we haven't catalogued).
 // Keyed by status_id so EN and JA clients dedupe correctly.
@@ -921,6 +964,7 @@ function collectUnknownBooks(books) {
   if (!Array.isArray(books)) return;
   let changed = false;
   for (const b of books) {
+    recordSeenIcon(b);
     // Collect JA text UNCONDITIONALLY — even books that fail to match the
     // DB must be searchable in JA (their status_id is the stable key).
     learnJaText(null, b.status_id, b.name);
