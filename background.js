@@ -168,21 +168,52 @@ function handleSpacebookList(data) {
 
 let guidebookTabId = null;
 let guidebookTabTimer = null;
-const GUIDEBOOK_TAB_TIMEOUT_MS = 15000;
+let guidebookTabActivated = false;
+const GUIDEBOOK_URL = 'https://game.granbluefantasy.jp/#arcarum3/book';
+// Browsers throttle background tabs (rAF paused, timers ≥1s), so the
+// game's SPA may take a while to fire spacebook_status_list — or never,
+// if its router is rAF-driven. We therefore wait generously, then force
+// the tab to the foreground once (loading it for real), then give up.
+const GUIDEBOOK_TAB_TIMEOUT_MS = 8000;   // before forcing activation
+const GUIDEBOOK_TAB_AFTER_ACTIVATE_MS = 10000; // after activation, before giving up
 
 async function openGuidebookTab() {
   // If a refresh is already pending, keep that tab.
   if (guidebookTabId != null) return;
   try {
     const tab = await chrome.tabs.create({
-      url: 'https://game.granbluefantasy.jp/#arcarum3/book',
+      url: GUIDEBOOK_URL,
       active: false, // background tab — don't steal focus
     });
     guidebookTabId = tab.id;
-    // Safety net: close even if we never see a status_list response.
-    guidebookTabTimer = setTimeout(closeGuidebookTab, GUIDEBOOK_TAB_TIMEOUT_MS);
+    guidebookTabActivated = false;
+    // Safety net: if no status_list response arrives, force the tab to the
+    // foreground (background throttling may have prevented the SPA from
+    // running at all), then close it after another grace period.
+    guidebookTabTimer = setTimeout(escalateGuidebookTab, GUIDEBOOK_TAB_TIMEOUT_MS);
   } catch (e) {
     guidebookTabId = null;
+  }
+}
+
+async function escalateGuidebookTab() {
+  if (guidebookTabId == null) return;
+  if (guidebookTabActivated) {
+    // Already tried foregrounding — give up and tell the user.
+    broadcastToWindow('guidebook-refresh-failed', true);
+    closeGuidebookTab();
+    return;
+  }
+  guidebookTabActivated = true;
+  try {
+    // Foregrounding defeats background throttling so the SPA runs its
+    // router and fires spacebook_status_list. Focus is returned to the
+    // game tab right after by the user's own next interaction; keep the
+    // helper window on top meanwhile is not needed.
+    await chrome.tabs.update(guidebookTabId, { active: true });
+    guidebookTabTimer = setTimeout(escalateGuidebookTab, GUIDEBOOK_TAB_AFTER_ACTIVATE_MS);
+  } catch (e) {
+    closeGuidebookTab();
   }
 }
 
@@ -191,6 +222,7 @@ function closeGuidebookTab() {
   if (guidebookTabId == null) return;
   const id = guidebookTabId;
   guidebookTabId = null;
+  guidebookTabActivated = false;
   try { chrome.tabs.remove(id); } catch (e) { /* tab already gone */ }
 }
 

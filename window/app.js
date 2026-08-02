@@ -383,6 +383,13 @@ function handleWindowMessage(type, payload) {
       setGuideBooksStale(!!payload);
       break;
 
+    case 'guidebook-refresh-failed':
+      // Background refresh couldn't get a status_list response (browser
+      // throttled the tab). Tell the user to open the guidebook page
+      // manually in the game.
+      updateStatusBar(I18N.t('status.guidebookManual'));
+      break;
+
     case 'shop-stock':
       // payload: {nodeId, stock:{items, coinAfter}}
       if (payload && payload.nodeId != null && payload.stock) {

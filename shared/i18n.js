@@ -20,6 +20,7 @@
       'status.lv2Soon': '☠ Lv2 shrink in ~{turns} turns',
       'status.nextCycleSoon': '☠ Next Lv1 in ~{turns} turns',
       'status.miasmaDone': '☠ Miasma Lv{level} fully closed',
+      'status.guidebookManual': '⚠ Auto-refresh throttled — open the Guide Book page in-game to sync',
       'status.newPhase': 'New phase — map refreshing...',
       // window — path info
       'path.hint': 'Click a node to plan a route. Click again to extend. Click your position or Esc to clear.',
@@ -92,6 +93,7 @@
       'status.lv2Soon': '☠ 约 {turns} 回合后 Lv2 缩圈',
       'status.nextCycleSoon': '☠ 约 {turns} 回合后下一轮 Lv1',
       'status.miasmaDone': '☠ 瘴气 Lv{level} 已完全收缩',
+      'status.guidebookManual': '⚠ 后台刷新被节流 — 请在游戏内打开导本页面以同步',
       'status.newPhase': '新阶段 — 地图刷新中...',
       // window — path info
       'path.hint': '点击节点规划路线，再次点击延伸。点击自己位置或按 Esc 清除。',
