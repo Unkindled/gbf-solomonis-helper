@@ -25,6 +25,7 @@ export class MapRenderer {
     this.totalTurn = 0;
     this.path = null;            // number[] | null
     this.pathAnnotation = null;  // {dangerSteps, predictions} | null
+    this.customWaypoints = [];   // node ids picked in custom-path mode
     this.filterActive = new Set();
     this.filterSpecial = new Set();
     this.hoveredNode = null;
@@ -240,6 +241,11 @@ export class MapRenderer {
     this.render();
   }
 
+  setCustomWaypoints(ids) {
+    this.customWaypoints = ids || [];
+    this.render();
+  }
+
   clearPath() {
     this.path = null;
     this.pathAnnotation = null;
@@ -307,6 +313,7 @@ export class MapRenderer {
     this._drawMiasmaOverlay(ctx);
     this._drawEdges(ctx);
     this._drawTeleporterLinks(ctx);
+    this._drawCustomWaypoints(ctx);
     this._drawPath(ctx);
     this._drawNodes(ctx);
     this._drawPlayer(ctx);
@@ -589,6 +596,33 @@ export class MapRenderer {
       ctx.lineCap = 'round';
       ctx.stroke();
     }
+  }
+
+  _drawCustomWaypoints(ctx) {
+    if (!this.customWaypoints || this.customWaypoints.length === 0) return;
+    this.customWaypoints.forEach((id, i) => {
+      const n = this.nodeMap.get(id);
+      if (!n) return;
+      const x = n.position_x;
+      const y = n.position_y;
+      // Glow ring + numbered marker
+      ctx.beginPath();
+      ctx.arc(x, y, 22, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(88, 166, 255, 0.18)';
+      ctx.fill();
+      ctx.strokeStyle = '#58a6ff';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(x, y, 14, 0, Math.PI * 2);
+      ctx.fillStyle = '#58a6ff';
+      ctx.fill();
+      ctx.fillStyle = '#0d1117';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(i + 1), x, y + 1);
+    });
   }
 
   _drawPath(ctx) {

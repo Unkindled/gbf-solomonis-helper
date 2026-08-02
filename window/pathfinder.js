@@ -9,7 +9,7 @@
 //   - findBattleRoute: within a step cap, the route touching the most
 //     battle nodes
 //   - findNearestShop: shortest path to the closest shop
-//   - findSafeZoneRoute: shortest path into the current safe zone
+//   - findCustomPath: route through user-picked waypoints (teleporters free)
 
 // Battle types for the battle-route navigation: Normal / Hard / Very Hard
 // encounters. Boss (1) is deliberately excluded per requirement.
@@ -59,13 +59,25 @@ function searchBest(nodeMap, startId, isTarget, opts = {}) {
 
     const node = nodeMap.get(cur);
     if (!node) continue;
-    for (const nextId of (node.adjacent_node_ids || [])) {
+    const teleporters = opts.teleporters;
+    // Expand neighbor set. With teleporters enabled, a teleporter node
+    // connects to every OTHER teleporter at ZERO cost (teleporting doesn't
+    // consume a turn).
+    let neighborIds = node.adjacent_node_ids || [];
+    if (teleporters && teleporters.size > 1 && teleporters.has(cur)) {
+      neighborIds = [...neighborIds, ...teleporters].filter(id => id !== cur);
+    }
+    for (const nextId of neighborIds) {
       if (!nodeMap.has(nextId)) continue;
       const nextNode = nodeMap.get(nextId);
-      const nd = dist + 1;
+      const isTeleportEdge = teleporters && teleporters.has(cur) && teleporters.has(nextId);
+      const nd = dist + (isTeleportEdge ? 0 : 1);
       // Score: base bonus for non-path nodes, plus any custom bonus.
-      let ns = bestScore.get(cur) + (isNonPath(nextNode) ? 1 : 0);
-      if (opts.score) ns += opts.score(nextNode) || 0;
+      // Teleport edges (0-cost) don't accumulate score — otherwise the
+      // teleporter clique would ping-pong forever (each hop +1, better
+      // than the previous, infinite re-queue).
+      let ns = bestScore.get(cur) + (isTeleportEdge ? 0 : (isNonPath(nextNode) ? 1 : 0));
+      if (opts.score && !isTeleportEdge) ns += opts.score(nextNode) || 0;
 
       const knownD = bestDist.get(nextId);
       const knownS = bestScore.get(nextId);
@@ -120,6 +132,66 @@ export function findShortestPath(nodeMap, startId, endId) {
   if (startId === endId) return [startId];
   const res = searchBest(nodeMap, startId, (n) => n.node_id === endId);
   return res ? res.path : null;
+}
+
+/** All teleporter node ids in the map (node_type 9). */
+export function getTeleporterIds(nodeMap) {
+  const set = new Set();
+  for (const [id, node] of nodeMap) {
+    if (node.node_type === 9) set.add(id);
+  }
+  return set;
+}
+
+/**
+ * Custom route: visit a set of up to 6 waypoint nodes (in the player's
+ * chosen ORDER) and return the concatenated shortest path. Teleporter
+ * nodes connect to every other teleporter at zero cost, so a waypoint
+ * sequence that includes teleporters can jump.
+ *
+ * @param {Map<number,object>} nodeMap
+ * @param {number} startId - player position
+ * @param {number[]} waypoints - ordered node ids to visit
+ * @returns {{path:number[], steps:number}|null}
+ */
+export function findCustomPath(nodeMap, startId, waypoints) {
+  if (!nodeMap.has(startId)) return null;
+  const teleporters = getTeleporterIds(nodeMap);
+  const full = [startId];
+  let cur = startId;
+  for (const wp of waypoints) {
+    if (!nodeMap.has(wp)) continue;
+    if (wp === cur) continue;
+    const res = searchBest(nodeMap, cur, (n) => n.node_id === wp, { teleporters });
+    if (!res) return null; // unreachable waypoint
+    full.push(...res.path.slice(1));
+    cur = wp;
+  }
+  // Clean up redundancy from concatenation + score-biased BFS:
+  // repeatedly remove A→A duplicates and A→B→A backtracks until stable,
+  // but NEVER delete a waypoint node (it must be visited even if the
+  // shortest path happens to backtrack through it).
+  const waypointSet = new Set(waypoints);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (let i = full.length - 1; i >= 1; i--) {
+      if (full[i] === full[i - 1]) { full.splice(i, 1); changed = true; }
+    }
+    for (let i = 1; i < full.length - 1; i++) {
+      if (full[i - 1] === full[i + 1] && !waypointSet.has(full[i])) {
+        full.splice(i, 1); changed = true; break;
+      }
+    }
+  }
+  // steps: count non-teleport edges (teleport jumps are free)
+  let steps = 0;
+  for (let i = 1; i < full.length; i++) {
+    const aTp = teleporters.has(full[i - 1]);
+    const bTp = teleporters.has(full[i]);
+    if (!(aTp && bTp)) steps++; // teleporter→teleporter edge is free
+  }
+  return { path: full, steps };
 }
 
 // Farm-route target types:
@@ -331,10 +403,4 @@ export function findHardRoute(nodeMap, startId, maxLen = HARD_MAX_LEN) {
   })(startId, 0);
 
   return best;
-}
-
-/** Navigation: shortest path into the current safe zone (non-shrinking node). */
-export function findSafeZoneRoute(nodeMap, startId) {
-  const res = searchBest(nodeMap, startId, (n) => !n.is_shrinking);
-  return res ? { path: res.path } : null;
 }

@@ -2,7 +2,7 @@
 
 import { MapRenderer } from './map-renderer.js';
 import { FilterPanel } from './filter-panel.js';
-import { findShortestPath, findFarmRoute, findNearestShop, findSafeZoneRoute, findHardRoute } from './pathfinder.js';
+import { findShortestPath, findFarmRoute, findNearestShop, findCustomPath, findHardRoute } from './pathfinder.js';
 import { MiasmaCalibration } from './miasma-predictor.js';
 import { DUNGEON_STATUS_LABELS, NODE_TYPE_LABELS } from '../shared/constants.js';
 import { GUIDEBOOK_DB, GUIDEBOOK_STATUS_ID } from '../shared/guidebook-data.js';
@@ -145,6 +145,11 @@ function init() {
     codex.classList.add('hidden');
   });
   document.getElementById('pick-overlay-close').addEventListener('click', hidePickOverlay);
+  document.getElementById('custom-path-confirm').addEventListener('click', confirmCustomPath);
+  document.getElementById('custom-path-cancel').addEventListener('click', () => {
+    exitCustomMode();
+    renderer.setCustomWaypoints([]);
+  });
   // Codex filter inputs → re-render
   const codexInputs = [
     'gb-codex-search', 'gb-codex-rarity', 'gb-codex-type',
@@ -1246,6 +1251,12 @@ function handleNodeClick(node) {
   if (!dungeon || dungeon.current_node_id == null) return;
   const clickedId = node.node_id;
 
+  // Custom path mode: clicks add/remove waypoints instead of planning.
+  if (customMode) {
+    handleCustomNodeClick(clickedId);
+    return;
+  }
+
   if (clickedId === dungeon.current_node_id) {
     clearCurrentPath();
     return;
@@ -1324,10 +1335,10 @@ function buildNavMenu() {
 
 const NAV_ITEMS = [
   { id: 'center', icon: '⌖', labelKey: 'nav.center', action: () => { if (renderer) renderer.focusPlayer(); } },
+  { id: 'custom', icon: '✎', labelKey: 'nav.custom', action: navigateCustomPath },
   { id: 'farm', icon: '🌾', labelKey: 'nav.farm', action: navigateFarmRoute },
   { id: 'hard', icon: '⚔', labelKey: 'nav.hard', action: navigateHardRoute },
   { id: 'shop', icon: '🛒', labelKey: 'nav.shop', action: navigateNearestShop },
-  { id: 'safe', icon: '☂', labelKey: 'nav.safe', action: navigateSafeZone },
 ];
 
 function navigateFarmRoute() {
@@ -1357,23 +1368,60 @@ function navigateHardRoute() {
   reEvaluatePath();
 }
 
-function navigateSafeZone() {
+// --- Custom path mode ---
+// User picks up to 6 waypoints on the map; clicking Confirm plans a route
+// through them (teleporters connect at zero cost). Cancel exits the mode.
+
+let customMode = false;
+let customWaypoints = [];
+
+function navigateCustomPath() {
   if (!dungeon) return;
-  const a = currentMiasmaInfo && currentMiasmaInfo.after;
-  if (!a || !a.is_miasmic) {
-    updatePathInfo(null, 'Safe zone has not appeared yet');
+  customMode = true;
+  customWaypoints = [];
+  document.getElementById('custom-path-overlay').classList.remove('hidden');
+  updateCustomPathHint();
+}
+
+function exitCustomMode() {
+  customMode = false;
+  customWaypoints = [];
+  document.getElementById('custom-path-overlay').classList.add('hidden');
+}
+
+function updateCustomPathHint() {
+  const el = document.getElementById('custom-path-count');
+  if (el) el.textContent = I18N.t('custom.count', { n: customWaypoints.length, max: 6 });
+}
+
+function handleCustomNodeClick(nodeId) {
+  if (!customMode) return;
+  if (customWaypoints.includes(nodeId)) {
+    customWaypoints = customWaypoints.filter(id => id !== nodeId); // toggle off
+  } else if (customWaypoints.length < 6) {
+    customWaypoints.push(nodeId);
+  } else {
+    updateStatusBar(I18N.t('custom.maxReached'));
+  }
+  updateCustomPathHint();
+  renderer.setCustomWaypoints(customWaypoints); // highlight picks
+}
+
+function confirmCustomPath() {
+  if (customWaypoints.length === 0) {
+    updateStatusBar(I18N.t('custom.noWaypoints'));
     return;
   }
-  const curNode = nodeMap.get(dungeon.current_node_id);
-  if (curNode && !curNode.is_shrinking) {
-    updatePathInfo(null, 'You are already in the safe zone');
+  const res = findCustomPath(nodeMap, dungeon.current_node_id, customWaypoints);
+  if (!res) {
+    updateStatusBar(I18N.t('custom.noPath'));
+    exitCustomMode();
     return;
   }
-  const res = findSafeZoneRoute(nodeMap, dungeon.current_node_id);
-  if (!res) { updatePathInfo(null, 'No safe zone reachable'); return; }
   currentPath = res.path;
   pathStartId = currentPath[0];
   reEvaluatePath();
+  exitCustomMode();
 }
 
 // --- UI updates ---
