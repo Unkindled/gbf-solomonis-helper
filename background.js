@@ -61,6 +61,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return;
   }
 
+  if (msg.channel === 'gbf-helper:open-guidebook-tab') {
+    openGuidebookTab();
+    return;
+  }
+
   if (msg.channel === 'gbf-helper:get-state') {
     // shopStock is a Map — serialize to a plain object for the response
     const shopStock = {};
@@ -144,9 +149,49 @@ function handleSpacebookList(data) {
   gameState.guideBooksStale = false; // full sync → no longer stale
   broadcastToWindow('guide-books', books);
   broadcastToWindow('guidebooks-stale', false);
+  closeGuidebookTab(); // data refreshed → safe to close the background tab
   // Auto-fetch any guidebook icons we don't have bundled yet
   const iconTypes = [...new Set(books.map(b => b.icon_type).filter(t => t != null))];
   fetchMissingBookIcons(iconTypes);
+}
+
+// --- Background guidebook refresh tab ---
+//
+// When guidebook data may be stale (e.g. after battle drops that didn't
+// trigger a status_list response), the user can tap the guidebook button
+// to open the in-game guidebook page in a BACKGROUND tab. The game itself
+// then calls spacebook_status_list (its own code, its own request — the
+// extension never sends it), our content script passively captures the
+// response, and the tab is closed right after. From the server's point of
+// view this is indistinguishable from the user opening the guidebook page
+// manually — no forged requests, no anti-cheat concern.
+
+let guidebookTabId = null;
+let guidebookTabTimer = null;
+const GUIDEBOOK_TAB_TIMEOUT_MS = 15000;
+
+async function openGuidebookTab() {
+  // If a refresh is already pending, keep that tab.
+  if (guidebookTabId != null) return;
+  try {
+    const tab = await chrome.tabs.create({
+      url: 'https://game.granbluefantasy.jp/#arcarum3/book',
+      active: false, // background tab — don't steal focus
+    });
+    guidebookTabId = tab.id;
+    // Safety net: close even if we never see a status_list response.
+    guidebookTabTimer = setTimeout(closeGuidebookTab, GUIDEBOOK_TAB_TIMEOUT_MS);
+  } catch (e) {
+    guidebookTabId = null;
+  }
+}
+
+function closeGuidebookTab() {
+  if (guidebookTabTimer) { clearTimeout(guidebookTabTimer); guidebookTabTimer = null; }
+  if (guidebookTabId == null) return;
+  const id = guidebookTabId;
+  guidebookTabId = null;
+  try { chrome.tabs.remove(id); } catch (e) { /* tab already gone */ }
 }
 
 // Fetch guidebook icon images from the game CDN that aren't bundled in the

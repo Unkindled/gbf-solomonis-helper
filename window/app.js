@@ -17,6 +17,8 @@ let pathStartId = null;
 let prevMiasmic = false;
 // Calibrated miasma phase timing for the current run (see MiasmaCalibration).
 const miasmaCal = new MiasmaCalibration();
+// True when guidebook data may be out of date (battle drops etc.).
+let guideBooksStale = false;
 
 // --- Init ---
 
@@ -108,10 +110,15 @@ function init() {
     updatePathInfo(currentPath ? currentPath : null);
   });
 
-  // Guide book popup toggle
+  // Guide book popup toggle. When data is stale, clicking also opens the
+  // in-game guidebook page in a background tab so the game itself refreshes
+  // spacebook_status_list (passively captured → tab auto-closes).
   const popup = document.getElementById('guidebook-popup');
   document.getElementById('btn-guidebook').addEventListener('click', () => {
     popup.classList.toggle('hidden');
+    if (guideBooksStale) {
+      chrome.runtime.sendMessage({ channel: 'gbf-helper:open-guidebook-tab' });
+    }
   });
   document.getElementById('guidebook-popup-close').addEventListener('click', () => {
     popup.classList.add('hidden');
@@ -394,6 +401,7 @@ function renderDungeonPoint(value) {
 }
 
 function setGuideBooksStale(stale) {
+  guideBooksStale = !!stale;
   const el = document.getElementById('guidebook-stale');
   if (el) el.classList.toggle('hidden', !stale);
 }
