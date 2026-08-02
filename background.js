@@ -278,6 +278,10 @@ function handleMoveNode(data) {
   if (data.miasma_info) gameState.miasmaInfo = data.miasma_info;
   recordMiasma('move_node', data);
 
+  // move_node carries a fresh party HP snapshot (before_party_status),
+  // e.g. miasma damage per step. Sync it to the party bar.
+  extractPartyStatus(data);
+
   // Update node visited status in map + accumulate miasma consumption
   if (gameState.map && gameState.map.node_list) {
     const node = gameState.map.node_list.find(n => n.node_id === data.after_current_node_id);
@@ -362,6 +366,9 @@ function handleProceed(data) {
   if (data.miasma_info) gameState.miasmaInfo = data.miasma_info;
   if (data.total_turn !== undefined) gameState.totalTurn = data.total_turn;
 
+  // Stationary miasma damage / event HP changes ride on proceed responses
+  extractPartyStatus(data);
+
   // Collect guide book candidates from scenario status lists (3-way pick UI:
   // action_scenario_list[] with scenario_type CHOICE + status_list candidates)
   const candidates = [];
@@ -426,6 +433,20 @@ function handleIncident(data) {
   // was previously wiped to undefined here (player "disappeared" until the
   // next real move_node).
   handleProceed(data);
+}
+
+// Extract a party HP snapshot from any response that carries
+// action_scenario_list[].before_party_status (move_node / proceed_node_event
+// / incident_choose). This is how miasma damage reaches the party bar.
+function extractPartyStatus(data) {
+  if (!data || !Array.isArray(data.action_scenario_list)) return;
+  for (const s of data.action_scenario_list) {
+    if (Array.isArray(s.before_party_status) && s.before_party_status.length > 0) {
+      gameState.partyStatus = s.before_party_status;
+      broadcastToWindow('party-status', s.before_party_status);
+      return;
+    }
+  }
 }
 
 function handlePartyStatus(data) {
