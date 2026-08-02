@@ -792,6 +792,14 @@ body::before {
 }
 .filter-row:hover {
   background: rgba(217,178,90,0.10);
+}
+
+.filter-count {
+  margin-left: auto;
+  color: var(--gold-2, #c9a24b);
+  font-size: 11px;
+  white-space: nowrap;
+}
   color: var(--gold-0);
   transform: translateX(2px);
 }

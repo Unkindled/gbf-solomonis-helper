@@ -219,6 +219,120 @@ export function findNearestShop(nodeMap, startId) {
   return res ? { path: res.path } : null;
 }
 
+// Hard-route target & scoring types.
+// Ruler (4) is the destination; Terrifying Foe (11) scores highest,
+// Strong Foe (3) below it. Both are safe to pass through or stop on.
+const HARD_RULER_TYPE = 4;
+const HARD_TERRIFYING_TYPE = 11;
+const HARD_STRONG_TYPE = 3;
+const HARD_WEIGHT_TERRIFYING = 10; // 10 strong foes ≈ 1 terrifying foe
+const HARD_MAX_LEN = 20;
+
+/**
+ * Navigation: strong-foe route. Destination is the CLOSEST Ruler node
+ * (shortest unweighted distance). Within maxLen steps, the walk maximizes
+ * (terrifying foes × 10 + strong foes) among distinct nodes en route;
+ * ties → shorter path. Reaching the closest Ruler stops the walk. A node
+ * may be revisited at most once (bounded backtracking — enough to detour
+ * around foes without exploding the search space). Returns null when no
+ * Ruler is reachable within maxLen steps.
+ */
+export function findHardRoute(nodeMap, startId, maxLen = HARD_MAX_LEN) {
+  if (!nodeMap.has(startId) || maxLen <= 0) return null;
+
+  // 1. Find the closest Ruler node(s) via unweighted BFS.
+  let rulerDist = Infinity;
+  const closestRulers = new Set();
+  {
+    const dist = new Map([[startId, 0]]);
+    const q = [startId];
+    while (q.length) {
+      const cur = q.shift();
+      const d = dist.get(cur);
+      if (d > rulerDist) continue; // no need to go deeper than the best found
+      const node = nodeMap.get(cur);
+      if (cur !== startId && node.node_type === HARD_RULER_TYPE) {
+        if (d < rulerDist) { rulerDist = d; closestRulers.clear(); }
+        if (d === rulerDist) closestRulers.add(cur);
+        continue;
+      }
+      for (const nx of (node.adjacent_node_ids || [])) {
+        if (!nodeMap.has(nx)) continue;
+        if (nodeMap.get(nx).is_shrinking) continue;
+        if (dist.has(nx)) continue;
+        dist.set(nx, d + 1);
+        q.push(nx);
+      }
+    }
+  }
+  if (closestRulers.size === 0) return null; // no Ruler reachable
+
+  // 2. DFS walk within maxLen. Stop only on a closest Ruler; score =
+  //    distinct terrifying foes ×10 + strong foes. Revisits are bounded.
+  let best = null; // { path, score, terrifying, strong, pathLen }
+
+  const path = [startId];
+  const pathSet = new Set([startId]);
+  const revisitCount = new Map();   // node id → times revisited while in path
+  const foesCollected = new Set();  // ids counted toward score
+  let score = 0;
+  let terrifying = 0;
+  let strong = 0;
+
+  (function dfs(cur, steps) {
+    const node = nodeMap.get(cur);
+    if (node && cur !== startId && closestRulers.has(cur) && !node.is_shrinking) {
+      // Reaching a closest Ruler is a valid destination — stop here.
+      const better = !best
+        || score > best.score
+        || (score === best.score && path.length < best.pathLen);
+      if (better) best = { path: [...path], score, terrifying, strong, pathLen: path.length };
+      return;
+    }
+
+    if (steps >= maxLen) return;
+
+    // Prune (SAFE): each remaining step adds at most one new foe (×10).
+    const rem = maxLen - steps;
+    if (best && score + rem * HARD_WEIGHT_TERRIFYING < best.score) return;
+
+    for (const nx of (node.adjacent_node_ids || [])) {
+      if (!nodeMap.has(nx)) continue;
+      const nn = nodeMap.get(nx);
+      if (nn.is_shrinking) continue;
+      const isNewNode = !pathSet.has(nx);
+      const isNewFoe = !foesCollected.has(nx)
+        && (nn.node_type === HARD_TERRIFYING_TYPE || nn.node_type === HARD_STRONG_TYPE);
+      // Bounded revisit: already on the path → allow only if it picks up
+      // a fresh foe AND has been revisited < 2 times so far.
+      if (!isNewNode) {
+        const rc = revisitCount.get(nx) || 0;
+        if (!isNewFoe || rc >= 2) continue;
+      }
+
+      path.push(nx);
+      if (isNewNode) pathSet.add(nx);
+      if (!isNewNode) revisitCount.set(nx, (revisitCount.get(nx) || 0) + 1);
+      if (isNewFoe) {
+        foesCollected.add(nx);
+        if (nn.node_type === HARD_TERRIFYING_TYPE) { score += HARD_WEIGHT_TERRIFYING; terrifying++; }
+        else { score += 1; strong++; }
+      }
+      dfs(nx, steps + 1);
+      if (isNewFoe) {
+        if (nn.node_type === HARD_TERRIFYING_TYPE) { score -= HARD_WEIGHT_TERRIFYING; terrifying--; }
+        else { score -= 1; strong--; }
+        foesCollected.delete(nx);
+      }
+      if (!isNewNode) revisitCount.set(nx, (revisitCount.get(nx) || 0) - 1);
+      if (isNewNode) pathSet.delete(nx);
+      path.pop();
+    }
+  })(startId, 0);
+
+  return best;
+}
+
 /** Navigation: shortest path into the current safe zone (non-shrinking node). */
 export function findSafeZoneRoute(nodeMap, startId) {
   const res = searchBest(nodeMap, startId, (n) => !n.is_shrinking);

@@ -2,7 +2,7 @@
 
 import { MapRenderer } from './map-renderer.js';
 import { FilterPanel } from './filter-panel.js';
-import { findShortestPath, findFarmRoute, findNearestShop, findSafeZoneRoute } from './pathfinder.js';
+import { findShortestPath, findFarmRoute, findNearestShop, findSafeZoneRoute, findHardRoute } from './pathfinder.js';
 import { MIASMA_ACTIVATION_TURN } from './miasma-predictor.js';
 import { DUNGEON_STATUS_LABELS, NODE_TYPE_LABELS } from '../shared/constants.js';
 
@@ -214,10 +214,21 @@ function applyFullMap(mapData) {
   }
 
   if (filterPanel) filterPanel.setPresentSpecials(getPresentSpecialIds());
+  updateTypeCounts();
   if (mapData.possession_arcarum3_dungeon_point != null) {
     renderDungeonPoint(mapData.possession_arcarum3_dungeon_point);
   }
   reEvaluatePath();
+}
+
+/** Count nodes per node_type and show them next to the filter labels. */
+function updateTypeCounts() {
+  if (!filterPanel) return;
+  const counts = new Map();
+  for (const [, node] of nodeMap) {
+    counts.set(node.node_type, (counts.get(node.node_type) || 0) + 1);
+  }
+  filterPanel.setTypeCounts(counts);
 }
 
 function getPresentSpecialIds() {
@@ -577,6 +588,7 @@ function buildNavMenu() {
 const NAV_ITEMS = [
   { id: 'center', icon: '⌖', labelKey: 'nav.center', action: () => { if (renderer) renderer.focusPlayer(); } },
   { id: 'farm', icon: '🌾', labelKey: 'nav.farm', action: navigateFarmRoute },
+  { id: 'hard', icon: '⚔', labelKey: 'nav.hard', action: navigateHardRoute },
   { id: 'shop', icon: '🛒', labelKey: 'nav.shop', action: navigateNearestShop },
   { id: 'safe', icon: '☂', labelKey: 'nav.safe', action: navigateSafeZone },
 ];
@@ -594,6 +606,15 @@ function navigateNearestShop() {
   if (!dungeon) return;
   const res = findNearestShop(nodeMap, dungeon.current_node_id);
   if (!res) { updatePathInfo(null, 'No shop reachable'); return; }
+  currentPath = res.path;
+  pathStartId = currentPath[0];
+  reEvaluatePath();
+}
+
+function navigateHardRoute() {
+  if (!dungeon) return;
+  const res = findHardRoute(nodeMap, dungeon.current_node_id, 20);
+  if (!res) { updatePathInfo(null, 'No Ruler reachable within 20 steps'); return; }
   currentPath = res.path;
   pathStartId = currentPath[0];
   reEvaluatePath();

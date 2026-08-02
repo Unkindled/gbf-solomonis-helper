@@ -40,6 +40,7 @@
       // navigation (compass menu)
       'nav.center': 'Center on player',
       'nav.farm': 'Farm route (≤9 steps)',
+      'nav.hard': 'Strong-foe route (≤20 steps)',
       'nav.shop': 'Nearest shop',
       'nav.safe': 'Into the safe zone',
       // node types
@@ -108,6 +109,7 @@
       // navigation (compass menu)
       'nav.center': '定位玩家',
       'nav.farm': '发育路线（≤9 步）',
+      'nav.hard': '强敌路线（≤20 步）',
       'nav.shop': '最近的商店',
       'nav.safe': '进入安全区',
       // node types

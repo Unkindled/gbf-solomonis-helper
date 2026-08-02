@@ -30,6 +30,7 @@ export class FilterPanel {
     this.activeSpecials = new Set();
     this.presentSpecials = new Set();
     this.specialRows = new Map();
+    this.typeCountsEls = new Map();
     this._build();
   }
 
@@ -92,11 +93,28 @@ export class FilterPanel {
     icon.width = ICON_W;
     icon.height = ICON_H;
     const text = document.createElement('span');
+    text.className = 'filter-label';
     text.textContent = I18N.t('nodeType.' + type) || NODE_TYPE_LABELS[type] || type;
+    const count = document.createElement('span');
+    count.className = 'filter-count';
+    count.textContent = '0';
     row.appendChild(cb);
     row.appendChild(icon);
     row.appendChild(text);
+    row.appendChild(count);
+    this.typeCountsEls.set(type, count);
     return row;
+  }
+
+  /**
+   * Update per-type node counts shown next to each type label,
+   * e.g. "Ruler (3)". Pass a Map of node_type -> count.
+   */
+  setTypeCounts(counts) {
+    for (const [type, el] of this.typeCountsEls) {
+      const c = counts.get(type) || 0;
+      el.textContent = c > 0 ? `(${c})` : '';
+    }
   }
 
   _createSpecialRow(id) {
