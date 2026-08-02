@@ -364,38 +364,55 @@ body::before {
 
 .hud-btn-badge {
   position: absolute;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  color: #fff;
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+  border: 1px solid rgba(0,0,0,0.5);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  z-index: 2;
+  pointer-events: none;
+}
+.hud-badge-total {
   top: -7px;
   right: -7px;
-  min-width: 22px;
-  height: 22px;
-  padding: 0 5px;
-  border-radius: 11px;
   background: radial-gradient(circle at 35% 30%, #ffd98a, var(--ember) 90%);
   color: #2a0d05;
-  font-family: var(--display);
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 22px;
-  text-align: center;
-  border: 1px solid rgba(0,0,0,0.4);
   box-shadow: 0 2px 6px rgba(0,0,0,0.5), 0 0 8px rgba(217,96,58,0.5);
-  z-index: 2;
+}
+.hud-badge-fav {
+  top: -7px;
+  left: -7px;
+  background: radial-gradient(circle at 35% 30%, #ff9db0, #c2185b 90%);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5), 0 0 8px rgba(194,24,91,0.5);
+}
+.hud-badge-cursed {
+  bottom: -7px;
+  left: -7px;
+  background: radial-gradient(circle at 35% 30%, #b57edc, #5b2a86 90%);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5), 0 0 8px rgba(91,42,134,0.5);
 }
 .hud-btn-badge.hidden { display: none; }
 
 .hud-btn-stale {
   position: absolute;
-  top: -7px;
-  left: -7px;
-  width: 22px;
-  height: 22px;
+  bottom: -7px;
+  right: -7px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #ffe08a, var(--blight) 95%);
   color: #fff;
   font-family: var(--display);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
-  line-height: 21px;
+  line-height: 19px;
   text-align: center;
   border: 1px solid rgba(0,0,0,0.4);
   box-shadow: 0 2px 6px rgba(0,0,0,0.5);
@@ -494,41 +511,84 @@ body::before {
   padding: 10px 2px;
 }
 
-/* --- Guide book codex --- */
-
-.guidebook-tabs {
+.guidebook-header-actions {
   display: flex;
-  gap: 4px;
+  gap: 6px;
+  align-items: center;
 }
-.guidebook-tab {
-  background: transparent;
-  border: 1px solid var(--gold-3);
-  border-bottom: none;
-  border-radius: 6px 6px 0 0;
-  padding: 5px 14px;
-  font-family: var(--display);
-  font-size: 13px;
-  color: var(--parch-dim);
-  cursor: pointer;
-  transition: color 0.15s, background 0.15s;
-}
-.guidebook-tab:hover { color: var(--parch-0); }
-.guidebook-tab.active {
+#gb-open-codex {
+  border-color: var(--gold-2);
   color: var(--gold-0);
-  background: rgba(217,178,90,0.10);
   font-weight: 600;
+}
+
+.gb-unknown-header {
+  margin: 14px 2px 6px;
+  font-family: var(--display);
+  font-size: 12px;
+  color: var(--blight);
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid rgba(196,74,134,0.3);
+  padding-bottom: 4px;
+}
+.guidebook-codex-row.unknown {
+  border-color: rgba(196,74,134,0.3);
+  background: rgba(60,10,40,0.25);
+}
+
+/* --- Guide book codex (separate large modal) --- */
+
+/* The codex opens like a book: a big centered panel with a title spine. */
+#guidebook-codex {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(900px, 92vw);
+  height: min(640px, 86vh);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background:
+    linear-gradient(180deg, rgba(217,178,90,0.10), transparent 30%),
+    radial-gradient(120% 90% at 50% 0%, #1b2742, #0a0e1a 70%);
+  border: 1px solid var(--gold-2);
+  border-radius: 10px;
+  box-shadow: 0 18px 60px rgba(0,0,0,0.7), 0 0 30px rgba(217,178,90,0.15);
+  overflow: hidden;
+  animation: codex-open 0.3s cubic-bezier(.2,.9,.3,1.15);
+}
+@keyframes codex-open {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.86) rotateX(6deg); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1) rotateX(0); }
+}
+#guidebook-codex.hidden { display: none; }
+
+.guidebook-codex-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--gold-edge);
+  background: linear-gradient(90deg, rgba(217,178,90,0.16), rgba(217,178,90,0.03));
+  font-family: var(--display);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  color: var(--gold-0);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
 }
 
 .guidebook-codex-controls {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  padding: 8px 12px;
+  padding: 10px 14px;
   border-bottom: 1px solid rgba(217,178,90,0.12);
   background: rgba(6,10,20,0.4);
 }
 .gb-codex-search {
-  flex: 1 1 100%;
+  flex: 2 1 220px;
   background: rgba(8,12,24,0.85);
   border: 1px solid var(--gold-3);
   border-radius: 5px;
@@ -539,7 +599,7 @@ body::before {
 }
 .gb-codex-search:focus { border-color: var(--gold-1); }
 .gb-codex-select {
-  flex: 1 1 45%;
+  flex: 1 1 130px;
   background: rgba(8,12,24,0.85);
   border: 1px solid var(--gold-3);
   border-radius: 5px;
@@ -549,20 +609,33 @@ body::before {
   outline: none;
 }
 
+#guidebook-codex-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px;
+}
+/* Grid: at least 2 books per row */
+.guidebook-codex-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 8px;
+}
+
 .guidebook-codex-row {
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 6px 6px;
-  border-bottom: 1px solid rgba(217,178,90,0.08);
-  border-radius: 5px;
-  transition: background 0.15s ease;
+  padding: 8px 10px;
+  border: 1px solid rgba(217,178,90,0.14);
+  border-radius: 7px;
+  background: rgba(10,16,30,0.55);
+  transition: background 0.15s ease, border-color 0.15s;
 }
-.guidebook-codex-row:hover { background: rgba(217,178,90,0.08); }
-.guidebook-codex-row.owned { background: rgba(120,200,120,0.05); }
+.guidebook-codex-row:hover { background: rgba(217,178,90,0.08); border-color: rgba(217,178,90,0.3); }
+.guidebook-codex-row.owned { background: rgba(120,200,120,0.07); border-color: rgba(120,200,120,0.25); }
 .guidebook-codex-row .gb-icon {
-  width: 26px;
-  height: 26px;
+  width: 30px;
+  height: 30px;
   border-radius: 4px;
   flex-shrink: 0;
   border: 1px solid var(--gold-3);
@@ -573,12 +646,19 @@ body::before {
   color: var(--parch-1);
   line-height: 1.35;
   flex: 1;
+  min-width: 0;
 }
 .guidebook-codex-row .gb-rarity {
   font-size: 11px;
   color: var(--gold-1);
   flex-shrink: 0;
   letter-spacing: 1px;
+}
+.guidebook-codex-row .gb-lang {
+  font-size: 9px;
+  color: var(--parch-dim);
+  flex-shrink: 0;
+  font-style: italic;
 }
 .gb-fav-btn {
   background: transparent;

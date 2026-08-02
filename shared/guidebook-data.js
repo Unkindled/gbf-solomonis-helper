@@ -2,7 +2,10 @@
 // (effect text + wiki tag taxonomy). rarity: 1=Normal, 2=Rare, 3=Unique,
 // 99=Cursed. availability: global/event/character. type & effects are the
 // wiki filter tags used for the codex filters. Owned status is matched at
-// runtime against spacebook_status_list by normalized effect text.
+// runtime against spacebook_status_list by status_id (preferred, language
+// independent) or by normalized effect text in en/ja/zh.
+// ja/zh fields are filled as translations are collected (framework for the
+// future localization / auto-update when new guidebooks ship).
 export const GUIDEBOOK_DB = [
  {
   "rarity": 3,
@@ -13,7 +16,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "aura",
   "text": "Elemental skill enhancement +180%",
-  "id": 1
+  "id": 1,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -24,7 +29,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "ca cap",
   "text": "100% boost to special C.A. DMG cap",
-  "id": 2
+  "id": 2,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -36,7 +43,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "amp",
   "text": "Amplify all allies' DMG based on total HP lost after this guidebook effect was obtained (Max: 100%)",
-  "id": 3
+  "id": 3,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -49,7 +58,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "amp",
   "text": "Amplify all allies' DMG based on number of times an event space was reached after this guidebook effect was obtained (10% per space / Max: 100%)",
-  "id": 4
+  "id": 4,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -58,7 +69,9 @@ export const GUIDEBOOK_DB = [
   "effects": [],
   "icon": "uplift",
   "text": "All allies have a maximum charge bar limit of 200% (Can't be stacked)",
-  "id": 5
+  "id": 5,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -70,7 +83,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "shield",
   "text": "At battle start: All allies' HP is reduced to 1 / Shield effect to each ally worth 500% of the HP they consumed (Can't be stacked)",
-  "id": 6
+  "id": 6,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -79,7 +94,9 @@ export const GUIDEBOOK_DB = [
   "effects": [],
   "icon": "ele switch",
   "text": "Allies' DMG taken is converted to the element they have superiority against (Can't be stacked)",
-  "id": 7
+  "id": 7,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -90,7 +107,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "Summon cooldowns become 1 turn (Can't be stacked)",
-  "id": 8
+  "id": 8,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -102,7 +121,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "\"Can't recast\" skills and 'Can't resummon\" summon calls become reusable again at the start of each battle (Can't be stacked)",
-  "id": 9
+  "id": 9,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -115,7 +136,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "Obtain a random number of Sephira coins and 1 random guidebook effect upon clearing a battle",
-  "id": 10
+  "id": 10,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -127,7 +150,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "Amplify DMG for allies with max HP above 24,999 +30% (Above 49,999: Bonus Elemental DMG effect [30%] / Above 99,999: Boost specs for the Bonus DMG and DMG amplify)",
-  "id": 11
+  "id": 11,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -139,7 +164,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "Bonus Elemental C.A. DMG effect to gun-, melee-, bow-, harp-, or katana-specialty allies (50%) / Bonus Superior Elemental C.A. DMG effect (50%)",
-  "id": 12
+  "id": 12,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -151,7 +178,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "Bonus Elemental DMG effect to sabre-, dagger-, spear-, axe-, or staff-specialty allies (50%) / Bonus Superior Elemental DMG effect (50%)",
-  "id": 13
+  "id": 13,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -163,7 +192,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "Upon attacking when all allies are almost knocked out: Increase number of times all allies do an attack +1",
-  "id": 14
+  "id": 14,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -174,7 +205,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "Chain bursts of over 4 chains change to Ultimate Nova (Ultimate Nova: Destruction DMG / Remove all buffs from foes / Counts as all elemental chain bursts) (Can't be stacked)",
-  "id": 15
+  "id": 15,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -185,7 +218,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "Upon an ally using a charge attack: 2-turn cut their skill cooldowns (Can't be stacked)",
-  "id": 16
+  "id": 16,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -194,7 +229,9 @@ export const GUIDEBOOK_DB = [
   "effects": [],
   "icon": "special",
   "text": "At end of turn when all allies' charge bars are at least 100%: Consume 100% of all allies' charge bars / First-position ally deals 10-hit elemental DMG to all foes (1000% total) (Can't be stacked)",
-  "id": 17
+  "id": 17,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -205,7 +242,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "At the end of each turn allies dealt 100 hits of DMG: 2-turn cut to all allies' skill cooldowns (Can't be stacked)",
-  "id": 18
+  "id": 18,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -217,7 +256,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "From an ally's 2nd or higher attack each turn: Sharp boost to ATK / From the 3rd or higher attack: Bonus Superior Elemental DMG effect (100%)",
-  "id": 19
+  "id": 19,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -228,7 +269,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "Sharp hit to DEF / All allies gain Autorevived (with buffs) at battle start. / Amplify DMG for each time an ally was knocked out after obtaining this effect (10% per ally / Max: 100%) (Can't be stacked)",
-  "id": 20
+  "id": 20,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -239,7 +282,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "amp",
   "text": "Amplify DMG 50%",
-  "id": 21
+  "id": 21,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -248,7 +293,9 @@ export const GUIDEBOOK_DB = [
   "effects": [],
   "icon": "def",
   "text": "20% DMG reduction",
-  "id": 22
+  "id": 22,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -259,7 +306,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "2-turn reduction to skill cooldowns",
-  "id": 23
+  "id": 23,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -271,7 +320,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "On Volcanic Area ruler spaces: Amplify DMG +30% / Bonus Water DMG effect [20%] / Bonus Water C.A. DMG effect [20%] / Lower requirements to cancel foe Omens",
-  "id": 24
+  "id": 24,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -283,7 +334,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "On Lake Area ruler spaces: Amplify DMG +30% / Bonus Earth DMG effect [20%] / Bonus Earth C.A. DMG effect [20%] / Lower requirements to cancel foe Omens",
-  "id": 25
+  "id": 25,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -295,7 +348,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "On Forest Area ruler spaces: Amplify DMG +30% / Bonus Wind DMG effect [20%] / Bonus Wind C.A. DMG effect [20%] / Lower requirements to cancel foe Omens",
-  "id": 26
+  "id": 26,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -306,7 +361,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "Lower foe's stats on battle, strong foe, and terrifying foe spaces (Can't be stacked)",
-  "id": 27
+  "id": 27,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -319,7 +376,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "At battle start (1st ally): Earth/wind DMG to foes / Hit to ATK, DEF, and M.A. rate / Bonus Earth DMG to allies / End of turn: Restore HP / 10% boost to charge bars (Can't be stacked)",
-  "id": 28
+  "id": 28,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -330,7 +389,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "To all allies for 2 turns after battle start: DMG immunity, debuff immunity, and buffs can't be removed (Can't be stacked)",
-  "id": 29
+  "id": 29,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -339,7 +400,9 @@ export const GUIDEBOOK_DB = [
   "effects": [],
   "icon": "special",
   "text": "MC harbors the power of the Omnipotent (Can't be stacked)",
-  "id": 30
+  "id": 30,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -351,7 +414,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "1-turn reduction to all allies' skill cooldowns / Heal all allies by 10% of max HP at battle start",
-  "id": 31
+  "id": 31,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -363,7 +428,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "At battle start: Maria Theresa activates The Empress Upright / If all allies' HP is full before attacking: Sharp boost to all allies' ATK (1 time) (Only if Maria Theresa is a main ally) (Can't be stacked)",
-  "id": 32
+  "id": 32,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 3,
@@ -376,7 +443,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "At battle start: Caim activates The Fool Upright and gains Trick (Caim) (After 12 skill uses by allies: End cooldown for all allies' skills [1 time]) (Only if Caim is a main ally) (Can't be stacked)",
-  "id": 33
+  "id": 33,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -387,7 +456,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "flurry",
   "text": "Normal attack hit count +1",
-  "id": 34
+  "id": 34,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -399,7 +470,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "flurry",
   "text": "Normal attack hit count for Erune and Levleath allies +1",
-  "id": 35
+  "id": 35,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -410,7 +483,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "flurry",
   "text": "Increase all allies' normal attack hit count based on number of cursed guidebooks held (Max: +10)",
-  "id": 36
+  "id": 36,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -421,7 +496,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "echo",
   "text": "Bonus Elemental DMG effect (20%)",
-  "id": 37
+  "id": 37,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -433,7 +510,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "echo",
   "text": "Bonus Elemental DMG effect to Harvin and Wolvir allies (30%)",
-  "id": 38
+  "id": 38,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -444,7 +523,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "rigor",
   "text": "Elemental Rigor effect (20%)",
-  "id": 39
+  "id": 39,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -455,7 +536,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "ca echo",
   "text": "Bonus Elemental C.A. DMG effect (20%)",
-  "id": 40
+  "id": 40,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -467,7 +550,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "ca echo",
   "text": "Bonus Elemental C.A. DMG effect to Draph and Grokkle allies (30%)",
-  "id": 41
+  "id": 41,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -478,7 +563,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "aura",
   "text": "Elemental skill enhancement +60%",
-  "id": 42
+  "id": 42,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -489,7 +576,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "ca dmg",
   "text": "At battle start: C.A. Reactivation effect to all allies (1 time) (Can't be stacked)",
-  "id": 43
+  "id": 43,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -501,7 +590,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "cap",
   "text": "Primal and Other allies' DMG cap +50%",
-  "id": 44
+  "id": 44,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -512,7 +603,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "amp",
   "text": "Amplify normal attack DMG +30%",
-  "id": 45
+  "id": 45,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -523,7 +616,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "amp",
   "text": "Amplify MC's and SSR allies' DMG +10% / Amplify SR allies' DMG +100% / Amplify R allies' DMG +200%",
-  "id": 46
+  "id": 46,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -535,7 +630,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "amp",
   "text": "Amplify Human and Geonoid allies' DMG +30%",
-  "id": 47
+  "id": 47,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -546,7 +643,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "skill amp",
   "text": "Amplify skill DMG +30%",
-  "id": 48
+  "id": 48,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -557,7 +656,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "ca amp",
   "text": "Amplify C.A. DMG +30%",
-  "id": 49
+  "id": 49,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -568,7 +669,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "cb amp",
   "text": "Amplify chain DMG +100%",
-  "id": 50
+  "id": 50,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -577,7 +680,9 @@ export const GUIDEBOOK_DB = [
   "effects": [],
   "icon": "uplift",
   "text": "Uplift (10%)",
-  "id": 51
+  "id": 51,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -586,7 +691,9 @@ export const GUIDEBOOK_DB = [
   "effects": [],
   "icon": "uplift",
   "text": "Charge bar gain +20%",
-  "id": 52
+  "id": 52,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -595,7 +702,9 @@ export const GUIDEBOOK_DB = [
   "effects": [],
   "icon": "def",
   "text": "Mitigate DMG taken (500)",
-  "id": 53
+  "id": 53,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -606,7 +715,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "guts",
   "text": "At battle start: Undying effect to all allies (1 time) (Can't be stacked)",
-  "id": 54
+  "id": 54,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -617,7 +728,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "veil",
   "text": "At battle start: Dispel Cancel effect (1 time) / Debuff immunity (1 time) (Can't be stacked)",
-  "id": 55
+  "id": 55,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -628,7 +741,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "regen",
   "text": "Regeneration (1000 HP)",
-  "id": 56
+  "id": 56,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -639,7 +754,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "Gain a random guidebook effect when resting at a healing space",
-  "id": 57
+  "id": 57,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -651,7 +768,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "Upon reaching an event space: Obtain a random amount of Sephira coins",
-  "id": 58
+  "id": 58,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -662,7 +781,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "Sephira coin drop amount upon clearing battles +30%",
-  "id": 59
+  "id": 59,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -671,7 +792,9 @@ export const GUIDEBOOK_DB = [
   "effects": [],
   "icon": "special",
   "text": "Allies' attacks won't miss regardless of accuracy, foe dodge rates, Mirror Image effects, or similar (Can't be stacked)",
-  "id": 60
+  "id": 60,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -682,7 +805,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "When an ally uses a skill: Amplify caster's DMG based on the skill's cooldown (Max: 50% / Can't be stacked)",
-  "id": 61
+  "id": 61,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -693,7 +818,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "C.A. Sealed effect to allies upon using their C.A. / Amplify N.A. DMG and skill DMG +20% / Skills and charge attacks won't consume charge bar (Excludes skills with 0 cooldown)",
-  "id": 62
+  "id": 62,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -705,7 +832,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "Upon obtaining a guidebook effect from a treasure chest space: Gain 1 additional guidebook effect (Remaining uses: 2/2)",
-  "id": 63
+  "id": 63,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -716,7 +845,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "50% hit to all allies' DMG dealt until 3rd turn / From 4th turn or later: Amplify DMG dealt +100% / 20% DMG reduction",
-  "id": 64
+  "id": 64,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -728,7 +859,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "50% hit to DMG dealt against foes appearing on battle spaces / Amplify DMG against foes appearing on strong foe, terrifying foe, ruler, and boss spaces +50%",
-  "id": 65
+  "id": 65,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -739,7 +872,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "Chance for all allies' normal attacks, skill DMG, and charge attacks to miss / 100% boost to ATK / 50% boost to DMG cap",
-  "id": 66
+  "id": 66,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -752,7 +887,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "When not entering battle for 3 spaces or more: Amplify all allies' DMG at start of next battle +50% / DMG Mitigation effect (2000) (Can't be stacked)",
-  "id": 67
+  "id": 67,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -761,7 +898,9 @@ export const GUIDEBOOK_DB = [
   "effects": [],
   "icon": "special",
   "text": "Number of summon calls per turn +1",
-  "id": 68
+  "id": 68,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -772,7 +911,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "Upon an ally using a debuff skill: 2 random debuffs to a foe",
-  "id": 69
+  "id": 69,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -783,7 +924,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "20% miasma DMG reduction",
-  "id": 70
+  "id": 70,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -792,7 +935,9 @@ export const GUIDEBOOK_DB = [
   "effects": [],
   "icon": "special",
   "text": "Next obtained cursed guidebook effect is counteracted (Remaining uses: 1/1)",
-  "id": 71
+  "id": 71,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -803,7 +948,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "At battle start: 40% boost to all allies' charge bars",
-  "id": 72
+  "id": 72,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -812,7 +959,9 @@ export const GUIDEBOOK_DB = [
   "effects": [],
   "icon": "special",
   "text": "When an ally uses a damage skill: Plain DMG to a foe based on its current HP",
-  "id": 73
+  "id": 73,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -821,7 +970,9 @@ export const GUIDEBOOK_DB = [
   "effects": [],
   "icon": "special",
   "text": "Elemental DMG dealt will be treated as superior to the target's element (Can't be stacked)",
-  "id": 74
+  "id": 74,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -832,7 +983,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "At battle start: Dodge/Tank-and-Counter effect to all allies (3 hits) (Can't be stacked)",
-  "id": 75
+  "id": 75,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -844,7 +997,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "1-turn cut to all allies' skill cooldowns after every 5 spaces moved (0/5 spaces)",
-  "id": 76
+  "id": 76,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -855,7 +1010,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "Party members gain all character types (Can't be stacked)",
-  "id": 77
+  "id": 77,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -866,7 +1023,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "Party members gain all weapons types as specialty weapons (Can't be stacked)",
-  "id": 78
+  "id": 78,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -877,7 +1036,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "At battle start: 5 Crests to all allies (Type of Crest depends on their element) (Can't be stacked)",
-  "id": 79
+  "id": 79,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -888,7 +1049,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "At end of turn: Chance to end cooldown for a random skill on each ally that didn't use a skill that turn (Can't be stacked)",
-  "id": 80
+  "id": 80,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -897,7 +1060,9 @@ export const GUIDEBOOK_DB = [
   "effects": [],
   "icon": "special",
   "text": "At end of turn: Elemental DMG to a foe for each ally that didn't take DMG that turn (Hit number increases based on number of consecutive turns DMG wasn't taken [Max: 5])",
-  "id": 81
+  "id": 81,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -908,7 +1073,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "revive",
   "text": "At battle start: Autorevive effect to all allies (1 time) / Death's Grace effect (Can't be stacked)",
-  "id": 82
+  "id": 82,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -919,7 +1086,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "Boost to chance of obtaining rare guidebook effects upon clearing a battle (Can't be stacked)",
-  "id": 83
+  "id": 83,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -930,7 +1099,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "For every 3 skills used by allies: First-position ally deals 3-hit elemental DMG to all foes / Hit to ATK and DEF (Stackable) / Amplify DMG taken (6 hits)",
-  "id": 84
+  "id": 84,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -942,7 +1113,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "At end of turn: First-position ally deals elemental DMG to all foes / Blind effect / Supplement DMG taken / Remove 1 buff",
-  "id": 85
+  "id": 85,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -953,7 +1126,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "Upon an ally attacking: Random debuff to a foe",
-  "id": 86
+  "id": 86,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -964,7 +1139,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "At end of turn: 1 random buff to each ally",
-  "id": 87
+  "id": 87,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -975,7 +1152,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "curse dmg",
   "text": "50% hit to DMG dealt (Changes to Amplify DMG +50% upon clearing 3 battles)",
-  "id": 88
+  "id": 88,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -984,7 +1163,9 @@ export const GUIDEBOOK_DB = [
   "effects": [],
   "icon": "curse def",
   "text": "Amplify DMG taken +20% (Changes to 20% DMG reduction upon clearing 3 battles)",
-  "id": 89
+  "id": 89,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 2,
@@ -995,7 +1176,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "curse special",
   "text": "2-turn increase to skill cooldowns (Changes to 2-turn reduction to skill cooldowns upon clearing 3 battles)",
-  "id": 90
+  "id": 90,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 1,
@@ -1004,7 +1187,9 @@ export const GUIDEBOOK_DB = [
   "effects": [],
   "icon": "atk",
   "text": "ATK +20%",
-  "id": 91
+  "id": 91,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 1,
@@ -1013,7 +1198,9 @@ export const GUIDEBOOK_DB = [
   "effects": [],
   "icon": "atk",
   "text": "Elemental ATK + 20%",
-  "id": 92
+  "id": 92,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 1,
@@ -1022,7 +1209,9 @@ export const GUIDEBOOK_DB = [
   "effects": [],
   "icon": "ma",
   "text": "Multiattack rate +20%",
-  "id": 93
+  "id": 93,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 1,
@@ -1031,7 +1220,9 @@ export const GUIDEBOOK_DB = [
   "effects": [],
   "icon": "crit",
   "text": "Critical hit rate +30%",
-  "id": 94
+  "id": 94,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 1,
@@ -1040,7 +1231,9 @@ export const GUIDEBOOK_DB = [
   "effects": [],
   "icon": "stamina",
   "text": "Stamina",
-  "id": 95
+  "id": 95,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 1,
@@ -1049,7 +1242,9 @@ export const GUIDEBOOK_DB = [
   "effects": [],
   "icon": "enmity",
   "text": "Enmity",
-  "id": 96
+  "id": 96,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 1,
@@ -1058,7 +1253,9 @@ export const GUIDEBOOK_DB = [
   "effects": [],
   "icon": "skill cap",
   "text": "Skill DMG +20% / Skill DMG cap +10%",
-  "id": 97
+  "id": 97,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 1,
@@ -1069,7 +1266,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "ca cap",
   "text": "C.A. DMG +20% / C.A. DMG cap +10%",
-  "id": 98
+  "id": 98,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 1,
@@ -1080,7 +1279,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "ca cap",
   "text": "Special C.A. DMG cap +10%",
-  "id": 99
+  "id": 99,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 1,
@@ -1091,7 +1292,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "cb cap",
   "text": "Chain burst DMG +50% / Chain burst DMG cap +30%",
-  "id": 100
+  "id": 100,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 1,
@@ -1102,7 +1305,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "cap",
   "text": "DMG cap + 10%",
-  "id": 101
+  "id": 101,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 1,
@@ -1111,7 +1316,9 @@ export const GUIDEBOOK_DB = [
   "effects": [],
   "icon": "def",
   "text": "DEF +30%",
-  "id": 102
+  "id": 102,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 1,
@@ -1120,7 +1327,9 @@ export const GUIDEBOOK_DB = [
   "effects": [],
   "icon": "hp",
   "text": "Max HP +30%",
-  "id": 103
+  "id": 103,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 1,
@@ -1131,7 +1340,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "heal spec",
   "text": "Healing specs +20%",
-  "id": 104
+  "id": 104,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 99,
@@ -1140,7 +1351,9 @@ export const GUIDEBOOK_DB = [
   "effects": [],
   "icon": "curse hp",
   "text": "20% hit to max HP",
-  "id": 105
+  "id": 105,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 99,
@@ -1149,7 +1362,9 @@ export const GUIDEBOOK_DB = [
   "effects": [],
   "icon": "curse hp",
   "text": "Take DMG each turn",
-  "id": 106
+  "id": 106,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 99,
@@ -1158,7 +1373,9 @@ export const GUIDEBOOK_DB = [
   "effects": [],
   "icon": "curse ma",
   "text": "100% hit to multiattack rate",
-  "id": 107
+  "id": 107,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 99,
@@ -1169,7 +1386,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "curse special",
   "text": "At end of turn: Random debuffs to each ally",
-  "id": 108
+  "id": 108,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 99,
@@ -1180,7 +1399,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "curse special",
   "text": "Foes' attacks and debuffs can't miss (Can't be stacked)",
-  "id": 109
+  "id": 109,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 99,
@@ -1191,7 +1412,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "curse special",
   "text": "At battle start: DMG immunity to foe (30 hits) (Can't be stacked)",
-  "id": 110
+  "id": 110,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 99,
@@ -1202,7 +1425,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "curse special",
   "text": "Chance of 1-turn extension to skill cooldowns for all allies at end of turn",
-  "id": 111
+  "id": 111,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 99,
@@ -1213,7 +1438,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "curse special",
   "text": "Sephira coin drop amount upon clearing battles -30%",
-  "id": 112
+  "id": 112,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 99,
@@ -1222,7 +1449,9 @@ export const GUIDEBOOK_DB = [
   "effects": [],
   "icon": "curse special",
   "text": "Omen cancel requirements on ruler spaces and boss spaces are increased",
-  "id": 113
+  "id": 113,
+  "ja": null,
+  "zh": null
  },
  {
   "rarity": 99,
@@ -1231,6 +1460,40 @@ export const GUIDEBOOK_DB = [
   "effects": [],
   "icon": "curse special",
   "text": "Become weak to all elements (Can't be stacked)",
-  "id": 114
+  "id": 114,
+  "ja": null,
+  "zh": null
  }
 ];
+
+// status_id (game-side guidebook effect id, identical across en/ja clients)
+// → GUIDEBOOK_DB entry id. Extended at runtime when new books are observed.
+export const GUIDEBOOK_STATUS_ID = {
+ "1": 91,
+ "2": 93,
+ "4": 98,
+ "6": 99,
+ "8": 92,
+ "9": 95,
+ "10": 96,
+ "11": 94,
+ "13": 103,
+ "14": 102,
+ "15": 104,
+ "17": 37,
+ "20": 45,
+ "21": 48,
+ "24": 42,
+ "27": 56,
+ "29": 51,
+ "31": 74,
+ "41": 79,
+ "47": 61,
+ "48": 81,
+ "50": 73,
+ "59": 78,
+ "64": 62,
+ "76": 2,
+ "88": 13,
+ "89": 12
+};

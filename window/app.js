@@ -128,19 +128,15 @@ function init() {
     popup.classList.add('hidden');
   });
 
-  // Guidebook popup tabs (My Guide Books / Codex)
-  const tabOwned = document.getElementById('gb-tab-owned');
-  const tabCodex = document.getElementById('gb-tab-codex');
-  const codexControls = document.getElementById('guidebook-codex-controls');
-  function setGbTab(tab) {
-    gbPopupTab = tab;
-    tabOwned.classList.toggle('active', tab === 'owned');
-    tabCodex.classList.toggle('active', tab === 'codex');
-    codexControls.classList.toggle('hidden', tab !== 'codex');
-    renderGuideBooks(latestGuideBooks);
-  }
-  tabOwned.addEventListener('click', () => setGbTab('owned'));
-  tabCodex.addEventListener('click', () => setGbTab('codex'));
+  // Guide book codex: opens as a separate large modal ("opening a book")
+  const codex = document.getElementById('guidebook-codex');
+  document.getElementById('gb-open-codex').addEventListener('click', () => {
+    codex.classList.remove('hidden');
+    renderCodex();
+  });
+  document.getElementById('gb-codex-close').addEventListener('click', () => {
+    codex.classList.add('hidden');
+  });
   // Codex filter inputs → re-render
   const codexInputs = [
     'gb-codex-search', 'gb-codex-rarity', 'gb-codex-type',
@@ -148,9 +144,12 @@ function init() {
   ];
   for (const id of codexInputs) {
     const el = document.getElementById(id);
-    if (el) el.addEventListener('input', () => { if (gbPopupTab === 'codex') renderCodex(); });
+    if (el) el.addEventListener('input', () => {
+      if (!codex.classList.contains('hidden')) renderCodex();
+    });
   }
   loadFavorites(() => { renderGuideBooks(latestGuideBooks); });
+  loadUnknownBooks();
 
   // Export miasma log button
   document.getElementById('btn-export-miasma').addEventListener('click', () => {
@@ -507,6 +506,7 @@ function renderGuideBooks(books) {
   const body = document.getElementById('guidebook-popup-body');
   if (!body) return;
 
+  collectUnknownBooks(latestGuideBooks);
   updateGuidebookBadges();
 
   if (!Array.isArray(books) || books.length === 0) {
@@ -537,21 +537,26 @@ function renderGuideBooks(books) {
     return (rarityOrder[b.rarity] ?? 9) - (rarityOrder[a.rarity] ?? 9) || String(a.name).localeCompare(String(b.name));
   });
 
-  if (gbPopupTab === 'codex') { renderCodex(); return; }
-
   const rows = merged.map(b => {
     const rarLabel = { 1: '★', 2: '★★', 3: '★★★', 99: '☠' }[b.rarity] || '';
     const name = (b.name || '').replace(/@@/g, ' ');
     const countLabel = b.num > 1 ? ` ×${b.num}` : '';
-    const isFav = favoriteBookIds.has(String(matchCodexEntry(b)?.id ?? -1));
+    const entryId = matchCodexEntry(b)?.id;
+    const isFav = entryId != null && favoriteBookIds.has(String(entryId));
     return `<div class="guidebook-popup-row">
       ${bookIconImg(b.icon_type)}
       <span class="gb-name">${name}<span class="gb-count">${countLabel}</span></span>
       <span class="gb-rarity">${rarLabel}</span>
-      ${isFav ? '<span class="gb-fav-mark">♥</span>' : ''}
+      ${entryId != null ? `<button class="gb-fav-btn ${isFav ? 'fav' : ''}" data-id="${entryId}" title="Favorite">${isFav ? '♥' : '♡'}</button>` : ''}
     </div>`;
   }).join('');
   body.innerHTML = rows;
+  body.querySelectorAll('.gb-fav-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleFavorite(parseInt(btn.dataset.id, 10));
+    });
+  });
 }
 
 // Cache guidebook icons fetched by the background (icon_type → data URL)
@@ -567,7 +572,6 @@ function cacheBookIcons(icons) {
 
 // favorite status: Set of wiki entry ids (strings), persisted in chrome.storage
 let favoriteBookIds = new Set();
-let gbPopupTab = 'owned'; // 'owned' | 'codex'
 
 function normText(s) {
   return String(s || '')
@@ -578,13 +582,31 @@ function normText(s) {
     .trim();
 }
 
-/** Match a game book (name/status_id) against the wiki DB by effect text. */
+/**
+ * Match a game book against the wiki DB.
+ * Priority:
+ *   1. exact status_id (language-independent — works for EN and JA clients)
+ *   2. normalized effect text in any available language
+ */
 function matchCodexEntry(gameBook) {
   if (gameBook == null) return null;
+  // 1) status_id mapping (built from observed data; extended at runtime
+  //    when new books appear)
+  if (gameBook.status_id != null) {
+    const byStatus = GUIDEBOOK_STATUS_ID[gameBook.status_id];
+    if (byStatus != null) return GUIDEBOOK_DB.find(b => b.id === byStatus) || null;
+  }
+  // 2) text match in any language (en / ja / zh)
   const n = normText(gameBook.name);
-  let hit = GUIDEBOOK_DB.find(b => normText(b.text) === n);
-  if (!hit && n.length >= 12) {
-    hit = GUIDEBOOK_DB.find(b => normText(b.text).startsWith(n));
+  let hit = null;
+  for (const b of GUIDEBOOK_DB) {
+    for (const lang of ['text', 'ja', 'zh']) {
+      const t = b[lang];
+      if (!t) continue;
+      const tn = normText(t);
+      if (tn === n || (n.length >= 12 && tn.startsWith(n))) { hit = b; break; }
+    }
+    if (hit) break;
   }
   return hit || null;
 }
@@ -609,8 +631,9 @@ function bookCodexIcon(entry, ownedInfo) {
 }
 
 function updateGuidebookBadges() {
-  // badge: total owned / cursed / favorite (separated)
-  const badge = document.getElementById('guidebook-badge');
+  const badgeTotal = document.getElementById('guidebook-badge');
+  const badgeFav = document.getElementById('guidebook-badge-fav');
+  const badgeCursed = document.getElementById('guidebook-badge-cursed');
   const owned = latestGuideBooks || [];
   const merged = [];
   const byId = new Map();
@@ -621,23 +644,63 @@ function updateGuidebookBadges() {
   }
   const total = merged.reduce((s, b) => s + b.num, 0);
   const cursed = merged.filter(b => (b.rarity || 0) === 99).reduce((s, b) => s + b.num, 0);
-  // favorites: count distinct favorited entries that are owned
   let favOwned = 0;
   const ownedSet = new Set(merged.map(b => matchCodexEntry(b)?.id).filter(x => x != null));
   for (const id of favoriteBookIds) if (ownedSet.has(parseInt(id, 10))) favOwned++;
-  if (badge) {
-    const parts = [];
-    if (cursed > 0) parts.push(`☠${cursed}`);
-    if (favOwned > 0) parts.push(`♥${favOwned}`);
-    if (total > 0) parts.push(String(total));
-    badge.textContent = parts.join(' ');
-    badge.classList.toggle('hidden', parts.length === 0);
-    badge.title = `Owned: ${total} · Cursed: ${cursed} · Favorited: ${favOwned}`;
+  if (badgeTotal) {
+    badgeTotal.textContent = String(total);
+    badgeTotal.classList.toggle('hidden', total <= 0);
+  }
+  if (badgeFav) {
+    badgeFav.textContent = `♥${favOwned}`;
+    badgeFav.classList.toggle('hidden', favOwned <= 0);
+    badgeFav.title = `Favorited: ${favOwned}`;
+  }
+  if (badgeCursed) {
+    badgeCursed.textContent = `☠${cursed}`;
+    badgeCursed.classList.toggle('hidden', cursed <= 0);
+    badgeCursed.title = `Cursed: ${cursed}`;
   }
 }
 
+// Unknown books: guidebooks seen in spacebook_status_list that don't match
+// any wiki DB entry (new additions / localized text we haven't catalogued).
+// Keyed by status_id so EN and JA clients dedupe correctly.
+let unknownBooks = new Map(); // status_id → { status_id, name, rarity, icon_type, num }
+function collectUnknownBooks(books) {
+  if (!Array.isArray(books)) return;
+  let changed = false;
+  for (const b of books) {
+    if (matchCodexEntry(b) != null) continue;
+    const key = b.status_id != null ? String(b.status_id) : b.name;
+    const prev = unknownBooks.get(key);
+    const mergedNum = (prev?.num || 0) + (b.num || 1);
+    if (!prev || prev.num !== mergedNum) {
+      unknownBooks.set(key, {
+        status_id: b.status_id,
+        name: b.name || 'status:' + b.status_id,
+        rarity: b.rarity,
+        icon_type: b.icon_type,
+        num: mergedNum,
+      });
+      changed = true;
+    }
+  }
+  if (changed) {
+    chrome.storage.local.set({ gbfHelperUnknownBooks: [...unknownBooks.values()] });
+  }
+}
+function loadUnknownBooks() {
+  chrome.storage.local.get('gbfHelperUnknownBooks', (res) => {
+    unknownBooks = new Map();
+    for (const b of (res.gbfHelperUnknownBooks || [])) {
+      unknownBooks.set(String(b.status_id ?? b.name), b);
+    }
+  });
+}
+
 function renderCodex() {
-  const body = document.getElementById('guidebook-popup-body');
+  const body = document.getElementById('guidebook-codex-body');
   if (!body) return;
   const q = (document.getElementById('gb-codex-search')?.value || '').toLowerCase();
   const rar = document.getElementById('gb-codex-rarity')?.value;
@@ -658,12 +721,11 @@ function renderCodex() {
     if (own === 'owned' && !isOwned) continue;
     if (own === 'missing' && isOwned) continue;
     if (fav === 'fav' && !isFav) continue;
-    if (q && !normText(entry.text).includes(q)) continue;
+    if (q) {
+      const hay = [entry.text, entry.ja, entry.zh].filter(Boolean).map(normText).join(' ');
+      if (!hay.includes(q)) continue;
+    }
     rows.push({ entry, isOwned, isFav });
-  }
-  if (rows.length === 0) {
-    body.innerHTML = '<div class="guidebook-popup-empty">No guide books match the filters</div>';
-    return;
   }
   // Sort: favorites first, then rarity desc (99=Cursed sorts last), then text
   const rarityOrder = { 3: 0, 2: 1, 1: 2, 99: 3 }; // Unique > Rare > Normal > Cursed
@@ -673,13 +735,39 @@ function renderCodex() {
       || String(a.entry.text).localeCompare(String(b.entry.text));
   });
   const rarLabel = { 1: '★', 2: '★★', 3: '★★★', 99: '☠' };
-  const html = rows.map(({ entry, isOwned, isFav }) => `
+
+  let html = '<div class="guidebook-codex-grid">';
+  html += rows.map(({ entry, isOwned, isFav }) => `
     <div class="guidebook-codex-row${isOwned ? ' owned' : ''}">
       ${bookCodexIcon(entry, ownedMap.get(entry.id))}
       <span class="gb-name">${escapeHtml(entry.text)}<span class="gb-count">${isOwned ? ' ✓' : ''}</span></span>
       <span class="gb-rarity">${rarLabel[entry.rarity] || ''}</span>
       <button class="gb-fav-btn ${isFav ? 'fav' : ''}" data-id="${entry.id}" title="Favorite">${isFav ? '♥' : '♡'}</button>
     </div>`).join('');
+  html += '</div>';
+
+  // Unknown / uncatalogued section (new guidebooks added by game updates)
+  const unknownList = [...unknownBooks.values()].filter(b => {
+    if (own === 'owned' && !latestGuideBooks?.some(g => String(g.status_id) === String(b.status_id))) return false;
+    if (own === 'missing' && latestGuideBooks?.some(g => String(g.status_id) === String(b.status_id))) return false;
+    return true;
+  });
+  if (unknownList.length > 0 && own !== 'missing') {
+    html += `<div class="gb-unknown-header">Uncatalogued (${unknownList.length}) — seen in your runs, not yet in the wiki DB</div>`;
+    html += '<div class="guidebook-codex-grid">';
+    html += unknownList.map(b => `
+      <div class="guidebook-codex-row unknown">
+        ${bookIconImg(b.icon_type)}
+        <span class="gb-name">${escapeHtml(b.name)}<span class="gb-count"> ×${b.num}</span><span class="gb-lang">id:${b.status_id ?? '?'}</span></span>
+        <span class="gb-rarity">${rarLabel[b.rarity] || ''}</span>
+      </div>`).join('');
+    html += '</div>';
+  }
+
+  if (rows.length === 0 && unknownList.length === 0) {
+    body.innerHTML = '<div class="guidebook-popup-empty">No guide books match the filters</div>';
+    return;
+  }
   body.innerHTML = html;
   // bind favorite buttons
   body.querySelectorAll('.gb-fav-btn').forEach(btn => {
@@ -700,7 +788,7 @@ function toggleFavorite(id) {
   else favoriteBookIds.add(key);
   persistFavorites();
   renderGuideBooks(latestGuideBooks);
-  if (gbPopupTab === 'codex') renderCodex();
+  if (!document.getElementById('guidebook-codex')?.classList.contains('hidden')) renderCodex();
 }
 
 function persistFavorites() {

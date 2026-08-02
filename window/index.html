@@ -28,7 +28,9 @@
           </button>
           <button id="btn-guidebook" class="hud-iconbtn tome" title="Guide Books" aria-label="Guide Books">
             <img src="../assets/book_thumb_1.png" alt="Guide Books">
-            <span id="guidebook-badge" class="hud-btn-badge hidden">0</span>
+            <span id="guidebook-badge" class="hud-btn-badge hud-badge-total hidden">0</span>
+            <span id="guidebook-badge-fav" class="hud-btn-badge hud-badge-fav hidden">♥0</span>
+            <span id="guidebook-badge-cursed" class="hud-btn-badge hud-badge-cursed hidden">☠0</span>
             <span id="guidebook-stale" class="hud-btn-stale hidden" title="Guide books may be out of date — open the in-game guidebook page to refresh">!</span>
           </button>
         </div>
@@ -37,14 +39,22 @@
       <div id="floating-path-info" class="hidden"></div>
       <div id="guidebook-popup" class="guidebook-popup hidden">
         <div class="guidebook-popup-header">
-          <div class="guidebook-tabs">
-            <button id="gb-tab-owned" class="guidebook-tab active">My Guide Books</button>
-            <button id="gb-tab-codex" class="guidebook-tab">Codex</button>
-          </div>
-          <button id="guidebook-popup-close" class="btn-small">×</button>
+          <span id="guidebook-popup-title">My Guide Books</span>
+          <span class="guidebook-header-actions">
+            <button id="gb-open-codex" class="btn-small" title="Open Guide Book Codex">📖 Codex</button>
+            <button id="guidebook-popup-close" class="btn-small">×</button>
+          </span>
         </div>
-        <div id="guidebook-codex-controls" class="guidebook-codex-controls hidden">
-          <input id="gb-codex-search" type="text" placeholder="Search guide books..." class="gb-codex-search">
+        <div id="guidebook-popup-body"></div>
+      </div>
+      <!-- Guide book codex: separate large "book" modal -->
+      <div id="guidebook-codex" class="guidebook-codex hidden">
+        <div class="guidebook-codex-header">
+          <span class="guidebook-codex-title">Guide Book Codex</span>
+          <button id="gb-codex-close" class="btn-small">×</button>
+        </div>
+        <div class="guidebook-codex-controls">
+          <input id="gb-codex-search" type="text" placeholder="Search guide books (EN / JA / ZH)..." class="gb-codex-search">
           <select id="gb-codex-rarity" class="gb-codex-select">
             <option value="">Rarity: All</option>
             <option value="1">Normal</option>
@@ -77,7 +87,7 @@
             <option value="fav">Favorites</option>
           </select>
         </div>
-        <div id="guidebook-popup-body"></div>
+        <div id="guidebook-codex-body"></div>
       </div>
     </div>
     <div id="sidebar">
