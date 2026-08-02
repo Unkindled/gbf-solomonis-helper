@@ -70,6 +70,8 @@
       'gb.uncatalogued': 'Uncatalogued ({n}) — seen in your runs, not yet in the wiki DB',
       'pick.title': 'Guide Book Options',
       'report.newMappings': '✓ {n} new guidebook mappings established',
+      'report.newJa': '✓ {n} JA translations backfilled',
+      'report.unmappedJa': '⚠ {n} JA books unmapped — switch to EN once',
       // navigation (compass menu)
       'nav.center': 'Center on player',
       'nav.farm': 'Farm route (≤9 steps)',
@@ -180,6 +182,8 @@
       'gb.uncatalogued': '未收录（{n}）— 你遇到过但 wiki 数据库还没有',
       'pick.title': '导本选项',
       'report.newMappings': '✓ 建立 {n} 个新导本映射',
+      'report.newJa': '✓ 补全 {n} 个日文翻译',
+      'report.unmappedJa': '⚠ {n} 本日文导本未映射 — 请切英文版一次',
       // navigation (compass menu)
       'nav.center': '定位玩家',
       'nav.farm': '发育路线（≤9 步）',

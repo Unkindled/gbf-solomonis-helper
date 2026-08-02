@@ -496,8 +496,12 @@ function handleWindowMessage(type, payload) {
       // payload: guidebooks obtained in a battle-report run (record page).
       // Feed into the learning pool only — no overlay; toast new mappings.
       if (Array.isArray(payload)) {
-        const n = absorbBookInfo(payload);
-        if (n > 0) showTransientToast(I18N.t('report.newMappings', { n }));
+        const { newMappings, newJa, unmappedJa } = absorbBookInfo(payload);
+        const msgs = [];
+        if (newMappings > 0) msgs.push(I18N.t('report.newMappings', { n: newMappings }));
+        if (newJa > 0) msgs.push(I18N.t('report.newJa', { n: newJa }));
+        if (unmappedJa > 0) msgs.push(I18N.t('report.unmappedJa', { n: unmappedJa }));
+        if (msgs.length > 0) showTransientToast(msgs.join('  '));
       }
       break;
 
@@ -509,10 +513,12 @@ function handleWindowMessage(type, payload) {
 
 /** Absorb guidebook info seen from any source (shop, 3-way pick, etc.) into
  *  the learned pools: icons, JA text, and status_id → wiki mappings.
- *  @returns {number} count of NEWLY taught status_id → wiki mappings */
+ *  @returns {{newMappings:number, newJa:number, unmappedJa:number}} */
 function absorbBookInfo(recs) {
   let reRender = false;
   let newMappings = 0;
+  let newJa = 0;
+  let unmappedJa = 0;
   const newIconTypes = new Set();
   for (const rec of recs) {
     const sid = rec.status_id != null ? String(rec.status_id) : null;
@@ -533,6 +539,15 @@ function absorbBookInfo(recs) {
       if (hit && hit.id != null) {
         if (!alreadyMapped) newMappings++;
         reRender = true;
+        // Backfill the entry's JA field from the runtime JA pool (JA-client
+        // sessions teach translations for mappings made in EN sessions).
+        const jaText = learnedJaText['status:' + sid] || (hit.ja || null);
+        if (jaText && hit.ja !== jaText) {
+          hit.ja = jaText;
+          newJa++;
+        }
+      } else if (/[\u3040-\u30ff\u4e00-\u9fff]/.test(rec.name)) {
+        unmappedJa++; // JA book with no mapping yet
       }
     }
   }
@@ -550,7 +565,7 @@ function absorbBookInfo(recs) {
     renderGuideBooks(latestGuideBooks);
     if (!document.getElementById('guidebook-codex')?.classList.contains('hidden')) renderCodex();
   }
-  return newMappings;
+  return { newMappings, newJa, unmappedJa };
 }
 
 // --- 3-way guidebook pick overlay ---
@@ -775,7 +790,15 @@ function normText(s) {
  */
 function getDisplayText(entry) {
   if (codexLang === 'zh') return entry.zh || entry.text;
-  if (codexLang === 'ja') return entry.ja || learnedJaText['entry:' + entry.id] || entry.text;
+  if (codexLang === 'ja') {
+    if (entry.ja) return entry.ja;
+    const entryJa = learnedJaText['entry:' + entry.id];
+    if (entryJa) return entryJa;
+    // status: pool — JA text learned under a status_id mapped to this entry
+    const statusKey = Object.entries(GUIDEBOOK_STATUS_ID).find(([, eid]) => eid === entry.id)?.[0];
+    if (statusKey && learnedJaText['status:' + statusKey]) return learnedJaText['status:' + statusKey];
+    return entry.text;
+  }
   return entry.text;
 }
 
