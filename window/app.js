@@ -495,11 +495,13 @@ function handleWindowMessage(type, payload) {
  *  the learned pools: icons, JA text, and status_id → wiki mappings. */
 function absorbBookInfo(recs) {
   let reRender = false;
+  const newIconTypes = new Set();
   for (const rec of recs) {
     const sid = rec.status_id != null ? String(rec.status_id) : null;
     if (sid == null) continue;
     if (rec.icon_type != null && seenBookIcons[sid] !== rec.icon_type) {
       seenBookIcons[sid] = rec.icon_type;
+      newIconTypes.add(rec.icon_type);
       reRender = true;
     }
     if (rec.name && /[\u3040-\u30ff\u4e00-\u9fff]/.test(rec.name) && learnedJaText['status:' + sid] !== rec.name) {
@@ -511,6 +513,11 @@ function absorbBookInfo(recs) {
       const hit = matchCodexEntry({ status_id: rec.status_id, name: rec.name, rarity: rec.rarity, icon_type: rec.icon_type });
       if (hit && hit.id != null) reRender = true;
     }
+  }
+  // Ask the background to fetch any icon PNGs we don't have bundled/cached
+  // (e.g. a pick option's icon_type seen for the first time).
+  if (newIconTypes.size > 0) {
+    chrome.runtime.sendMessage({ channel: 'gbf-helper:fetch-book-icons', iconTypes: [...newIconTypes] });
   }
   if (reRender) {
     chrome.storage.local.set({
@@ -528,6 +535,7 @@ function absorbBookInfo(recs) {
 // helper window with their Chinese translation (via status_id → wiki map),
 // so JA/EN players can read what each guidebook does without switching.
 function showPickOverlay(candidates) {
+  lastPickCandidates = Array.isArray(candidates) ? candidates : [];
   const overlay = document.getElementById('pick-overlay');
   const body = document.getElementById('pick-overlay-body');
   if (!overlay || !body) return;
@@ -561,6 +569,7 @@ function hidePickOverlay() {
   clearTimeout(pickOverlayTimer);
 }
 let pickOverlayTimer = null;
+let lastPickCandidates = [];
 
 // --- HUD rendering: dungeon point / party / guide books ---
 
@@ -708,6 +717,9 @@ function cacheBookIcons(icons) {
   window.__bookIconCache = bookIconCache;
   // Re-render to pick up newly available icons
   if (latestGuideBooks.length > 0) renderGuideBooks(latestGuideBooks);
+  if (lastPickCandidates.length > 0 && !document.getElementById('pick-overlay')?.classList.contains('hidden')) {
+    showPickOverlay(lastPickCandidates);
+  }
 }
 
 // --- Guide book codex ---

@@ -67,6 +67,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return;
   }
 
+  if (msg.channel === 'gbf-helper:fetch-book-icons') {
+    const types = Array.isArray(msg.iconTypes) ? msg.iconTypes : [];
+    if (types.length > 0) fetchMissingBookIcons(types);
+    return;
+  }
+
   if (msg.channel === 'gbf-helper:get-state') {
     // shopStock is a Map — serialize to a plain object for the response
     const shopStock = {};
