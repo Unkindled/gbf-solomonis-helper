@@ -570,10 +570,10 @@ body::before {
 #app.sidebar-collapsed #path-info { display: none; }
 
 /* Floating path info shown while collapsed — below the HUD (party bar,
-   coin chip) so it never covers them. */
+   coin chip + their labels) so it never covers them. */
 #floating-path-info {
   position: absolute;
-  top: 132px;
+  top: 152px;
   left: 12px;
   z-index: 25;
   max-width: 340px;
