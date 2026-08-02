@@ -122,19 +122,25 @@ export function findShortestPath(nodeMap, startId, endId) {
   return res ? res.path : null;
 }
 
-// Farm-route target types: normal battles (2) and events (5). Hard (3),
-// Very Hard (11) and Boss (1) are deliberately excluded — farming wants
-// easy encounters, not threats.
+// Farm-route target types:
+//   - normal battles (2): top priority
+//   - events (5) and treasure chests (6): equal, below battles
+// Hard (3), Very Hard (11), Ruler (4) and Boss (1) are deliberately
+// excluded — farming wants easy encounters, not threats.
 const FARM_BATTLE_TYPE = 2;
 const FARM_EVENT_TYPE = 5;
+const FARM_CHEST_TYPE = 6;
 
 function isFarmNode(node) {
-  return node && (node.node_type === FARM_BATTLE_TYPE || node.node_type === FARM_EVENT_TYPE);
+  if (!node) return false;
+  return node.node_type === FARM_BATTLE_TYPE
+    || node.node_type === FARM_EVENT_TYPE
+    || node.node_type === FARM_CHEST_TYPE;
 }
 
 /**
  * Navigation: within maxLen steps, the farming route. Priority:
- *   1) most farm nodes total (battles + events)
+ *   1) most farm nodes total (battles + events + chests)
  *   2) ties → more normal battles, then shorter path
  * The path ENDS at the last farm node — never walks extra steps to fill
  * the cap. Implementation: for every reachable farm node, run a dist-first
@@ -152,8 +158,12 @@ export function findFarmRoute(nodeMap, startId, maxLen = 9) {
     const node = nodeMap.get(cur);
     if (!node) continue;
     for (const nx of (node.adjacent_node_ids || [])) {
-      if (!nodeMap.has(nx)) continue;
-      if (dist.has(nx)) continue;
+      if (!nodeMap.has(nx) || dist.has(nx)) continue;
+      const nn = nodeMap.get(nx);
+      // Do NOT route through hard encounters (3, 4, 11) or the boss (1):
+      // farming avoids forced hard fights. Shop (8) / teleporter (9) etc.
+      // remain passable.
+      if (nn.node_type === 3 || nn.node_type === 4 || nn.node_type === 11 || nn.node_type === 1) continue;
       dist.set(nx, d + 1);
       queue.push(nx);
     }
@@ -171,6 +181,8 @@ export function findFarmRoute(nodeMap, startId, maxLen = 9) {
       const cur = q.shift();
       for (const nx of (nodeMap.get(cur).adjacent_node_ids || [])) {
         if (!nodeMap.has(nx) || prev.has(nx)) continue;
+        const nn = nodeMap.get(nx);
+        if (nn.node_type === 3 || nn.node_type === 4 || nn.node_type === 11 || nn.node_type === 1) continue;
         prev.set(nx, cur);
         if (nx === targetId) { found = true; break; }
         q.push(nx);
