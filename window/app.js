@@ -94,6 +94,8 @@ function init() {
   btnCollapse.addEventListener('click', () => {
     document.getElementById('app').classList.toggle('sidebar-collapsed');
     btnCollapse.textContent = document.getElementById('app').classList.contains('sidebar-collapsed') ? '▸' : '▾';
+    // Refresh floating path info visibility
+    updatePathInfo(currentPath ? currentPath : null);
   });
 
   // Guide book popup toggle
@@ -640,29 +642,30 @@ function updateStatusBar(override) {
 
 function updatePathInfo(path, error) {
   const el = document.getElementById('path-info');
+  const floatEl = document.getElementById('floating-path-info');
+  let html;
   if (error) {
-    el.innerHTML = `<span class="path-error">${error}</span>`;
-    return;
+    html = `<span class="path-error">${error}</span>`;
+  } else if (!path) {
+    html = `<span class="path-hint">${I18N.t('path.hint')}</span>`;
+  } else {
+    const steps = path.length - 1;
+    const counts = {};
+    for (const id of path) {
+      const n = nodeMap.get(id);
+      if (!n) continue;
+      const label = I18N.t('nodeType.' + n.node_type) || NODE_TYPE_LABELS[n.node_type] || `type:${n.node_type}`;
+      counts[label] = (counts[label] || 0) + 1;
+    }
+    const summary = Object.entries(counts).map(([k, v]) => `${k}×${v}`).join(', ');
+    html = `<div class="path-summary"><strong>${I18N.t('path.summary', { steps, summary })}</strong></div>`;
   }
-  if (!path) {
-    el.innerHTML = `<span class="path-hint">${I18N.t('path.hint')}</span>`;
-    return;
+  el.innerHTML = html;
+  if (floatEl) {
+    // Sync the floating copy; show it when collapsed and there's content
+    floatEl.innerHTML = html;
+    floatEl.classList.toggle('hidden', !document.getElementById('app').classList.contains('sidebar-collapsed'));
   }
-
-  const steps = path.length - 1;
-
-  const counts = {};
-  for (const id of path) {
-    const n = nodeMap.get(id);
-    if (!n) continue;
-    const label = I18N.t('nodeType.' + n.node_type) || NODE_TYPE_LABELS[n.node_type] || `type:${n.node_type}`;
-    counts[label] = (counts[label] || 0) + 1;
-  }
-  const summary = Object.entries(counts).map(([k, v]) => `${k}×${v}`).join(', ');
-
-  el.innerHTML = `
-    <div class="path-summary"><strong>${I18N.t('path.summary', { steps, summary })}</strong></div>
-  `;
 }
 
 // --- Start ---

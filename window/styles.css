@@ -551,12 +551,40 @@ body::before {
 
 #app.sidebar-left #sidebar { order: -1; border-left: none; border-right: 1px solid var(--gold-edge); }
 
-/* Collapsed: only the path info remains, filter hidden */
-#app.sidebar-collapsed #sidebar { width: 230px; min-width: 230px; }
+/* Collapsed: sidebar becomes a narrow strip (toolbar only) so the map
+   gets full width; path info floats over the map's top-left. */
+#app.sidebar-collapsed #sidebar {
+  width: 46px;
+  min-width: 46px;
+}
+#app.sidebar-collapsed .sidebar-toolbar {
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+}
 #app.sidebar-collapsed #status-bar,
 #app.sidebar-collapsed .sidebar-actions,
 #app.sidebar-collapsed #filter-panel { display: none; }
 #app.sidebar-collapsed #sidebar::after { display: none; }
+#app.sidebar-collapsed #path-info { display: none; }
+
+/* Floating path info shown while collapsed */
+#floating-path-info {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 25;
+  max-width: 340px;
+  padding: 8px 12px;
+  border: 1px solid var(--gold-edge);
+  border-radius: 9px;
+  background: var(--panel-bg);
+  box-shadow: var(--shadow-deep);
+  pointer-events: none;
+  animation: popup-in 0.18s ease;
+}
+#floating-path-info.hidden { display: none; }
 
 /* ---------- Sidebar ---------- */
 
