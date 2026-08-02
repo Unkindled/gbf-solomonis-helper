@@ -436,14 +436,20 @@ function handleIncident(data) {
 }
 
 // Extract a party HP snapshot from any response that carries
-// action_scenario_list[].before_party_status (move_node / proceed_node_event
-// / incident_choose). This is how miasma damage reaches the party bar.
+// action_scenario_list[].before/after_party_status (move_node /
+// proceed_node_event / incident_choose). This is how miasma damage
+// reaches the party bar.
+// after_party_status is the post-move HP (before_ lags one step behind —
+// verified: move#N.after === move#N+1.before).
 function extractPartyStatus(data) {
   if (!data || !Array.isArray(data.action_scenario_list)) return;
   for (const s of data.action_scenario_list) {
-    if (Array.isArray(s.before_party_status) && s.before_party_status.length > 0) {
-      gameState.partyStatus = s.before_party_status;
-      broadcastToWindow('party-status', s.before_party_status);
+    const snap = Array.isArray(s.after_party_status) && s.after_party_status.length > 0
+      ? s.after_party_status
+      : (Array.isArray(s.before_party_status) && s.before_party_status.length > 0 ? s.before_party_status : null);
+    if (snap) {
+      gameState.partyStatus = snap;
+      broadcastToWindow('party-status', snap);
       return;
     }
   }
@@ -456,15 +462,19 @@ function handlePartyStatus(data) {
 }
 
 // Battle start: raid/start.json carries a full snapshot of the player's
-// party HP (player.param[] with hp/hpmax/pid/alive). The game doesn't push
-// mid-battle HP changes, so this snapshot is the freshest data we can get
-// passively — shown until the next party_status / battle end.
+// party HP (player.param[] with hp/hpmax/pid/alive). BUT the pid format
+// differs from party_status image_id (missing _01/_03 suffix), so NPC
+// portraits would 404 during battle. Per user decision: DON'T sync the
+// party bar during battle — the bar updates again on battle end via
+// party_status / content/index. We still record the HP for state.
 function handleRaidStart(data) {
   if (!data || !data.player || !Array.isArray(data.player.param)) return;
   const params = data.player.param;
   const party = params.map((p, i) => ({
     attribute: p.attr != null ? Number(p.attr) : null,
-    image_id: p.pid || '',
+    // pid ≠ party_status image_id (missing _01/_03 suffix) → NPC portraits
+    // would 404; drop the id so the bar shows a placeholder instead.
+    image_id: i === 0 ? (p.pid || '') : '',
     max_hp: Number(p.hpmax) || 0,
     hp: String(p.hp != null ? p.hp : 0),
     is_pc: i === 0,
@@ -473,7 +483,8 @@ function handleRaidStart(data) {
   }));
   if (party.length === 0) return;
   gameState.partyStatus = party;
-  broadcastToWindow('party-status', party);
+  // NOTE: deliberately no broadcast — battle-time portraits are broken
+  // (pid ≠ image_id), and HP doesn't change mid-battle anyway.
 }
 
 // --- Broadcast to helper window ---
