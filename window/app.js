@@ -655,9 +655,13 @@ function loadLearnedJaText() {
   });
 }
 
-/** Remove "(Remaining uses: x/y)" style suffixes for fuzzy matching. */
+/** Remove progress/remaining-use suffixes for fuzzy matching:
+ *  "(Remaining uses: x/y)", "(3/3 spaces)", "(0/5 spaces)" — the game
+ *  appends these counters but the wiki text omits them. */
 function stripRemainingUses(s) {
-  return String(s || '').replace(/\(\s*remaining\s+uses\s*:\s*\d+\s*\/\s*\d+\s*\)/gi, '');
+  return String(s || '')
+    .replace(/\(\s*remaining\s+uses\s*:\s*\d+\s*\/\s*\d+\s*\)/gi, '')
+    .replace(/\(\s*\d+\s*\/\s*\d+\s*(?:spaces?|spaces?\s+moved)?\s*\)/gi, '');
 }
 
 // Runtime-learned id maps (persisted in chrome.storage):
