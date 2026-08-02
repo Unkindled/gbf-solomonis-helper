@@ -5,7 +5,7 @@ import { FilterPanel } from './filter-panel.js';
 import { findShortestPath, findFarmRoute, findNearestShop, findSafeZoneRoute, findHardRoute } from './pathfinder.js';
 import { MiasmaCalibration } from './miasma-predictor.js';
 import { DUNGEON_STATUS_LABELS, NODE_TYPE_LABELS } from '../shared/constants.js';
-import { GUIDEBOOK_DB } from '../shared/guidebook-data.js';
+import { GUIDEBOOK_DB, GUIDEBOOK_STATUS_ID } from '../shared/guidebook-data.js';
 
 let renderer = null;
 let filterPanel = null;
