@@ -17,7 +17,7 @@ export const GUIDEBOOK_DB = [
   "icon": "aura",
   "text": "Elemental skill enhancement +180%",
   "id": 1,
-  "ja": null,
+  "ja": "自属性スキルエンハンス(180%)",
   "zh": null
  },
  {
@@ -95,7 +95,7 @@ export const GUIDEBOOK_DB = [
   "icon": "ele switch",
   "text": "Allies' DMG taken is converted to the element they have superiority against (Can't be stacked)",
   "id": 7,
-  "ja": null,
+  "ja": "被ダメージを有利属性に変換する(重複不可)",
   "zh": null
  },
  {
@@ -179,7 +179,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "Bonus Elemental DMG effect to sabre-, dagger-, spear-, axe-, or staff-specialty allies (50%) / Bonus Superior Elemental DMG effect (50%)",
   "id": 13,
-  "ja": null,
+  "ja": "得意武器に「剣」「短剣」「槍」「斧」「杖」の いずれかが含まれるキャラに自属性追撃効果 (50%)/弱点属性追撃効果(50%)",
   "zh": null
  },
  {
@@ -206,7 +206,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "Chain bursts of over 4 chains change to Ultimate Nova (Ultimate Nova: Destruction DMG / Remove all buffs from foes / Counts as all elemental chain bursts) (Can't be stacked)",
   "id": 15,
-  "ja": null,
+  "ja": "オーバーチェイン時のチェインバーストが「アル ティメット・ノヴァ」に変化　◆アルティメッ ト・ノヴァ：破壊属性ダメージ/敵の強化効果を 全て無効化/全属性のオーバーチェインとして扱 う(重複不可)",
   "zh": null
  },
  {
@@ -257,7 +257,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "From an ally's 2nd or higher attack each turn: Sharp boost to ATK / From the 3rd or higher attack: Bonus Superior Elemental DMG effect (100%)",
   "id": 19,
-  "ja": null,
+  "ja": "ターン進行時に2回目以降の攻撃行動を行うと き、攻撃大幅UP/3回目以降の攻撃行動を行うと き弱点属性追撃効果(100%)",
   "zh": null
  },
  {
@@ -551,7 +551,7 @@ export const GUIDEBOOK_DB = [
   "icon": "ca echo",
   "text": "Bonus Elemental C.A. DMG effect to Draph and Grokkle allies (30%)",
   "id": 41,
-  "ja": null,
+  "ja": "ドラフ族とグラックル族に自属性奥義追撃効果 (30%)",
   "zh": null
  },
  {
@@ -564,7 +564,7 @@ export const GUIDEBOOK_DB = [
   "icon": "aura",
   "text": "Elemental skill enhancement +60%",
   "id": 42,
-  "ja": null,
+  "ja": "自属性スキルエンハンス(60%)",
   "zh": null
  },
  {
@@ -769,7 +769,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "Upon reaching an event space: Obtain a random amount of Sephira coins",
   "id": 58,
-  "ja": null,
+  "ja": "イベントマスに到達した時、ランダムな数のセフ ィラコインを獲得する",
   "zh": null
  },
  {
@@ -888,7 +888,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "When not entering battle for 3 spaces or more: Amplify all allies' DMG at start of next battle +50% / DMG Mitigation effect (2000) (Can't be stacked)",
   "id": 67,
-  "ja": null,
+  "ja": "3マス以上連続で戦闘を行わなかった場合、次の バトル開始時に味方全体に与ダメージUP(50%)/ 被ダメージ減少効果(2000)(1/3マス)(重複不可)",
   "zh": null
  },
  {
@@ -925,7 +925,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "20% miasma DMG reduction",
   "id": 70,
-  "ja": null,
+  "ja": "瘴気ダメージ軽減(20%)",
   "zh": null
  },
  {
@@ -1011,7 +1011,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "Party members gain all character types (Can't be stacked)",
   "id": 77,
-  "ja": null,
+  "ja": "パーティメンバーの種族に全ての種族を追加する (重複不可)",
   "zh": null
  },
  {
@@ -1037,7 +1037,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "At battle start: 5 Crests to all allies (Type of Crest depends on their element) (Can't be stacked)",
   "id": 79,
-  "ja": null,
+  "ja": "バトル開始時、味方全体に刻印を5つ付与　◆付 与する刻印の種類は自属性によって変化(重複不 可)",
   "zh": null
  },
  {
@@ -1050,7 +1050,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "At end of turn: Chance to end cooldown for a random skill on each ally that didn't use a skill that turn (Can't be stacked)",
   "id": 80,
-  "ja": null,
+  "ja": "アビリティを使用しなかった味方がターン終了 時、確率で自分のランダムなアビリティが1つ即 時使用可能になる(重複不可)",
   "zh": null
  },
  {
@@ -1061,7 +1061,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "At end of turn: Elemental DMG to a foe for each ally that didn't take DMG that turn (Hit number increases based on number of consecutive turns DMG wasn't taken [Max: 5])",
   "id": 81,
-  "ja": null,
+  "ja": "ダメージを受けなかった味方がターン終了時、敵 に自属性ダメージ　◆継続してダメージを受けな かったターン数に応じて攻撃回数UP(最大5回)",
   "zh": null
  },
  {
@@ -1100,7 +1100,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "For every 3 skills used by allies: First-position ally deals 3-hit elemental DMG to all foes / Hit to ATK and DEF (Stackable) / Amplify DMG taken (6 hits)",
   "id": 84,
-  "ja": null,
+  "ja": "味方全体が累計で3回アビリティを使用する度に 先頭のキャラが敵全体に3回自属性ダメージ/攻防 DOWN(累積)/被ダメージUP(6回)",
   "zh": null
  },
  {
@@ -1210,7 +1210,7 @@ export const GUIDEBOOK_DB = [
   "icon": "ma",
   "text": "Multiattack rate +20%",
   "id": 93,
-  "ja": null,
+  "ja": "連続攻撃確率UP(20%)",
   "zh": null
  },
  {
@@ -1221,7 +1221,7 @@ export const GUIDEBOOK_DB = [
   "icon": "crit",
   "text": "Critical hit rate +30%",
   "id": 94,
-  "ja": null,
+  "ja": "クリティカル確率UP(30%)",
   "zh": null
  },
  {
@@ -1232,7 +1232,7 @@ export const GUIDEBOOK_DB = [
   "icon": "stamina",
   "text": "Stamina",
   "id": 95,
-  "ja": null,
+  "ja": "渾身",
   "zh": null
  },
  {
@@ -1243,7 +1243,7 @@ export const GUIDEBOOK_DB = [
   "icon": "enmity",
   "text": "Enmity",
   "id": 96,
-  "ja": null,
+  "ja": "背水",
   "zh": null
  },
  {
@@ -1254,7 +1254,7 @@ export const GUIDEBOOK_DB = [
   "icon": "skill cap",
   "text": "Skill DMG +20% / Skill DMG cap +10%",
   "id": 97,
-  "ja": null,
+  "ja": "アビリティダメージUP(20%)/アビリティダメー ジ上限UP(10%)",
   "zh": null
  },
  {
@@ -1306,7 +1306,7 @@ export const GUIDEBOOK_DB = [
   "icon": "cap",
   "text": "DMG cap + 10%",
   "id": 101,
-  "ja": null,
+  "ja": "ダメージ上限UP(10%)",
   "zh": null
  },
  {
@@ -1317,7 +1317,7 @@ export const GUIDEBOOK_DB = [
   "icon": "def",
   "text": "DEF +30%",
   "id": 102,
-  "ja": null,
+  "ja": "防御力UP(30%)",
   "zh": null
  },
  {
@@ -1328,7 +1328,7 @@ export const GUIDEBOOK_DB = [
   "icon": "hp",
   "text": "Max HP +30%",
   "id": 103,
-  "ja": null,
+  "ja": "最大HPUP(30%)",
   "zh": null
  },
  {
@@ -1471,6 +1471,7 @@ export const GUIDEBOOK_DB = [
 export const GUIDEBOOK_STATUS_ID = {
  "1": 91,
  "2": 93,
+ "3": 97,
  "4": 98,
  "5": 100,
  "6": 99,
@@ -1485,28 +1486,60 @@ export const GUIDEBOOK_STATUS_ID = {
  "17": 37,
  "20": 45,
  "21": 48,
+ "22": 49,
+ "23": 50,
  "24": 42,
  "27": 56,
  "28": 52,
  "29": 51,
+ "30": 68,
  "31": 74,
+ "32": 60,
+ "33": 34,
+ "34": 47,
  "35": 35,
+ "36": 41,
+ "37": 38,
+ "38": 44,
+ "39": 75,
+ "40": 72,
  "41": 79,
+ "42": 54,
+ "44": 55,
+ "46": 80,
  "47": 61,
  "48": 81,
+ "49": 46,
  "50": 73,
+ "52": 70,
+ "53": 76,
  "54": 67,
  "57": 63,
+ "58": 58,
  "59": 78,
  "60": 77,
+ "62": 66,
  "64": 62,
+ "65": 65,
  "67": 84,
+ "74": 23,
  "76": 2,
+ "79": 1,
+ "80": 7,
+ "81": 9,
  "83": 8,
+ "85": 3,
+ "84": 15,
+ "87": 10,
  "88": 13,
  "89": 12,
+ "90": 11,
+ "91": 19,
  "92": 18,
  "93": 17,
+ "95": 14,
  "117": 107,
- "124": 114
+ "120": 111,
+ "124": 114,
+ "128": 90
 };

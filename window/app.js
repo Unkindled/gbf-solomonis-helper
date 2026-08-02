@@ -6,6 +6,7 @@ import { findShortestPath, findFarmRoute, findNearestShop, findSafeZoneRoute, fi
 import { MiasmaCalibration } from './miasma-predictor.js';
 import { DUNGEON_STATUS_LABELS, NODE_TYPE_LABELS } from '../shared/constants.js';
 import { GUIDEBOOK_DB, GUIDEBOOK_STATUS_ID } from '../shared/guidebook-data.js';
+import { GUIDEBOOK_ICONS } from '../shared/guidebook-icons.js';
 import { GUIDEBOOK_ZH } from '../shared/guidebook-zh.js';
 
 // Merge the community ZH translation into the DB entries' zh field.
@@ -831,12 +832,14 @@ function importGuidebookData(file) {
 }
 
 /** Remove progress/remaining-use suffixes for fuzzy matching:
- *  "(Remaining uses: x/y)", "(3/3 spaces)", "(0/5 spaces)" — the game
- *  appends these counters but the wiki text omits them. */
+ *  "(Remaining uses: x/y)", "(3/3 spaces)", "(0/5 spaces)", "(0% / Max: 100%)"
+ *  — the game appends these counters but the wiki text omits them. */
 function stripRemainingUses(s) {
   return String(s || '')
     .replace(/\(\s*remaining\s+uses\s*:\s*\d+\s*\/\s*\d+\s*\)/gi, '')
-    .replace(/\(\s*\d+\s*\/\s*\d+\s*(?:spaces?|spaces?\s+moved)?\s*\)/gi, '');
+    .replace(/\(\s*\d+\s*\/\s*\d+\s*(?:spaces?|spaces?\s+moved)?\s*\)/gi, '')
+    .replace(/\(\s*\d+%\s*\/\s*max\s*:\s*\d+%\s*\)/gi, '')
+    .replace(/\(\s*max\s*:\s*\d+%\s*\)/gi, '');
 }
 
 // Runtime-learned id maps (persisted in chrome.storage):
@@ -898,7 +901,9 @@ function bookCodexIcon(entry, ownedInfo) {
   // 2) Books we've SEEN before (even if not owned now): status_id →
   //    icon_type recorded from past status_list responses.
   const sid = statusIdOfEntry(entry.id);
-  const seenIcon = sid != null ? seenBookIcons[sid] : null;
+  const seenIcon = sid != null
+    ? (seenBookIcons[sid] ?? GUIDEBOOK_ICONS[sid])
+    : null;
   if (seenIcon != null) return bookIconImg(seenIcon);
   // 3) Never seen → neutral placeholder.
   return `<img class="gb-icon" src="../assets/book_thumb_1.png" alt="">`;
