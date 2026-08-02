@@ -150,52 +150,69 @@ function isFarmNode(node) {
 export function findFarmRoute(nodeMap, startId, maxLen = 9) {
   if (!nodeMap.has(startId) || maxLen <= 0) return null;
 
-  const dist = new Map([[startId, 0]]);
-  const queue = [startId];
-  while (queue.length > 0) {
-    const cur = queue.shift();
-    const d = dist.get(cur);
-    if (d >= maxLen) continue;
+  // Bounded-depth DFS over (node, steps) states. Steps strictly increases,
+  // so the state space is finite (no revisiting cycles), and a longer path
+  // is allowed when it earns more farm nodes. Each (node, steps) keeps its
+  // best (farmNodes, battles); a state is expanded again only when a
+  // strictly better score arrives.
+  const memo = new Map(); // nodeId → Map<steps, {farmNodes, battles, prevNode, prevSteps}>
+  const getM = (id) => {
+    let m = memo.get(id);
+    if (!m) { m = new Map(); memo.set(id, m); }
+    return m;
+  };
+  getM(startId).set(0, { farmNodes: 0, battles: 0, prevNode: null, prevSteps: -1 });
+  const stack = [[startId, 0]];
+
+  while (stack.length > 0) {
+    const [cur, steps] = stack.pop();
+    const curBest = getM(cur).get(steps);
+    if (steps >= maxLen) continue;
     const node = nodeMap.get(cur);
     if (!node) continue;
     for (const nx of (node.adjacent_node_ids || [])) {
-      if (!nodeMap.has(nx) || dist.has(nx)) continue;
-      dist.set(nx, d + 1);
-      queue.push(nx);
-    }
-  }
+      if (!nodeMap.has(nx)) continue;
+      const nn = nodeMap.get(nx);
+      const nSteps = steps + 1;
+      const nFarm = curBest.farmNodes + (isFarmNode(nn) ? 1 : 0);
+      const nBattle = curBest.battles + (nn.node_type === FARM_BATTLE_TYPE ? 1 : 0);
 
-  let best = null;
-  for (const [targetId, node] of nodeMap) {
-    if (!isFarmNode(node) || targetId === startId) continue;
-    if (!dist.has(targetId)) continue;
-
-    const prev = new Map([[startId, null]]);
-    const q = [startId];
-    let found = false;
-    while (q.length > 0 && !found) {
-      const cur = q.shift();
-      for (const nx of (nodeMap.get(cur).adjacent_node_ids || [])) {
-        if (!nodeMap.has(nx) || prev.has(nx)) continue;
-        prev.set(nx, cur);
-        if (nx === targetId) { found = true; break; }
-        q.push(nx);
+      const m = getM(nx);
+      const known = m.get(nSteps);
+      const better = !known || nFarm > known.farmNodes || (nFarm === known.farmNodes && nBattle > known.battles);
+      if (better) {
+        m.set(nSteps, { farmNodes: nFarm, battles: nBattle, prevNode: cur, prevSteps: steps });
+        stack.push([nx, nSteps]);
       }
     }
-    if (!found) continue;
+  }
 
-    const path = [];
-    let c = targetId;
-    while (c !== null) { path.unshift(c); c = prev.get(c); }
-    const farmNodes = path.filter(id => isFarmNode(nodeMap.get(id))).length;
-    const battles = path.filter(id => nodeMap.get(id).node_type === FARM_BATTLE_TYPE).length;
-    // farmNodes*1000 dominates; battles*1 breaks ties
-    const score = farmNodes * 1000 + battles;
-    if (!best || score > best.score || (score === best.score && path.length < best.path.length)) {
-      best = { path, farmNodes, battles, score };
+  // Destination: the farm node reached with the best score
+  // (farmNodes first, battles second, fewest steps third).
+  let dest = null;
+  for (const [id, m] of memo) {
+    if (id === startId || !isFarmNode(nodeMap.get(id))) continue;
+    for (const [steps, b] of m) {
+      const better = !dest
+        || b.farmNodes > dest.farmNodes
+        || (b.farmNodes === dest.farmNodes && b.battles > dest.battles)
+        || (b.farmNodes === dest.farmNodes && b.battles === dest.battles && steps < dest.steps);
+      if (better) dest = { nodeId: id, steps, farmNodes: b.farmNodes, battles: b.battles };
     }
   }
-  return best;
+  if (!dest) return null;
+
+  // Reconstruct by walking prev pointers (steps decreasing).
+  const path = [];
+  let curId = dest.nodeId;
+  let curSteps = dest.steps;
+  while (curId !== null) {
+    path.unshift(curId);
+    const b = memo.get(curId).get(curSteps);
+    curId = b.prevNode;
+    curSteps = b.prevSteps;
+  }
+  return { path, farmNodes: dest.farmNodes, battles: dest.battles };
 }
 
 /** Navigation: shortest path to the closest shop node. */
