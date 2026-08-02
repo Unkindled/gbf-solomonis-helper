@@ -125,8 +125,9 @@ export function findShortestPath(nodeMap, startId, endId) {
 // Farm-route target types:
 //   - normal battles (2): top priority
 //   - events (5) and treasure chests (6): equal, below battles
-// Hard (3), Very Hard (11), Ruler (4) and Boss (1) are deliberately
-// excluded — farming wants easy encounters, not threats.
+// Hard (3), Very Hard (11), Ruler (4) and Boss (1) are NOT farm targets,
+// but ANY node may be passed through en route (reaching more farm nodes
+// may require crossing them).
 const FARM_BATTLE_TYPE = 2;
 const FARM_EVENT_TYPE = 5;
 const FARM_CHEST_TYPE = 6;
@@ -159,11 +160,6 @@ export function findFarmRoute(nodeMap, startId, maxLen = 9) {
     if (!node) continue;
     for (const nx of (node.adjacent_node_ids || [])) {
       if (!nodeMap.has(nx) || dist.has(nx)) continue;
-      const nn = nodeMap.get(nx);
-      // Do NOT route through hard encounters (3, 4, 11) or the boss (1):
-      // farming avoids forced hard fights. Shop (8) / teleporter (9) etc.
-      // remain passable.
-      if (nn.node_type === 3 || nn.node_type === 4 || nn.node_type === 11 || nn.node_type === 1) continue;
       dist.set(nx, d + 1);
       queue.push(nx);
     }
@@ -181,8 +177,6 @@ export function findFarmRoute(nodeMap, startId, maxLen = 9) {
       const cur = q.shift();
       for (const nx of (nodeMap.get(cur).adjacent_node_ids || [])) {
         if (!nodeMap.has(nx) || prev.has(nx)) continue;
-        const nn = nodeMap.get(nx);
-        if (nn.node_type === 3 || nn.node_type === 4 || nn.node_type === 11 || nn.node_type === 1) continue;
         prev.set(nx, cur);
         if (nx === targetId) { found = true; break; }
         q.push(nx);
