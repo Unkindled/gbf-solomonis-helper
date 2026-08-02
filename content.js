@@ -12,7 +12,7 @@
     mapInit: /arcarum3\/dungeon\/content\/index\//,
     moveNode: /rest\/arcarum3\/dungeon\/move_node/,
     finishNode: /rest\/arcarum3\/dungeon\/finish_node_event/,
-    proceed: /rest\/arcarum3\/dungeon\/proceed_node_event$/,
+    proceed: /rest\/arcarum3\/dungeon\/proceed_node_event(\?|$)/,
     spacebookAdd: /rest\/arcarum3\/dungeon\/proceed_node_event_spacebook_status_add/,
     spacebookList: /rest\/arcarum3\/dungeon\/spacebook_status_list/,
     incident: /rest\/arcarum3\/dungeon\/incident_choose/,
