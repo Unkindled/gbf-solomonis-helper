@@ -595,17 +595,22 @@ function normText(s) {
  */
 function matchCodexEntry(gameBook) {
   if (gameBook == null) return null;
-  // 1) learned map (runtime)
-  if (gameBook.status_id != null) {
-    const learned = learnedStatusId[gameBook.status_id];
-    if (learned != null) return GUIDEBOOK_DB.find(b => b.id === learned) || null;
+  const sid = gameBook.status_id != null ? String(gameBook.status_id) : null;
+  const uid = gameBook.user_status_id != null ? String(gameBook.user_status_id) : null;
+  // 1) learned user_status_id map (instance id — identical across EN/JA
+  //    for the same player, so a match learned in EN hits instantly in JA)
+  if (uid != null && learnedMap.user[uid] != null) {
+    return GUIDEBOOK_DB.find(b => b.id === learnedMap.user[uid]) || null;
   }
-  // 2) built-in status_id map
-  if (gameBook.status_id != null) {
-    const byStatus = GUIDEBOOK_STATUS_ID[gameBook.status_id];
-    if (byStatus != null) return GUIDEBOOK_DB.find(b => b.id === byStatus) || null;
+  // 2) learned status_id map (runtime)
+  if (sid != null && learnedMap.status[sid] != null) {
+    return GUIDEBOOK_DB.find(b => b.id === learnedMap.status[sid]) || null;
   }
-  // 3) text match in any language (en / ja / zh). Exact first; if that
+  // 3) built-in status_id map
+  if (sid != null && GUIDEBOOK_STATUS_ID[sid] != null) {
+    return GUIDEBOOK_DB.find(b => b.id === GUIDEBOOK_STATUS_ID[sid]) || null;
+  }
+  // 4) text match in any language (en / ja / zh). Exact first; if that
   //    fails, strip "(Remaining uses: x/y)" both sides and prefix-match —
   //    remaining-use counts differ between players (e.g. 1/2 vs 2/2).
   const n = normText(gameBook.name);
@@ -622,7 +627,7 @@ function matchCodexEntry(gameBook) {
     }
     if (hit) break;
   }
-  if (hit && gameBook.status_id != null) learnStatusId(gameBook.status_id, hit.id);
+  if (hit) learnStatusId(gameBook, hit.id);
   return hit || null;
 }
 
@@ -631,19 +636,33 @@ function stripRemainingUses(s) {
   return String(s || '').replace(/\(\s*remaining\s+uses\s*:\s*\d+\s*\/\s*\d+\s*\)/gi, '');
 }
 
-// Runtime-learned status_id → entry.id map (persisted in chrome.storage).
-// Lets a JA client match books it has never seen in EN, once an EN session
-// has taught the mapping for that status_id.
-let learnedStatusId = {};
-function learnStatusId(statusId, entryId) {
-  const key = String(statusId);
-  if (learnedStatusId[key] === entryId) return;
-  learnedStatusId[key] = entryId;
-  chrome.storage.local.set({ gbfHelperStatusIdMap: learnedStatusId });
+// Runtime-learned id maps (persisted in chrome.storage):
+//   user: user_status_id → entry.id  (instance id, identical across EN/JA
+//         for the same account — the fastest cross-language bridge)
+//   status: status_id → entry.id     (effect id, language-independent)
+let learnedMap = { user: {}, status: {} };
+function learnStatusId(gameBook, entryId) {
+  let changed = false;
+  if (gameBook.status_id != null) {
+    const k = String(gameBook.status_id);
+    if (learnedMap.status[k] !== entryId) { learnedMap.status[k] = entryId; changed = true; }
+  }
+  if (gameBook.user_status_id != null) {
+    const k = String(gameBook.user_status_id);
+    if (learnedMap.user[k] !== entryId) { learnedMap.user[k] = entryId; changed = true; }
+  }
+  if (changed) chrome.storage.local.set({ gbfHelperStatusIdMap: learnedMap });
 }
 function loadLearnedStatusId() {
   chrome.storage.local.get('gbfHelperStatusIdMap', (res) => {
-    learnedStatusId = res.gbfHelperStatusIdMap || {};
+    const raw = res.gbfHelperStatusIdMap;
+    if (raw && (raw.user || raw.status)) {
+      // v2 shape
+      learnedMap = { user: raw.user || {}, status: raw.status || {} };
+    } else if (raw) {
+      // v1 shape: plain status_id → id object
+      learnedMap = { user: {}, status: raw };
+    }
   });
 }
 
@@ -714,6 +733,7 @@ function collectUnknownBooks(books) {
     if (!prev || prev.num !== mergedNum) {
       unknownBooks.set(key, {
         status_id: b.status_id,
+        user_status_id: b.user_status_id,
         name: b.name || 'status:' + b.status_id,
         rarity: b.rarity,
         icon_type: b.icon_type,
@@ -721,6 +741,11 @@ function collectUnknownBooks(books) {
       });
       changed = true;
     }
+  }
+  // Prune: drop entries that can now be matched (learned maps / built-in
+  // map grew since they were collected).
+  for (const [key, ub] of unknownBooks) {
+    if (matchCodexEntry(ub) != null) { unknownBooks.delete(key); changed = true; }
   }
   if (changed) {
     chrome.storage.local.set({ gbfHelperUnknownBooks: [...unknownBooks.values()] });
@@ -732,6 +757,8 @@ function loadUnknownBooks() {
     for (const b of (res.gbfHelperUnknownBooks || [])) {
       unknownBooks.set(String(b.status_id ?? b.name), b);
     }
+    // prune stale entries right after loading too
+    collectUnknownBooks([]);
   });
 }
 
