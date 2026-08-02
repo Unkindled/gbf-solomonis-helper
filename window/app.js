@@ -6,6 +6,12 @@ import { findShortestPath, findFarmRoute, findNearestShop, findSafeZoneRoute, fi
 import { MiasmaCalibration } from './miasma-predictor.js';
 import { DUNGEON_STATUS_LABELS, NODE_TYPE_LABELS } from '../shared/constants.js';
 import { GUIDEBOOK_DB, GUIDEBOOK_STATUS_ID } from '../shared/guidebook-data.js';
+import { GUIDEBOOK_ZH } from '../shared/guidebook-zh.js';
+
+// Merge the community ZH translation into the DB entries' zh field.
+for (const entry of GUIDEBOOK_DB) {
+  if (GUIDEBOOK_ZH[entry.id]) entry.zh = GUIDEBOOK_ZH[entry.id];
+}
 
 let renderer = null;
 let filterPanel = null;
@@ -140,11 +146,12 @@ function init() {
   // Codex filter inputs → re-render
   const codexInputs = [
     'gb-codex-search', 'gb-codex-rarity', 'gb-codex-type',
-    'gb-codex-avail', 'gb-codex-own', 'gb-codex-fav',
+    'gb-codex-avail', 'gb-codex-own', 'gb-codex-fav', 'gb-codex-lang',
   ];
   for (const id of codexInputs) {
     const el = document.getElementById(id);
     if (el) el.addEventListener('input', () => {
+      if (id === 'gb-codex-lang') codexLang = el.value;
       if (!codex.classList.contains('hidden')) renderCodex();
     });
   }
@@ -586,6 +593,8 @@ function cacheBookIcons(icons) {
 
 // favorite status: Set of wiki entry ids (strings), persisted in chrome.storage
 let favoriteBookIds = new Set();
+// Display language for the codex: 'text' (EN) | 'ja' | 'zh'
+let codexLang = 'text';
 
 function normText(s) {
   return String(s || '')
@@ -596,6 +605,18 @@ function normText(s) {
     .replace(/\s*([+%])\s*/g, (m, c) => c)
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+/**
+ * Display text for a codex entry in the selected language, with fallback:
+ *   zh → ja (runtime-collected) → text (EN).
+ * The bundled ja field is sparse; runtime-collected JA (learnedJaText
+ * under 'entry:<id>') fills the gap while playing the JA client.
+ */
+function getDisplayText(entry) {
+  if (codexLang === 'zh') return entry.zh || entry.text;
+  if (codexLang === 'ja') return entry.ja || learnedJaText['entry:' + entry.id] || entry.text;
+  return entry.text;
 }
 
 /**
@@ -928,23 +949,28 @@ function renderCodex() {
     }
     rows.push({ entry, isOwned, isFav });
   }
-  // Sort: favorites first, then rarity desc (99=Cursed sorts last), then text
+  // Sort: favorites first, then rarity desc (99=Cursed sorts last), then display text
   const rarityOrder = { 3: 0, 2: 1, 1: 2, 99: 3 }; // Unique > Rare > Normal > Cursed
   rows.sort((a, b) => {
     if (a.isFav !== b.isFav) return a.isFav ? -1 : 1;
     return (rarityOrder[a.entry.rarity] ?? 9) - (rarityOrder[b.entry.rarity] ?? 9)
-      || String(a.entry.text).localeCompare(String(b.entry.text));
+      || String(getDisplayText(a.entry)).localeCompare(String(getDisplayText(b.entry)));
   });
   const rarLabel = { 1: '★', 2: '★★', 3: '★★★', 99: '☠' };
 
   let html = '<div class="guidebook-codex-grid">';
-  html += rows.map(({ entry, isOwned, isFav }) => `
-    <div class="guidebook-codex-row${isOwned ? ' owned' : ''}">
+  html += rows.map(({ entry, isOwned, isFav }) => {
+    const label = getDisplayText(entry);
+    const langTag = codexLang === 'zh' && !entry.zh ? '<span class="gb-lang">EN</span>'
+      : codexLang === 'ja' && !entry.ja && !learnedJaText['entry:' + entry.id] ? '<span class="gb-lang">EN</span>'
+      : '';
+    return `<div class="guidebook-codex-row${isOwned ? ' owned' : ''}">
       ${bookCodexIcon(entry, ownedMap.get(entry.id))}
-      <span class="gb-name">${escapeHtml(entry.text)}<span class="gb-count">${isOwned ? ' ✓' : ''}</span></span>
+      <span class="gb-name">${escapeHtml(label)}${langTag}<span class="gb-count">${isOwned ? ' ✓' : ''}</span></span>
       <span class="gb-rarity">${rarLabel[entry.rarity] || ''}</span>
       <button class="gb-fav-btn ${isFav ? 'fav' : ''}" data-id="${entry.id}" title="Favorite">${isFav ? '♥' : '♡'}</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   html += '</div>';
 
   // Unknown / uncatalogued section (new guidebooks added by game updates)
