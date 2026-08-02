@@ -722,9 +722,11 @@ let ownedLang = 'original';
 function normText(s) {
   return String(s || '')
     .toLowerCase()
-    // Keep ASCII letters/digits, +/%, and CJK (Japanese) text; drop symbols
-    // like '/', '(', ')', '@', '・' etc. \p{L} covers all letters (incl. JA).
+    // Keep ASCII letters/digits and CJK; drop symbols like '/', '(', ')',
+    // '@', '・' etc. \p{L} covers all letters (incl. JA).
     .replace(/[^\p{L}\p{N}+% ]/gu, ' ')
+    // '+50%' ≡ '50%': drop '+' in front of digits (ATK +20% vs ATK 20%).
+    .replace(/\+\s*(?=\p{N})/gu, '')
     .replace(/\s*([+%])\s*/g, (m, c) => c)
     .replace(/\s+/g, ' ')
     .trim();
