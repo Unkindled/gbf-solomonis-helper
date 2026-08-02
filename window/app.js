@@ -150,6 +150,7 @@ function init() {
   }
   loadFavorites(() => { renderGuideBooks(latestGuideBooks); });
   loadUnknownBooks();
+  loadLearnedStatusId();
 
   // Export miasma log button
   document.getElementById('btn-export-miasma').addEventListener('click', () => {
@@ -585,18 +586,26 @@ function normText(s) {
 /**
  * Match a game book against the wiki DB.
  * Priority:
- *   1. exact status_id (language-independent — works for EN and JA clients)
- *   2. normalized effect text in any available language
+ *   1. learned status_id map (chrome.storage, extended at runtime when an
+ *      EN-client match teaches a status_id → entry mapping)
+ *   2. built-in status_id mapping (language-independent — works for EN and JA)
+ *   3. normalized effect text in any available language
+ * Side effect: when matched by text AND the game gave us a status_id, learn
+ * the mapping so future JA/EN sessions match instantly.
  */
 function matchCodexEntry(gameBook) {
   if (gameBook == null) return null;
-  // 1) status_id mapping (built from observed data; extended at runtime
-  //    when new books appear)
+  // 1) learned map (runtime)
+  if (gameBook.status_id != null) {
+    const learned = learnedStatusId[gameBook.status_id];
+    if (learned != null) return GUIDEBOOK_DB.find(b => b.id === learned) || null;
+  }
+  // 2) built-in status_id map
   if (gameBook.status_id != null) {
     const byStatus = GUIDEBOOK_STATUS_ID[gameBook.status_id];
     if (byStatus != null) return GUIDEBOOK_DB.find(b => b.id === byStatus) || null;
   }
-  // 2) text match in any language (en / ja / zh)
+  // 3) text match in any language (en / ja / zh)
   const n = normText(gameBook.name);
   let hit = null;
   for (const b of GUIDEBOOK_DB) {
@@ -608,7 +617,24 @@ function matchCodexEntry(gameBook) {
     }
     if (hit) break;
   }
+  if (hit && gameBook.status_id != null) learnStatusId(gameBook.status_id, hit.id);
   return hit || null;
+}
+
+// Runtime-learned status_id → entry.id map (persisted in chrome.storage).
+// Lets a JA client match books it has never seen in EN, once an EN session
+// has taught the mapping for that status_id.
+let learnedStatusId = {};
+function learnStatusId(statusId, entryId) {
+  const key = String(statusId);
+  if (learnedStatusId[key] === entryId) return;
+  learnedStatusId[key] = entryId;
+  chrome.storage.local.set({ gbfHelperStatusIdMap: learnedStatusId });
+}
+function loadLearnedStatusId() {
+  chrome.storage.local.get('gbfHelperStatusIdMap', (res) => {
+    learnedStatusId = res.gbfHelperStatusIdMap || {};
+  });
 }
 
 /** Build a Map<status_id, wiki entry> for all currently owned books. */
