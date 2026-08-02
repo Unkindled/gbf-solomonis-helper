@@ -793,7 +793,9 @@ function loadUnknownBooks() {
 function renderCodex() {
   const body = document.getElementById('guidebook-codex-body');
   if (!body) return;
-  const q = (document.getElementById('gb-codex-search')?.value || '').toLowerCase();
+  // Normalize the query the same way as the DB texts (keeps CJK, drops
+  // symbols/fullwidth punctuation) so JA searches match the haystack.
+  const q = normText(document.getElementById('gb-codex-search')?.value || '');
   const rar = document.getElementById('gb-codex-rarity')?.value;
   const typ = document.getElementById('gb-codex-type')?.value;
   const avail = document.getElementById('gb-codex-avail')?.value;
