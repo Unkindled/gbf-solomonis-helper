@@ -369,6 +369,7 @@ function handleWindowMessage(type, payload) {
 
     case 'guide-books':
       renderGuideBooks(payload);
+      updateStatusBar(); // clear the 'refreshing…' override once data arrives
       break;
 
     case 'guidebook-icons':
@@ -381,6 +382,11 @@ function handleWindowMessage(type, payload) {
 
     case 'guidebooks-stale':
       setGuideBooksStale(!!payload);
+      break;
+
+    case 'guidebook-refresh-started':
+      // Background tab opened; game SPA should fire status_list soon.
+      updateStatusBar(I18N.t('status.guidebookRefreshing'));
       break;
 
     case 'guidebook-refresh-failed':

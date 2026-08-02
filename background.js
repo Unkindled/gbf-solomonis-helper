@@ -187,6 +187,7 @@ async function openGuidebookTab() {
     });
     guidebookTabId = tab.id;
     guidebookTabActivated = false;
+    broadcastToWindow('guidebook-refresh-started', true);
     // Safety net: if no status_list response arrives, force the tab to the
     // foreground (background throttling may have prevented the SPA from
     // running at all), then close it after another grace period.
@@ -207,10 +208,12 @@ async function escalateGuidebookTab() {
   guidebookTabActivated = true;
   try {
     // Foregrounding defeats background throttling so the SPA runs its
-    // router and fires spacebook_status_list. Focus is returned to the
-    // game tab right after by the user's own next interaction; keep the
-    // helper window on top meanwhile is not needed.
+    // router and fires spacebook_status_list. Immediately return focus to
+    // the helper window (if open) so the user barely notices.
     await chrome.tabs.update(guidebookTabId, { active: true });
+    if (helperWindowId != null) {
+      try { await chrome.windows.update(helperWindowId, { focused: true }); } catch (e) { /* closed */ }
+    }
     guidebookTabTimer = setTimeout(escalateGuidebookTab, GUIDEBOOK_TAB_AFTER_ACTIVATE_MS);
   } catch (e) {
     closeGuidebookTab();
