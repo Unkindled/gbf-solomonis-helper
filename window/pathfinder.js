@@ -167,7 +167,7 @@ export function findFarmRoute(nodeMap, startId, maxLen = 9) {
 
   (function dfs(cur, steps) {
     const node = nodeMap.get(cur);
-    if (node && cur !== startId && isFarmNode(node)) {
+    if (node && cur !== startId && isFarmNode(node) && !node.is_shrinking) {
       const better = !best
         || farmNodes > best.farmNodes
         || (farmNodes === best.farmNodes && battles > best.battles)
@@ -186,6 +186,9 @@ export function findFarmRoute(nodeMap, startId, maxLen = 9) {
     for (const nx of (node.adjacent_node_ids || [])) {
       if (!nodeMap.has(nx)) continue;
       const nn = nodeMap.get(nx);
+      // Nodes submerged by the miasma (is_shrinking) are unsafe — never
+      // route through them or treat them as targets.
+      if (nn.is_shrinking) continue;
       const isNewFarm = isFarmNode(nn) && !farmCollected.has(nx);
       const isNewNode = !pathSet.has(nx);
 
