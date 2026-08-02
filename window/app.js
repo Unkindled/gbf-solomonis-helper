@@ -605,8 +605,11 @@ function matchCodexEntry(gameBook) {
     const byStatus = GUIDEBOOK_STATUS_ID[gameBook.status_id];
     if (byStatus != null) return GUIDEBOOK_DB.find(b => b.id === byStatus) || null;
   }
-  // 3) text match in any language (en / ja / zh)
+  // 3) text match in any language (en / ja / zh). Exact first; if that
+  //    fails, strip "(Remaining uses: x/y)" both sides and prefix-match —
+  //    remaining-use counts differ between players (e.g. 1/2 vs 2/2).
   const n = normText(gameBook.name);
+  const nStripped = normText(stripRemainingUses(gameBook.name));
   let hit = null;
   for (const b of GUIDEBOOK_DB) {
     for (const lang of ['text', 'ja', 'zh']) {
@@ -614,11 +617,18 @@ function matchCodexEntry(gameBook) {
       if (!t) continue;
       const tn = normText(t);
       if (tn === n || (n.length >= 12 && tn.startsWith(n))) { hit = b; break; }
+      const tnStripped = normText(stripRemainingUses(t));
+      if (nStripped.length >= 12 && (tnStripped.startsWith(nStripped) || nStripped.startsWith(tnStripped))) { hit = b; break; }
     }
     if (hit) break;
   }
   if (hit && gameBook.status_id != null) learnStatusId(gameBook.status_id, hit.id);
   return hit || null;
+}
+
+/** Remove "(Remaining uses: x/y)" style suffixes for fuzzy matching. */
+function stripRemainingUses(s) {
+  return String(s || '').replace(/\(\s*remaining\s+uses\s*:\s*\d+\s*\/\s*\d+\s*\)/gi, '');
 }
 
 // Runtime-learned status_id → entry.id map (persisted in chrome.storage).
@@ -784,7 +794,7 @@ function renderCodex() {
     html += unknownList.map(b => `
       <div class="guidebook-codex-row unknown">
         ${bookIconImg(b.icon_type)}
-        <span class="gb-name">${escapeHtml(b.name)}<span class="gb-count"> ×${b.num}</span><span class="gb-lang">id:${b.status_id ?? '?'}</span></span>
+        <span class="gb-name">${escapeHtml(b.name.replace(/@@/g, ' '))}<span class="gb-count"> ×${b.num}</span><span class="gb-lang">id:${b.status_id ?? '?'}</span></span>
         <span class="gb-rarity">${rarLabel[b.rarity] || ''}</span>
       </div>`).join('');
     html += '</div>';
