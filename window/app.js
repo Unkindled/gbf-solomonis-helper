@@ -155,6 +155,15 @@ function init() {
       if (!codex.classList.contains('hidden')) renderCodex();
     });
   }
+
+  // 'My Guide Books' display language toggle (Chinese / original text)
+  const ownedLangBtn = document.getElementById('gb-owned-lang');
+  ownedLangBtn.addEventListener('click', () => {
+    ownedLang = ownedLang === 'zh' ? 'original' : 'zh';
+    ownedLangBtn.textContent = ownedLang === 'zh' ? 'EN' : '中';
+    ownedLangBtn.title = I18N.t('gb.langSwitchTitle');
+    renderGuideBooks(latestGuideBooks);
+  });
   loadFavorites(() => { renderGuideBooks(latestGuideBooks); });
   loadUnknownBooks();
   loadLearnedStatusId();
@@ -202,6 +211,7 @@ function init() {
     buildNavMenu();
     langBtn.textContent = I18N.t('btn.lang');
     langBtn.title = I18N.getLang() === 'zh' ? 'Switch to English' : '切换到中文';
+    applyGuidebookUI(); // bilingual labels + re-render content
     updateStatusBar();
     if (currentPath) updatePathInfo(currentPath); else updatePathInfo(null);
   }
@@ -560,14 +570,25 @@ function renderGuideBooks(books) {
 
   const rows = merged.map(b => {
     const rarLabel = { 1: '★', 2: '★★', 3: '★★★', 99: '☠' }[b.rarity] || '';
-    const name = (b.name || '').replace(/@@/g, ' ');
-    const countLabel = b.num > 1 ? ` ×${b.num}` : '';
-    const entryId = matchCodexEntry(b)?.id;
+    const original = (b.name || '').replace(/@@/g, ' ');
+    const entry = matchCodexEntry(b);
+    const entryId = entry?.id;
     const isFav = entryId != null && favoriteBookIds.has(String(entryId));
-    return `<div class="guidebook-popup-row">
+    // Display text: Chinese toggle → prefer bundled/learned ZH, else original
+    let display = original;
+    if (ownedLang === 'zh' && entry?.zh) display = entry.zh;
+    // Unmapped JA-only text → remind user to teach the mapping (EN once)
+    const isJaText = /[\u3040-\u30ff\u4e00-\u9fff]/.test(original);
+    const unmappedJa = isJaText && (entry == null || !entryHasStatusMap(entryId));
+    const nameHtml = `${escapeHtml(display)}${ownedLang === 'zh' && display === original ? '<span class="gb-lang">EN</span>' : ''}<span class="gb-count">${countLabel}</span>`;
+    const warnHtml = unmappedJa
+      ? `<span class="gb-unmapped-warn" title="${I18N.t('gb.jaUnmapped')}">⚠</span>`
+      : '';
+    return `<div class="guidebook-popup-row${unmappedJa ? ' gb-row-unmapped' : ''}">
       ${bookIconImg(b.icon_type)}
-      <span class="gb-name">${name}<span class="gb-count">${countLabel}</span></span>
+      <span class="gb-name">${nameHtml}</span>
       <span class="gb-rarity">${rarLabel}</span>
+      ${warnHtml}
       ${entryId != null ? `<button class="gb-fav-btn ${isFav ? 'fav' : ''}" data-id="${entryId}" title="Favorite">${isFav ? '♥' : '♡'}</button>` : ''}
     </div>`;
   }).join('');
@@ -595,6 +616,8 @@ function cacheBookIcons(icons) {
 let favoriteBookIds = new Set();
 // Display language for the codex: 'text' (EN) | 'ja' | 'zh'
 let codexLang = 'text';
+// Display language for 'My Guide Books': 'original' (game text) | 'zh'
+let ownedLang = 'original';
 
 function normText(s) {
   return String(s || '')
@@ -1193,6 +1216,36 @@ function navigateSafeZone() {
 }
 
 // --- UI updates ---
+
+/** Refresh bilingual UI strings for the guidebook popup & codex. */
+function applyGuidebookUI() {
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
+    const key = el.getAttribute('data-i18n');
+    const txt = I18N.t(key);
+    if (txt && txt !== key) el.textContent = txt;
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    const txt = I18N.t(key);
+    if (txt && txt !== key) el.placeholder = txt;
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach((el) => {
+    const key = el.getAttribute('data-i18n-title');
+    const txt = I18N.t(key);
+    if (txt && txt !== key) el.title = txt;
+  });
+  const title = document.getElementById('guidebook-popup-title');
+  if (title) title.textContent = I18N.t('gb.myBooks');
+  const openCodex = document.getElementById('gb-open-codex');
+  if (openCodex) openCodex.textContent = I18N.t('gb.openCodex');
+  const ownedLangBtn = document.getElementById('gb-owned-lang');
+  if (ownedLangBtn) {
+    ownedLangBtn.textContent = ownedLang === 'zh' ? 'EN' : '中';
+    ownedLangBtn.title = I18N.t('gb.langSwitchTitle');
+  }
+  renderGuideBooks(latestGuideBooks);
+  if (!document.getElementById('guidebook-codex')?.classList.contains('hidden')) renderCodex();
+}
 
 function updateStatusBar(override) {
   const el = document.getElementById('status-bar');

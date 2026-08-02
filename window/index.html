@@ -41,7 +41,8 @@
         <div class="guidebook-popup-header">
           <span id="guidebook-popup-title">My Guide Books</span>
           <span class="guidebook-header-actions">
-            <button id="gb-open-codex" class="btn-small" title="Open Guide Book Codex">📖 Codex</button>
+            <button id="gb-owned-lang" class="btn-small" title="Toggle Chinese / original text">中</button>
+            <button id="gb-open-codex" class="btn-small gb-codex-btn" title="Open Guide Book Codex">📖 Codex</button>
             <button id="guidebook-popup-close" class="btn-small">×</button>
           </span>
         </div>
@@ -50,20 +51,20 @@
       <!-- Guide book codex: separate large "book" modal -->
       <div id="guidebook-codex" class="guidebook-codex hidden">
         <div class="guidebook-codex-header">
-          <span class="guidebook-codex-title">Guide Book Codex</span>
+          <span class="guidebook-codex-title" data-i18n="gb.codex">Guide Book Codex</span>
           <button id="gb-codex-close" class="btn-small">×</button>
         </div>
         <div class="guidebook-codex-controls">
-          <input id="gb-codex-search" type="text" placeholder="Search guide books (EN / JA / ZH)..." class="gb-codex-search">
+          <input id="gb-codex-search" type="text" data-i18n-placeholder="gb.search" class="gb-codex-search">
           <select id="gb-codex-rarity" class="gb-codex-select">
-            <option value="">Rarity: All</option>
+            <option value="" data-i18n="gb.rarity">Rarity: All</option>
             <option value="1">Normal</option>
             <option value="2">Rare</option>
             <option value="3">Unique</option>
             <option value="99">Cursed</option>
           </select>
           <select id="gb-codex-type" class="gb-codex-select">
-            <option value="">Type: All</option>
+            <option value="" data-i18n="gb.type">Type: All</option>
             <option value="na">Normal Attack</option>
             <option value="skill">Skill DMG</option>
             <option value="ca">Charge Attack</option>
@@ -72,33 +73,33 @@
             <option value="misc">Miscellaneous</option>
           </select>
           <select id="gb-codex-avail" class="gb-codex-select">
-            <option value="">Availability: All</option>
+            <option value="" data-i18n="gb.avail">Availability: All</option>
             <option value="global">Global</option>
             <option value="event">Event</option>
             <option value="character">Character</option>
           </select>
           <select id="gb-codex-own" class="gb-codex-select">
-            <option value="">Ownership: All</option>
-            <option value="owned">Owned</option>
-            <option value="missing">Not owned</option>
+            <option value="" data-i18n="gb.own">Ownership: All</option>
+            <option value="owned" data-i18n="gb.ownOwned">Owned</option>
+            <option value="missing" data-i18n="gb.ownMissing">Not owned</option>
           </select>
           <select id="gb-codex-fav" class="gb-codex-select">
-            <option value="">Favorite: All</option>
-            <option value="fav">Favorites</option>
+            <option value="" data-i18n="gb.fav">Favorite: All</option>
+            <option value="fav" data-i18n="gb.favOnly">Favorites</option>
           </select>
-          <select id="gb-codex-lang" class="gb-codex-select" title="Display language">
+          <select id="gb-codex-lang" class="gb-codex-select" data-i18n-title="gb.lang">
             <option value="text">EN</option>
             <option value="ja">日本語</option>
             <option value="zh">中文</option>
           </select>
-          <select id="gb-codex-map" class="gb-codex-select" title="Filter by status_id mapping status">
-            <option value="">ID Map: All</option>
-            <option value="mapped">Mapped (✓)</option>
-            <option value="unmapped">Unmapped (△)</option>
+          <select id="gb-codex-map" class="gb-codex-select">
+            <option value="" data-i18n="gb.idMap">ID Map: All</option>
+            <option value="mapped" data-i18n="gb.idMapMapped">Mapped (✓)</option>
+            <option value="unmapped" data-i18n="gb.idMapUnmapped">Unmapped (△)</option>
           </select>
           <span class="gb-data-actions">
-            <button id="gb-export-data" class="btn-small" title="Export learned data (JA text, id maps, uncatalogued) as JSON">⬇ Export</button>
-            <button id="gb-import-data" class="btn-small" title="Import learned data from JSON">⬆ Import</button>
+            <button id="gb-export-data" class="btn-small" data-i18n="gb.export">⬇ Export</button>
+            <button id="gb-import-data" class="btn-small" data-i18n="gb.import">⬆ Import</button>
             <input type="file" id="gb-import-file" accept=".json,application/json" class="hidden">
           </span>
         </div>

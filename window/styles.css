@@ -504,6 +504,16 @@ body::before {
   flex-shrink: 0;
   letter-spacing: 1px;
 }
+.gb-unmapped-warn {
+  color: #f0a030;
+  font-size: 13px;
+  flex-shrink: 0;
+  cursor: help;
+}
+.guidebook-popup-row.gb-row-unmapped {
+  background: rgba(240,160,48,0.07);
+  border: 1px solid rgba(240,160,48,0.25);
+}
 .guidebook-popup-empty {
   color: var(--parch-dim);
   font-style: italic;
@@ -519,6 +529,22 @@ body::before {
 #gb-open-codex {
   border-color: var(--gold-2);
   color: var(--gold-0);
+  font-weight: 700;
+  font-size: 12px;
+  padding: 6px 14px;
+  background: linear-gradient(180deg, rgba(217,178,90,0.22), rgba(217,178,90,0.06));
+  box-shadow: 0 0 10px rgba(217,178,90,0.25);
+  letter-spacing: 0.5px;
+  transition: box-shadow 0.15s ease, background 0.15s ease, transform 0.12s ease;
+}
+#gb-open-codex:hover {
+  background: linear-gradient(180deg, rgba(217,178,90,0.32), rgba(217,178,90,0.10));
+  box-shadow: 0 0 16px rgba(217,178,90,0.45);
+  transform: translateY(-1px);
+}
+#gb-owned-lang {
+  border-color: var(--gold-3);
+  color: var(--gold-1);
   font-weight: 600;
 }
 
