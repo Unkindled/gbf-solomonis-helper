@@ -2,7 +2,7 @@
 
 import { MapRenderer } from './map-renderer.js';
 import { FilterPanel } from './filter-panel.js';
-import { findShortestPath } from './pathfinder.js';
+import { findShortestPath, findBattleRoute, findNearestShop, findSafeZoneRoute } from './pathfinder.js';
 import { MIASMA_ACTIVATION_TURN } from './miasma-predictor.js';
 import { DUNGEON_STATUS_LABELS, NODE_TYPE_LABELS } from '../shared/constants.js';
 
@@ -70,9 +70,30 @@ function init() {
     handleWindowMessage(msg.type, msg.payload);
   });
 
-  // Focus button
-  document.getElementById('btn-focus').addEventListener('click', () => {
-    if (renderer) renderer.focusPlayer();
+  // Compass: opens the navigation menu (center-on-player is a menu item).
+  const navMenu = document.getElementById('nav-menu');
+  const btnFocus = document.getElementById('btn-focus');
+  buildNavMenu();
+  btnFocus.addEventListener('click', (e) => {
+    e.stopPropagation();
+    navMenu.classList.toggle('hidden');
+  });
+  document.addEventListener('click', (e) => {
+    if (!navMenu.classList.contains('hidden') && !navMenu.contains(e.target) && e.target !== btnFocus && !btnFocus.contains(e.target)) {
+      navMenu.classList.add('hidden');
+    }
+  });
+
+  // Sidebar: switch side / collapse
+  const sidebar = document.getElementById('sidebar');
+  const btnSide = document.getElementById('btn-sidebar-side');
+  btnSide.addEventListener('click', () => {
+    document.getElementById('app').classList.toggle('sidebar-left');
+  });
+  const btnCollapse = document.getElementById('btn-sidebar-collapse');
+  btnCollapse.addEventListener('click', () => {
+    document.getElementById('app').classList.toggle('sidebar-collapsed');
+    btnCollapse.textContent = document.getElementById('app').classList.contains('sidebar-collapsed') ? '▸' : '▾';
   });
 
   // Guide book popup toggle
@@ -112,6 +133,7 @@ function init() {
       renderer.setFilter(types, specials);
     });
     if (dungeon) filterPanel.setPresentSpecials(getPresentSpecialIds());
+    buildNavMenu();
     langBtn.textContent = I18N.t('btn.lang');
     langBtn.title = I18N.getLang() === 'zh' ? 'Switch to English' : '切换到中文';
     updateStatusBar();
@@ -361,9 +383,11 @@ function renderPartyBar(party) {
     const dead = m.alive === 0;
     const hp = dead ? 0 : (Number(m.hp) || 0);
     const maxHp = Number(m.max_hp) || 1;
-    const pct = Math.max(0, Math.min(100, Math.round(hp / maxHp * 100)));
+    // Minimum 1% while alive (never show an empty bar unless dead)
+    const rawPct = Math.round(hp / maxHp * 100);
+    const pct = dead ? 0 : Math.max(1, Math.min(100, rawPct));
     // Game rule: hpPercent <= 25 → red gauge, otherwise green; dead → gray
-    const color = dead ? '#5a5f6e' : (pct <= 25 ? '#e03131' : '#4caf50');
+    const color = dead ? '#5a5f6e' : (rawPct <= 25 ? '#e03131' : '#4caf50');
     const label = m.is_pc ? 'PC' : `N${i}`;
     const base = 'https://prd-game-a-granbluefantasy.akamaized.net/assets_en/img/sp/assets/';
     const imgUrl = m.image_id ? `${base}${m.is_pc ? 'leader' : 'npc'}/raid_normal/${m.image_id}.jpg` : '';
@@ -517,6 +541,71 @@ function reEvaluatePath() {
   if (!currentPath || !renderer) return;
   renderer.setPath(currentPath, null);
   updatePathInfo(currentPath);
+}
+
+// --- Navigation menu (compass) ---
+// Extensible: add entries to NAV_ITEMS; each entry has {id, icon, label,
+// action()}. The menu rebuilds on language change.
+
+function buildNavMenu() {
+  const menu = document.getElementById('nav-menu');
+  if (!menu) return;
+  menu.innerHTML = '';
+  for (const item of NAV_ITEMS) {
+    const btn = document.createElement('button');
+    btn.className = 'nav-item';
+    btn.innerHTML = `<span class="nav-icon">${item.icon}</span><span class="nav-label">${I18N.t(item.labelKey)}</span>`;
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      menu.classList.add('hidden');
+      item.action();
+    });
+    menu.appendChild(btn);
+  }
+}
+
+const NAV_ITEMS = [
+  { id: 'center', icon: '⌖', labelKey: 'nav.center', action: () => { if (renderer) renderer.focusPlayer(); } },
+  { id: 'battle', icon: '⚔', labelKey: 'nav.battle', action: navigateBattleRoute },
+  { id: 'shop', icon: '🛒', labelKey: 'nav.shop', action: navigateNearestShop },
+  { id: 'safe', icon: '☂', labelKey: 'nav.safe', action: navigateSafeZone },
+];
+
+function navigateBattleRoute() {
+  if (!dungeon) return;
+  const res = findBattleRoute(nodeMap, dungeon.current_node_id, 9);
+  if (!res) { updatePathInfo(null, 'No battle route within 9 steps'); return; }
+  currentPath = res.path;
+  pathStartId = currentPath[0];
+  reEvaluatePath();
+}
+
+function navigateNearestShop() {
+  if (!dungeon) return;
+  const res = findNearestShop(nodeMap, dungeon.current_node_id);
+  if (!res) { updatePathInfo(null, 'No shop reachable'); return; }
+  currentPath = res.path;
+  pathStartId = currentPath[0];
+  reEvaluatePath();
+}
+
+function navigateSafeZone() {
+  if (!dungeon) return;
+  const a = currentMiasmaInfo && currentMiasmaInfo.after;
+  if (!a || !a.is_miasmic) {
+    updatePathInfo(null, 'Safe zone has not appeared yet');
+    return;
+  }
+  const curNode = nodeMap.get(dungeon.current_node_id);
+  if (curNode && !curNode.is_shrinking) {
+    updatePathInfo(null, 'You are already in the safe zone');
+    return;
+  }
+  const res = findSafeZoneRoute(nodeMap, dungeon.current_node_id);
+  if (!res) { updatePathInfo(null, 'No safe zone reachable'); return; }
+  currentPath = res.path;
+  pathStartId = currentPath[0];
+  reEvaluatePath();
 }
 
 // --- UI updates ---

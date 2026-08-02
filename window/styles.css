@@ -494,6 +494,70 @@ body::before {
   padding: 10px 2px;
 }
 
+/* ---------- Navigation menu (compass dropdown) ---------- */
+
+#hud-right { position: relative; }
+
+.nav-menu {
+  position: absolute;
+  top: 64px;
+  right: 0;
+  z-index: 40;
+  min-width: 190px;
+  background: var(--panel-bg);
+  border: 1px solid var(--gold-edge);
+  border-radius: 10px;
+  box-shadow: var(--shadow-deep);
+  padding: 5px;
+  animation: popup-in 0.18s cubic-bezier(.2,.9,.3,1.15);
+}
+.nav-menu.hidden { display: none; }
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--parch-1);
+  font-family: var(--body);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+.nav-item:hover {
+  background: rgba(217,178,90,0.12);
+  color: var(--gold-0);
+}
+.nav-icon {
+  width: 20px;
+  text-align: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+/* ---------- Sidebar toolbar (side-switch + collapse) ---------- */
+
+.sidebar-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 6px 10px 2px;
+}
+
+#app.sidebar-left #sidebar { order: -1; border-left: none; border-right: 1px solid var(--gold-edge); }
+
+/* Collapsed: only the path info remains, filter hidden */
+#app.sidebar-collapsed #sidebar { width: 230px; min-width: 230px; }
+#app.sidebar-collapsed #status-bar,
+#app.sidebar-collapsed .sidebar-actions,
+#app.sidebar-collapsed #filter-panel { display: none; }
+#app.sidebar-collapsed #sidebar::after { display: none; }
+
 /* ---------- Sidebar ---------- */
 
 #sidebar {

@@ -37,6 +37,11 @@
       'filter.specialEvent': 'Special Event',
       'filter.presentHint': '(● = in this run)',
       'filter.guideBooks': 'Guide Books',
+      // navigation (compass menu)
+      'nav.center': 'Center on player',
+      'nav.battle': 'Battle route (≤9 steps)',
+      'nav.shop': 'Nearest shop',
+      'nav.safe': 'Into the safe zone',
       // node types
       'nodeType.0': 'Path',
       'nodeType.1': 'Boss',
@@ -100,6 +105,11 @@
       'filter.specialEvent': '特殊事件',
       'filter.presentHint': '(● = 本局出现)',
       'filter.guideBooks': '导本',
+      // navigation (compass menu)
+      'nav.center': '定位玩家',
+      'nav.battle': '战斗路线（≤9 步）',
+      'nav.shop': '最近的商店',
+      'nav.safe': '进入安全区',
       // node types
       'nodeType.0': '通路',
       'nodeType.1': '首领',

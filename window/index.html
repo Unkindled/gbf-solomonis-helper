@@ -17,7 +17,8 @@
           <div id="party-bar"></div>
         </div>
         <div id="hud-right">
-          <button id="btn-focus" class="hud-iconbtn compass" title="Center on player (F)" aria-label="Center on player">
+          <div id="nav-menu" class="nav-menu hidden"></div>
+          <button id="btn-focus" class="hud-iconbtn compass" title="Navigation" aria-label="Navigation" aria-haspopup="true">
             <svg viewBox="0 0 24 24" class="compass-svg" aria-hidden="true">
               <circle cx="12" cy="12" r="9" class="compass-ring"/>
               <path d="M12 3 L13.6 10.4 L12 9 L10.4 10.4 Z" class="compass-needle-n"/>
@@ -42,6 +43,10 @@
       </div>
     </div>
     <div id="sidebar">
+      <div class="sidebar-toolbar">
+        <button id="btn-sidebar-side" class="btn-small" title="Move panel to the other side">⇄</button>
+        <button id="btn-sidebar-collapse" class="btn-small" title="Collapse filter panel">▾</button>
+      </div>
       <div id="status-bar">Waiting for game data...</div>
       <div id="path-info">
         <span class="path-hint">Click a node to plan a route from your position.</span>
