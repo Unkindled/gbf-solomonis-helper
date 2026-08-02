@@ -2,7 +2,7 @@
 
 import { MapRenderer } from './map-renderer.js';
 import { FilterPanel } from './filter-panel.js';
-import { findShortestPath, findBattleRoute, findNearestShop, findSafeZoneRoute } from './pathfinder.js';
+import { findShortestPath, findFarmRoute, findNearestShop, findSafeZoneRoute } from './pathfinder.js';
 import { MIASMA_ACTIVATION_TURN } from './miasma-predictor.js';
 import { DUNGEON_STATUS_LABELS, NODE_TYPE_LABELS } from '../shared/constants.js';
 
@@ -32,6 +32,14 @@ function init() {
   }
   window.addEventListener('resize', resizeCanvas);
   resizeCanvas();
+
+  // Watch the map container directly: collapsing the sidebar changes its
+  // width WITHOUT a window resize, and leaving the canvas CSS-stretched
+  // distorts the map. ResizeObserver keeps the backing store in sync.
+  const mapContainer = document.getElementById('map-container');
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(() => resizeCanvas()).observe(mapContainer);
+  }
 
   // Restore cached guidebook icons from storage
   chrome.storage.local.get('gbf-helper-book-icons').then((stored) => {
@@ -568,15 +576,15 @@ function buildNavMenu() {
 
 const NAV_ITEMS = [
   { id: 'center', icon: '⌖', labelKey: 'nav.center', action: () => { if (renderer) renderer.focusPlayer(); } },
-  { id: 'battle', icon: '⚔', labelKey: 'nav.battle', action: navigateBattleRoute },
+  { id: 'farm', icon: '🌾', labelKey: 'nav.farm', action: navigateFarmRoute },
   { id: 'shop', icon: '🛒', labelKey: 'nav.shop', action: navigateNearestShop },
   { id: 'safe', icon: '☂', labelKey: 'nav.safe', action: navigateSafeZone },
 ];
 
-function navigateBattleRoute() {
+function navigateFarmRoute() {
   if (!dungeon) return;
-  const res = findBattleRoute(nodeMap, dungeon.current_node_id, 9);
-  if (!res) { updatePathInfo(null, 'No battle route within 9 steps'); return; }
+  const res = findFarmRoute(nodeMap, dungeon.current_node_id, 9);
+  if (!res) { updatePathInfo(null, 'No farm route within 9 steps'); return; }
   currentPath = res.path;
   pathStartId = currentPath[0];
   reEvaluatePath();

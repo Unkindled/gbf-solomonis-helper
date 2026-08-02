@@ -122,22 +122,27 @@ export function findShortestPath(nodeMap, startId, endId) {
   return res ? res.path : null;
 }
 
-/**
- * Navigation: within maxLen steps, the route touching the most battle
- * nodes (Boss excluded). The path ENDS at the last battle node — it never
- * extends into extra steps just to fill the cap.
- *
- * Implementation: for every reachable battle node (≤ maxLen steps), run a
- * dist-first BFS (acyclic by construction) to it, count the battle nodes
- * along that route, and pick the route with the most battles (ties →
- * shorter). This avoids the score-priority cycles that arise when paths
- * may revisit nodes.
- */
-export function findBattleRoute(nodeMap, startId, maxLen = 9) {
-  if (!nodeMap.has(startId)) return null;
-  if (maxLen <= 0) return null;
+// Farm-route target types: normal battles (2) and events (5). Hard (3),
+// Very Hard (11) and Boss (1) are deliberately excluded — farming wants
+// easy encounters, not threats.
+const FARM_BATTLE_TYPE = 2;
+const FARM_EVENT_TYPE = 5;
 
-  // Dist-first BFS from startId, capped at maxLen.
+function isFarmNode(node) {
+  return node && (node.node_type === FARM_BATTLE_TYPE || node.node_type === FARM_EVENT_TYPE);
+}
+
+/**
+ * Navigation: within maxLen steps, the farming route. Priority:
+ *   1) most farm nodes total (battles + events)
+ *   2) ties → more normal battles, then shorter path
+ * The path ENDS at the last farm node — never walks extra steps to fill
+ * the cap. Implementation: for every reachable farm node, run a dist-first
+ * BFS (acyclic) to it, count farm nodes along the route, pick the best.
+ */
+export function findFarmRoute(nodeMap, startId, maxLen = 9) {
+  if (!nodeMap.has(startId) || maxLen <= 0) return null;
+
   const dist = new Map([[startId, 0]]);
   const queue = [startId];
   while (queue.length > 0) {
@@ -148,17 +153,15 @@ export function findBattleRoute(nodeMap, startId, maxLen = 9) {
     if (!node) continue;
     for (const nx of (node.adjacent_node_ids || [])) {
       if (!nodeMap.has(nx)) continue;
-      if (dist.has(nx)) continue; // dist-first ⇒ acyclic
+      if (dist.has(nx)) continue;
       dist.set(nx, d + 1);
       queue.push(nx);
     }
   }
 
-  // For each reachable battle node, run a dist-first BFS toward it and
-  // count battles along the route.
   let best = null;
   for (const [targetId, node] of nodeMap) {
-    if (!isBattle(node) || targetId === startId) continue;
+    if (!isFarmNode(node) || targetId === startId) continue;
     if (!dist.has(targetId)) continue;
 
     const prev = new Map([[startId, null]]);
@@ -178,9 +181,12 @@ export function findBattleRoute(nodeMap, startId, maxLen = 9) {
     const path = [];
     let c = targetId;
     while (c !== null) { path.unshift(c); c = prev.get(c); }
-    const battles = path.filter(id => isBattle(nodeMap.get(id))).length;
-    if (!best || battles > best.battles || (battles === best.battles && path.length < best.path.length)) {
-      best = { path, battles };
+    const farmNodes = path.filter(id => isFarmNode(nodeMap.get(id))).length;
+    const battles = path.filter(id => nodeMap.get(id).node_type === FARM_BATTLE_TYPE).length;
+    // farmNodes*1000 dominates; battles*1 breaks ties
+    const score = farmNodes * 1000 + battles;
+    if (!best || score > best.score || (score === best.score && path.length < best.path.length)) {
+      best = { path, farmNodes, battles, score };
     }
   }
   return best;

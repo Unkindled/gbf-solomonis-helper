@@ -39,7 +39,7 @@
       'filter.guideBooks': 'Guide Books',
       // navigation (compass menu)
       'nav.center': 'Center on player',
-      'nav.battle': 'Battle route (≤9 steps)',
+      'nav.farm': 'Farm route (≤9 steps)',
       'nav.shop': 'Nearest shop',
       'nav.safe': 'Into the safe zone',
       // node types
@@ -107,7 +107,7 @@
       'filter.guideBooks': '导本',
       // navigation (compass menu)
       'nav.center': '定位玩家',
-      'nav.battle': '战斗路线（≤9 步）',
+      'nav.farm': '发育路线（≤9 步）',
       'nav.shop': '最近的商店',
       'nav.safe': '进入安全区',
       // node types
