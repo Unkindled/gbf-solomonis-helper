@@ -59,7 +59,7 @@ export const GUIDEBOOK_DB = [
   "icon": "amp",
   "text": "Amplify all allies' DMG based on number of times an event space was reached after this guidebook effect was obtained (10% per space / Max: 100%)",
   "id": 4,
-  "ja": null,
+  "ja": "この導本効果を入手して以降にイベントマスに到 達した回数に応じて味方全体の与ダメージ UP(50%/最大100%)",
   "zh": null
  },
  {
@@ -165,7 +165,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "Bonus Elemental C.A. DMG effect to gun-, melee-, bow-, harp-, or katana-specialty allies (50%) / Bonus Superior Elemental C.A. DMG effect (50%)",
   "id": 12,
-  "ja": null,
+  "ja": "得意武器に「銃」「格闘」「弓」「楽器」「刀」 のいずれかが含まれるキャラに自属性奥義追撃効 果(50%)/弱点属性奥義追撃効果(50%)",
   "zh": null
  },
  {
@@ -193,7 +193,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "Upon attacking when all allies are almost knocked out: Increase number of times all allies do an attack +1",
   "id": 14,
-  "ja": null,
+  "ja": "攻撃開始時に味方全体が瀕死状態の時、味方全体 の攻撃行動回数増加(＋1)",
   "zh": null
  },
  {
@@ -511,7 +511,7 @@ export const GUIDEBOOK_DB = [
   "icon": "echo",
   "text": "Bonus Elemental DMG effect to Harvin and Wolvir allies (30%)",
   "id": 38,
-  "ja": null,
+  "ja": "ハーヴィン族とヴォルヴィル族に自属性追撃効果 (30%)",
   "zh": null
  },
  {
@@ -577,7 +577,7 @@ export const GUIDEBOOK_DB = [
   "icon": "ca dmg",
   "text": "At battle start: C.A. Reactivation effect to all allies (1 time) (Can't be stacked)",
   "id": 43,
-  "ja": null,
+  "ja": "バトル開始時、味方全体に奥義再発動効果(1回) (重複不可)",
   "zh": null
  },
  {
@@ -604,7 +604,7 @@ export const GUIDEBOOK_DB = [
   "icon": "amp",
   "text": "Amplify normal attack DMG +30%",
   "id": 45,
-  "ja": null,
+  "ja": "通常攻撃の与ダメージUP(30%)",
   "zh": null
  },
  {
@@ -617,7 +617,7 @@ export const GUIDEBOOK_DB = [
   "icon": "amp",
   "text": "Amplify MC's and SSR allies' DMG +10% / Amplify SR allies' DMG +100% / Amplify R allies' DMG +200%",
   "id": 46,
-  "ja": null,
+  "ja": "主人公とSSレアキャラの与ダメージUP(10%)/S レアキャラの与ダメージUP(100%)/レアキャラの 与ダメージUP(200%)",
   "zh": null
  },
  {
@@ -657,7 +657,7 @@ export const GUIDEBOOK_DB = [
   "icon": "ca amp",
   "text": "Amplify C.A. DMG +30%",
   "id": 49,
-  "ja": null,
+  "ja": "奥義与ダメージUP(30%)",
   "zh": null
  },
  {
@@ -681,7 +681,7 @@ export const GUIDEBOOK_DB = [
   "icon": "uplift",
   "text": "Uplift (10%)",
   "id": 51,
-  "ja": null,
+  "ja": "高揚(10%)",
   "zh": null
  },
  {
@@ -742,7 +742,7 @@ export const GUIDEBOOK_DB = [
   "icon": "regen",
   "text": "Regeneration (1000 HP)",
   "id": 56,
-  "ja": null,
+  "ja": "再生(1000回復)",
   "zh": null
  },
  {
@@ -819,7 +819,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "C.A. Sealed effect to allies upon using their C.A. / Amplify N.A. DMG and skill DMG +20% / Skills and charge attacks won't consume charge bar (Excludes skills with 0 cooldown)",
   "id": 62,
-  "ja": null,
+  "ja": "味方全体が奥義発動時、自分に奥義封印効果/通 常攻撃とアビリティの与ダメージUP(20%)/奥義 ゲージDOWN効果無効/奥義やアビリティの発動 に奥義ゲージを消費しない　◆使用間隔0ターン のアビリティを除く",
   "zh": null
  },
  {
@@ -1280,7 +1280,7 @@ export const GUIDEBOOK_DB = [
   "icon": "ca cap",
   "text": "Special C.A. DMG cap +10%",
   "id": 99,
-  "ja": null,
+  "ja": "奥義ダメージ特殊上限UP(10%)",
   "zh": null
  },
  {
@@ -1341,7 +1341,7 @@ export const GUIDEBOOK_DB = [
   "icon": "heal spec",
   "text": "Healing specs +20%",
   "id": 104,
-  "ja": null,
+  "ja": "回復性能UP(20%)",
   "zh": null
  },
  {
@@ -1484,6 +1484,8 @@ export const GUIDEBOOK_STATUS_ID = {
  "14": 102,
  "15": 104,
  "17": 37,
+ "18": 40,
+ "19": 39,
  "20": 45,
  "21": 48,
  "22": 49,
@@ -1505,6 +1507,7 @@ export const GUIDEBOOK_STATUS_ID = {
  "40": 72,
  "41": 79,
  "42": 54,
+ "43": 43,
  "44": 55,
  "46": 80,
  "47": 61,
@@ -1522,15 +1525,17 @@ export const GUIDEBOOK_STATUS_ID = {
  "64": 62,
  "65": 65,
  "67": 84,
+ "72": 21,
  "74": 23,
  "76": 2,
+ "77": 5,
  "79": 1,
  "80": 7,
  "81": 9,
  "83": 8,
+ "84": 15,
  "85": 3,
  "86": 4,
- "84": 15,
  "87": 10,
  "88": 13,
  "89": 12,
@@ -1539,7 +1544,10 @@ export const GUIDEBOOK_STATUS_ID = {
  "92": 18,
  "93": 17,
  "95": 14,
+ "97": 6,
+ "108": 32,
  "117": 107,
+ "118": 106,
  "120": 111,
  "124": 114,
  "128": 90
