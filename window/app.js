@@ -571,6 +571,7 @@ function renderGuideBooks(books) {
   const rows = merged.map(b => {
     const rarLabel = { 1: '★', 2: '★★', 3: '★★★', 99: '☠' }[b.rarity] || '';
     const original = (b.name || '').replace(/@@/g, ' ');
+    const countLabel = b.num > 1 ? ` ×${b.num}` : '';
     const entry = matchCodexEntry(b);
     const entryId = entry?.id;
     const isFav = entryId != null && favoriteBookIds.has(String(entryId));
