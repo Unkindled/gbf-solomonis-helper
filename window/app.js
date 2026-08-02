@@ -627,7 +627,7 @@ function bookIconImg(iconType) {
   if (cached) {
     return `<img class="gb-icon" src="${cached}" alt="">`;
   }
-  return `<img class="gb-icon" src="${local}" alt="" onerror="this.onerror=null;var c=window.__bookIconCache&&window.__bookIconCache['${iconType}'];if(c)this.src=c;">`;
+  return `<img class="gb-icon" src="${local}" alt="" onerror="this.onerror=null;var c=window.__bookIconCache&&window.__bookIconCache['${iconType}'];if(c)this.src=c;else{this.style.display='none';this.insertAdjacentHTML('afterend','<div class=&quot;gb-icon&quot;></div>');}">`;
 }
 
 function renderGuideBooks(books) {
