@@ -951,6 +951,28 @@ body::before {
   color: var(--parch-dim);
 }
 
+/* ---------- Transient toast ---------- */
+
+.transient-toast {
+  position: fixed;
+  bottom: 46px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  padding: 9px 20px;
+  border-radius: 8px;
+  background: rgba(16, 24, 40, 0.95);
+  border: 1px solid rgba(76, 175, 80, 0.5);
+  color: #9be0a0;
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 6px 22px rgba(0,0,0,0.6);
+  animation: popup-in 0.2s ease;
+  pointer-events: none;
+}
+.transient-toast.hidden { display: none; }
+
 /* ---------- Sidebar ---------- */
 
 #sidebar {

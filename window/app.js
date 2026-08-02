@@ -494,8 +494,11 @@ function handleWindowMessage(type, payload) {
 
     case 'report-books':
       // payload: guidebooks obtained in a battle-report run (record page).
-      // Feed into the learning pool only — no overlay.
-      if (Array.isArray(payload)) absorbBookInfo(payload);
+      // Feed into the learning pool only — no overlay; toast new mappings.
+      if (Array.isArray(payload)) {
+        const n = absorbBookInfo(payload);
+        if (n > 0) showTransientToast(I18N.t('report.newMappings', { n }));
+      }
       break;
 
     case 'pick-done':
@@ -505,9 +508,11 @@ function handleWindowMessage(type, payload) {
 }
 
 /** Absorb guidebook info seen from any source (shop, 3-way pick, etc.) into
- *  the learned pools: icons, JA text, and status_id → wiki mappings. */
+ *  the learned pools: icons, JA text, and status_id → wiki mappings.
+ *  @returns {number} count of NEWLY taught status_id → wiki mappings */
 function absorbBookInfo(recs) {
   let reRender = false;
+  let newMappings = 0;
   const newIconTypes = new Set();
   for (const rec of recs) {
     const sid = rec.status_id != null ? String(rec.status_id) : null;
@@ -523,8 +528,12 @@ function absorbBookInfo(recs) {
     }
     if (rec.name) {
       // Try to teach a mapping (works when the name matches wiki text)
+      const alreadyMapped = learnedMap.status[sid] != null || GUIDEBOOK_STATUS_ID[sid] != null;
       const hit = matchCodexEntry({ status_id: rec.status_id, name: rec.name, rarity: rec.rarity, icon_type: rec.icon_type });
-      if (hit && hit.id != null) reRender = true;
+      if (hit && hit.id != null) {
+        if (!alreadyMapped) newMappings++;
+        reRender = true;
+      }
     }
   }
   // Ask the background to fetch any icon PNGs we don't have bundled/cached
@@ -541,6 +550,7 @@ function absorbBookInfo(recs) {
     renderGuideBooks(latestGuideBooks);
     if (!document.getElementById('guidebook-codex')?.classList.contains('hidden')) renderCodex();
   }
+  return newMappings;
 }
 
 // --- 3-way guidebook pick overlay ---
@@ -1231,6 +1241,22 @@ function renderCodex() {
 
 function escapeHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/** Short-lived toast notification (auto-hides after 2.5s). */
+let toastTimer = null;
+function showTransientToast(text) {
+  let el = document.getElementById('transient-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'transient-toast';
+    el.className = 'transient-toast hidden';
+    document.body.appendChild(el);
+  }
+  el.textContent = text;
+  el.classList.remove('hidden');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.add('hidden'), 2500);
 }
 
 function toggleFavorite(id) {
