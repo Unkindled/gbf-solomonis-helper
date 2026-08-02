@@ -146,7 +146,7 @@ function init() {
   // Codex filter inputs → re-render
   const codexInputs = [
     'gb-codex-search', 'gb-codex-rarity', 'gb-codex-type',
-    'gb-codex-avail', 'gb-codex-own', 'gb-codex-fav', 'gb-codex-lang',
+    'gb-codex-avail', 'gb-codex-own', 'gb-codex-fav', 'gb-codex-lang', 'gb-codex-map',
   ];
   for (const id of codexInputs) {
     const el = document.getElementById(id);
@@ -620,6 +620,21 @@ function getDisplayText(entry) {
 }
 
 /**
+ * Whether a wiki entry already has a known game status_id mapping
+ * (built-in table or runtime-learned user/status maps). Mapped entries
+ * are recognized by the JA client immediately; unmapped ones fall into
+ * Uncatalogued until an EN session teaches the id.
+ */
+function entryHasStatusMap(entryId) {
+  const vals = [
+    ...Object.values(GUIDEBOOK_STATUS_ID),
+    ...Object.values(learnedMap.status || {}),
+    ...Object.values(learnedMap.user || {}),
+  ];
+  return vals.includes(entryId);
+}
+
+/**
  * Match a game book against the wiki DB.
  * Priority:
  *   1. learned status_id map (chrome.storage, extended at runtime when an
@@ -926,6 +941,7 @@ function renderCodex() {
   const avail = document.getElementById('gb-codex-avail')?.value;
   const own = document.getElementById('gb-codex-own')?.value;
   const fav = document.getElementById('gb-codex-fav')?.value;
+  const mapF = document.getElementById('gb-codex-map')?.value;
 
   const ownedMap = ownedCodexMap(latestGuideBooks || []);
   const rows = [];
@@ -933,12 +949,15 @@ function renderCodex() {
     const ownedInfo = ownedMap.get(entry.id);
     const isOwned = !!ownedInfo;
     const isFav = favoriteBookIds.has(String(entry.id));
+    const isMapped = entryHasStatusMap(entry.id);
     if (rar && String(entry.rarity) !== rar) continue;
     if (typ && !entry.type.split(',').includes(typ)) continue;
     if (avail && entry.availability !== avail) continue;
     if (own === 'owned' && !isOwned) continue;
     if (own === 'missing' && isOwned) continue;
     if (fav === 'fav' && !isFav) continue;
+    if (mapF === 'mapped' && !isMapped) continue;
+    if (mapF === 'unmapped' && isMapped) continue;
     if (q) {
       const entryJa = learnedJaText['entry:' + entry.id] || '';
       // status: keys — a DB entry's JA text learned under its status_id
@@ -947,7 +966,7 @@ function renderCodex() {
       const hay = [entry.text, entry.ja, entry.zh, entryJa, statusJa].filter(Boolean).map(normText).join(' ');
       if (!hay.includes(q)) continue;
     }
-    rows.push({ entry, isOwned, isFav });
+    rows.push({ entry, isOwned, isFav, isMapped });
   }
   // Sort: favorites first, then rarity desc (99=Cursed sorts last), then display text
   const rarityOrder = { 3: 0, 2: 1, 1: 2, 99: 3 }; // Unique > Rare > Normal > Cursed
@@ -959,15 +978,19 @@ function renderCodex() {
   const rarLabel = { 1: '★', 2: '★★', 3: '★★★', 99: '☠' };
 
   let html = '<div class="guidebook-codex-grid">';
-  html += rows.map(({ entry, isOwned, isFav }) => {
+  html += rows.map(({ entry, isOwned, isFav, isMapped }) => {
     const label = getDisplayText(entry);
     const langTag = codexLang === 'zh' && !entry.zh ? '<span class="gb-lang">EN</span>'
       : codexLang === 'ja' && !entry.ja && !learnedJaText['entry:' + entry.id] ? '<span class="gb-lang">EN</span>'
       : '';
+    const mapTag = isMapped
+      ? '<span class="gb-map gb-map-ok" title="status_id mapped — JA client recognizes this">✓</span>'
+      : '<span class="gb-map gb-map-warn" title="No status_id mapping yet — collect it with an EN session">△</span>';
     return `<div class="guidebook-codex-row${isOwned ? ' owned' : ''}">
       ${bookCodexIcon(entry, ownedMap.get(entry.id))}
       <span class="gb-name">${escapeHtml(label)}${langTag}<span class="gb-count">${isOwned ? ' ✓' : ''}</span></span>
       <span class="gb-rarity">${rarLabel[entry.rarity] || ''}</span>
+      ${mapTag}
       <button class="gb-fav-btn ${isFav ? 'fav' : ''}" data-id="${entry.id}" title="Favorite">${isFav ? '♥' : '♡'}</button>
     </div>`;
   }).join('');

@@ -678,6 +678,15 @@ body::before {
   flex-shrink: 0;
   font-style: italic;
 }
+.gb-map {
+  font-size: 12px;
+  flex-shrink: 0;
+  font-weight: 700;
+  width: 16px;
+  text-align: center;
+}
+.gb-map-ok { color: #4caf50; }
+.gb-map-warn { color: #f0a030; }
 .gb-fav-btn {
   background: transparent;
   border: none;
