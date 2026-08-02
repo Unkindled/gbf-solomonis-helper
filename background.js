@@ -163,10 +163,9 @@ function handleSpacebookList(data) {
 // window (bottom-right corner, unfocused). Unlike a background TAB, a
 // visible popup window keeps document.hidden === false, so the browser
 // does NOT throttle it — the game SPA runs immediately and fires
-// spacebook_status_list on its own. A DNR session rule (scoped to that
-// one tab) blocks images/media/fonts to speed up loading. The window is
-// closed right after data arrives. The extension never sends any
-// request itself — only the game does.
+// spacebook_status_list on its own. The window is closed right after
+// data arrives. The extension never sends any request itself — only the
+// game does.
 
 let guidebookWinId = null;
 let guidebookTabId = null;
@@ -175,7 +174,6 @@ const GUIDEBOOK_URL = 'https://game.granbluefantasy.jp/#arcarum3/book';
 const GUIDEBOOK_WIN_W = 340;
 const GUIDEBOOK_WIN_H = 220;
 const GUIDEBOOK_TAB_TIMEOUT_MS = 12000;
-const GUIDEBOOK_BLOCK_RULE_ID = 89001;
 
 async function getCornerPosition() {
   try {
@@ -190,35 +188,6 @@ async function getCornerPosition() {
   } catch (e) {
     return {};
   }
-}
-
-async function installResourceBlock(winId, tabId) {
-  // Block heavy resources for THIS tab only (images/media/fonts) so the
-  // guidebook page loads fast. The rule is session-scoped to the tab id,
-  // so the player's main game tab is unaffected.
-  const rule = {
-    id: GUIDEBOOK_BLOCK_RULE_ID,
-    priority: 1,
-    action: { type: 'block' },
-    condition: {
-      tabIds: [tabId],
-      resourceTypes: ['image', 'media', 'font'],
-    },
-  };
-  try {
-    await chrome.declarativeNetRequest.updateSessionRules({
-      addRules: [rule],
-      removeRuleIds: [GUIDEBOOK_BLOCK_RULE_ID],
-    });
-  } catch (e) { /* rule may be unsupported on some platforms — non-fatal */ }
-}
-
-async function removeResourceBlock() {
-  try {
-    await chrome.declarativeNetRequest.updateSessionRules({
-      removeRuleIds: [GUIDEBOOK_BLOCK_RULE_ID],
-    });
-  } catch (e) { /* non-fatal */ }
 }
 
 async function openGuidebookTab() {
@@ -240,7 +209,6 @@ async function openGuidebookTab() {
     if (guidebookWinId != null) {
       try { await chrome.windows.update(guidebookWinId, { focused: false }); } catch (e) { /* ignore */ }
     }
-    if (guidebookTabId != null) installResourceBlock(guidebookWinId, guidebookTabId);
     broadcastToWindow('guidebook-refresh-started', true);
     // Safety net: close and notify even if no status_list response arrives.
     guidebookTabTimer = setTimeout(() => {
@@ -255,7 +223,6 @@ async function openGuidebookTab() {
 
 function closeGuidebookTab() {
   if (guidebookTabTimer) { clearTimeout(guidebookTabTimer); guidebookTabTimer = null; }
-  removeResourceBlock();
   const winId = guidebookWinId;
   guidebookWinId = null;
   guidebookTabId = null;

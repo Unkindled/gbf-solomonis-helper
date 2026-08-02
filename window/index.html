@@ -37,8 +37,45 @@
       <div id="floating-path-info" class="hidden"></div>
       <div id="guidebook-popup" class="guidebook-popup hidden">
         <div class="guidebook-popup-header">
-          <span id="guidebook-popup-title">Guide Books</span>
+          <div class="guidebook-tabs">
+            <button id="gb-tab-owned" class="guidebook-tab active">My Guide Books</button>
+            <button id="gb-tab-codex" class="guidebook-tab">Codex</button>
+          </div>
           <button id="guidebook-popup-close" class="btn-small">×</button>
+        </div>
+        <div id="guidebook-codex-controls" class="guidebook-codex-controls hidden">
+          <input id="gb-codex-search" type="text" placeholder="Search guide books..." class="gb-codex-search">
+          <select id="gb-codex-rarity" class="gb-codex-select">
+            <option value="">Rarity: All</option>
+            <option value="1">Normal</option>
+            <option value="2">Rare</option>
+            <option value="3">Unique</option>
+            <option value="99">Cursed</option>
+          </select>
+          <select id="gb-codex-type" class="gb-codex-select">
+            <option value="">Type: All</option>
+            <option value="na">Normal Attack</option>
+            <option value="skill">Skill DMG</option>
+            <option value="ca">Charge Attack</option>
+            <option value="def">Defensive</option>
+            <option value="summon">Summon</option>
+            <option value="misc">Miscellaneous</option>
+          </select>
+          <select id="gb-codex-avail" class="gb-codex-select">
+            <option value="">Availability: All</option>
+            <option value="global">Global</option>
+            <option value="event">Event</option>
+            <option value="character">Character</option>
+          </select>
+          <select id="gb-codex-own" class="gb-codex-select">
+            <option value="">Ownership: All</option>
+            <option value="owned">Owned</option>
+            <option value="missing">Not owned</option>
+          </select>
+          <select id="gb-codex-fav" class="gb-codex-select">
+            <option value="">Favorite: All</option>
+            <option value="fav">Favorites</option>
+          </select>
         </div>
         <div id="guidebook-popup-body"></div>
       </div>

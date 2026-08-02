@@ -494,6 +494,105 @@ body::before {
   padding: 10px 2px;
 }
 
+/* --- Guide book codex --- */
+
+.guidebook-tabs {
+  display: flex;
+  gap: 4px;
+}
+.guidebook-tab {
+  background: transparent;
+  border: 1px solid var(--gold-3);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  padding: 5px 14px;
+  font-family: var(--display);
+  font-size: 13px;
+  color: var(--parch-dim);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+.guidebook-tab:hover { color: var(--parch-0); }
+.guidebook-tab.active {
+  color: var(--gold-0);
+  background: rgba(217,178,90,0.10);
+  font-weight: 600;
+}
+
+.guidebook-codex-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(217,178,90,0.12);
+  background: rgba(6,10,20,0.4);
+}
+.gb-codex-search {
+  flex: 1 1 100%;
+  background: rgba(8,12,24,0.85);
+  border: 1px solid var(--gold-3);
+  border-radius: 5px;
+  color: var(--parch-0);
+  font-size: 12px;
+  padding: 5px 8px;
+  outline: none;
+}
+.gb-codex-search:focus { border-color: var(--gold-1); }
+.gb-codex-select {
+  flex: 1 1 45%;
+  background: rgba(8,12,24,0.85);
+  border: 1px solid var(--gold-3);
+  border-radius: 5px;
+  color: var(--parch-0);
+  font-size: 11px;
+  padding: 4px 6px;
+  outline: none;
+}
+
+.guidebook-codex-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 6px;
+  border-bottom: 1px solid rgba(217,178,90,0.08);
+  border-radius: 5px;
+  transition: background 0.15s ease;
+}
+.guidebook-codex-row:hover { background: rgba(217,178,90,0.08); }
+.guidebook-codex-row.owned { background: rgba(120,200,120,0.05); }
+.guidebook-codex-row .gb-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  border: 1px solid var(--gold-3);
+  box-shadow: var(--shadow-inset);
+}
+.guidebook-codex-row .gb-name {
+  font-size: 11px;
+  color: var(--parch-1);
+  line-height: 1.35;
+  flex: 1;
+}
+.guidebook-codex-row .gb-rarity {
+  font-size: 11px;
+  color: var(--gold-1);
+  flex-shrink: 0;
+  letter-spacing: 1px;
+}
+.gb-fav-btn {
+  background: transparent;
+  border: none;
+  color: var(--parch-dim);
+  font-size: 15px;
+  cursor: pointer;
+  padding: 2px 4px;
+  transition: color 0.15s, transform 0.12s;
+}
+.gb-fav-btn:hover { transform: scale(1.2); }
+.gb-fav-btn.fav { color: #ff6b81; }
+.gb-fav-mark { color: #ff6b81; font-size: 12px; flex-shrink: 0; }
+
 /* ---------- Navigation menu (compass dropdown) ---------- */
 
 #hud-right { position: relative; }
