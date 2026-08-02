@@ -496,11 +496,16 @@ function handleWindowMessage(type, payload) {
       // payload: guidebooks obtained in a battle-report run (record page).
       // Feed into the learning pool only — no overlay; toast new mappings.
       if (Array.isArray(payload)) {
-        const { newMappings, newJa, unmappedJa } = absorbBookInfo(payload);
+        const { newMappings, newJa, unmappedJaBooks } = absorbBookInfo(payload);
         const msgs = [];
         if (newMappings > 0) msgs.push(I18N.t('report.newMappings', { n: newMappings }));
         if (newJa > 0) msgs.push(I18N.t('report.newJa', { n: newJa }));
-        if (unmappedJa > 0) msgs.push(I18N.t('report.unmappedJa', { n: unmappedJa }));
+        if (unmappedJaBooks.length > 0) {
+          // Show up to 3 book names so the player knows their content.
+          const shown = unmappedJaBooks.slice(0, 3).map(s => s.length > 26 ? s.slice(0, 26) + '…' : s);
+          const extra = unmappedJaBooks.length - shown.length;
+          msgs.push(I18N.t('report.unmappedJa', { n: unmappedJaBooks.length }) + '：' + shown.join(' / ') + (extra > 0 ? ` +${extra}` : ''));
+        }
         if (msgs.length > 0) showTransientToast(msgs.join('  '));
       }
       break;
@@ -513,12 +518,12 @@ function handleWindowMessage(type, payload) {
 
 /** Absorb guidebook info seen from any source (shop, 3-way pick, etc.) into
  *  the learned pools: icons, JA text, and status_id → wiki mappings.
- *  @returns {{newMappings:number, newJa:number, unmappedJa:number}} */
+ *  @returns {{newMappings:number, newJa:number, unmappedJaBooks:string[]}} */
 function absorbBookInfo(recs) {
   let reRender = false;
   let newMappings = 0;
   let newJa = 0;
-  let unmappedJa = 0;
+  const unmappedJaBooks = [];
   const newIconTypes = new Set();
   for (const rec of recs) {
     const sid = rec.status_id != null ? String(rec.status_id) : null;
@@ -547,7 +552,9 @@ function absorbBookInfo(recs) {
           newJa++;
         }
       } else if (/[\u3040-\u30ff\u4e00-\u9fff]/.test(rec.name)) {
-        unmappedJa++; // JA book with no mapping yet
+        // JA book with no mapping yet — report its content so the player
+        // knows what it does even before switching to EN.
+        unmappedJaBooks.push((rec.name || '').replace(/@@/g, ' '));
       }
     }
   }
@@ -565,7 +572,7 @@ function absorbBookInfo(recs) {
     renderGuideBooks(latestGuideBooks);
     if (!document.getElementById('guidebook-codex')?.classList.contains('hidden')) renderCodex();
   }
-  return { newMappings, newJa, unmappedJa };
+  return { newMappings, newJa, unmappedJaBooks };
 }
 
 // --- 3-way guidebook pick overlay ---
