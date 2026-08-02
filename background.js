@@ -14,6 +14,7 @@ let gameState = {
   guideBookCandidates: [], // recent pick candidates [{status_id,name,rarity,icon_type}]
   guideBooksStale: false, // set true after battle end (drops may be missed)
   shopStock: new Map(),   // node_id → {coinAfter, items:[{lineup_id,name,price,stock,canBuy}]}
+  shopGuidebooks: {},     // status_id → {status_id,name,icon_type,rarity} from shop lineups
 };
 
 // Miasma data recorder — stores every miasma snapshot for formula analysis
@@ -300,6 +301,31 @@ function handleShopLineup(data) {
 
   gameState.shopStock.set(nodeId, { items, coinAfter: prev.coinAfter });
   broadcastToWindow('shop-stock', { nodeId, stock: { items, coinAfter: prev.coinAfter } });
+
+  // Collect guidebooks sold in the shop: the shop lineup reveals books the
+  // player does NOT own, with their status_id + icon_type + rarity. These
+  // feed the codex's unmapped pool — a fast way to gather book info beyond
+  // what the player has obtained.
+  const shopBooks = data.item_list.filter(it => String(it.item_type) === '4' && it.status_id != null);
+  if (shopBooks.length > 0) {
+    gameState.shopGuidebooks = gameState.shopGuidebooks || {};
+    let added = false;
+    for (const b of shopBooks) {
+      const key = String(b.status_id);
+      const rec = {
+        status_id: b.status_id,
+        name: b.name || '',
+        icon_type: b.icon_type,
+        rarity: b.rarity,
+      };
+      const prevRec = gameState.shopGuidebooks[key];
+      if (!prevRec || prevRec.name !== rec.name || prevRec.icon_type !== rec.icon_type) {
+        gameState.shopGuidebooks[key] = rec;
+        added = true;
+      }
+    }
+    if (added) broadcastToWindow('shop-guidebooks', gameState.shopGuidebooks);
+  }
 }
 
 function handleShopPurchase(data) {

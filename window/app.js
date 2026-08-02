@@ -468,6 +468,39 @@ function handleWindowMessage(type, payload) {
         renderer.render();
       }
       break;
+
+    case 'shop-guidebooks':
+      // payload: status_id → {status_id,name,icon_type,rarity} seen in shop
+      // lineups. Feed them into the learned pools: icons, JA text, and try
+      // to teach a status_id → wiki mapping when the name matches.
+      if (payload && typeof payload === 'object') {
+        let reRender = false;
+        for (const [sid, rec] of Object.entries(payload)) {
+          if (rec.icon_type != null && seenBookIcons[sid] !== rec.icon_type) {
+            seenBookIcons[sid] = rec.icon_type;
+            reRender = true;
+          }
+          if (rec.name && /[\u3040-\u30ff\u4e00-\u9fff]/.test(rec.name) && learnedJaText['status:' + sid] !== rec.name) {
+            learnedJaText['status:' + sid] = rec.name;
+            reRender = true;
+          }
+          if (rec.name) {
+            // Try to teach a mapping (works when the name matches wiki text)
+            const hit = matchCodexEntry({ status_id: rec.status_id, name: rec.name, rarity: rec.rarity, icon_type: rec.icon_type });
+            if (hit && hit.id != null) reRender = true;
+          }
+        }
+        if (reRender) {
+          chrome.storage.local.set({
+            gbfHelperSeenBookIcons: seenBookIcons,
+            gbfHelperLearnedJaText: learnedJaText,
+            gbfHelperStatusIdMap: learnedMap,
+          });
+          renderGuideBooks(latestGuideBooks);
+          if (!document.getElementById('guidebook-codex')?.classList.contains('hidden')) renderCodex();
+        }
+      }
+      break;
   }
 }
 
