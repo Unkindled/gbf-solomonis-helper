@@ -3,7 +3,7 @@
   "name": "GBF Solomonis Map Helper",
   "version": "0.1.0",
   "description": "Read-only map overlay for Evoking Solomonis. No game modification.",
-  "permissions": ["notifications", "storage"],
+  "permissions": ["notifications", "storage", "declarativeNetRequest", "system.display"],
   "host_permissions": [
     "https://game.granbluefantasy.jp/*",
     "https://prd-game-a-granbluefantasy.akamaized.net/*"

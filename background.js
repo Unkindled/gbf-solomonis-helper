@@ -155,78 +155,112 @@ function handleSpacebookList(data) {
   fetchMissingBookIcons(iconTypes);
 }
 
-// --- Background guidebook refresh tab ---
+// --- Background guidebook refresh window ---
 //
 // When guidebook data may be stale (e.g. after battle drops that didn't
 // trigger a status_list response), the user can tap the guidebook button
-// to open the in-game guidebook page in a BACKGROUND tab. The game itself
-// then calls spacebook_status_list (its own code, its own request — the
-// extension never sends it), our content script passively captures the
-// response, and the tab is closed right after. From the server's point of
-// view this is indistinguishable from the user opening the guidebook page
-// manually — no forged requests, no anti-cheat concern.
+// to open the in-game guidebook page in a TINY, INCONSPICUOUS popup
+// window (bottom-right corner, unfocused). Unlike a background TAB, a
+// visible popup window keeps document.hidden === false, so the browser
+// does NOT throttle it — the game SPA runs immediately and fires
+// spacebook_status_list on its own. A DNR session rule (scoped to that
+// one tab) blocks images/media/fonts to speed up loading. The window is
+// closed right after data arrives. The extension never sends any
+// request itself — only the game does.
 
+let guidebookWinId = null;
 let guidebookTabId = null;
 let guidebookTabTimer = null;
-let guidebookTabActivated = false;
 const GUIDEBOOK_URL = 'https://game.granbluefantasy.jp/#arcarum3/book';
-// Browsers throttle background tabs (rAF paused, timers ≥1s), so the
-// game's SPA may take a while to fire spacebook_status_list — or never,
-// if its router is rAF-driven. We therefore wait generously, then force
-// the tab to the foreground once (loading it for real), then give up.
-const GUIDEBOOK_TAB_TIMEOUT_MS = 8000;   // before forcing activation
-const GUIDEBOOK_TAB_AFTER_ACTIVATE_MS = 10000; // after activation, before giving up
+const GUIDEBOOK_WIN_W = 340;
+const GUIDEBOOK_WIN_H = 220;
+const GUIDEBOOK_TAB_TIMEOUT_MS = 12000;
+const GUIDEBOOK_BLOCK_RULE_ID = 89001;
 
-async function openGuidebookTab() {
-  // If a refresh is already pending, keep that tab.
-  if (guidebookTabId != null) return;
+async function getCornerPosition() {
   try {
-    const tab = await chrome.tabs.create({
-      url: GUIDEBOOK_URL,
-      active: false, // background tab — don't steal focus
-    });
-    guidebookTabId = tab.id;
-    guidebookTabActivated = false;
-    broadcastToWindow('guidebook-refresh-started', true);
-    // Safety net: if no status_list response arrives, force the tab to the
-    // foreground (background throttling may have prevented the SPA from
-    // running at all), then close it after another grace period.
-    guidebookTabTimer = setTimeout(escalateGuidebookTab, GUIDEBOOK_TAB_TIMEOUT_MS);
+    const displays = await chrome.system.display.getInfo();
+    const primary = displays.find(d => d.isPrimary) || displays[0];
+    if (!primary) return {};
+    const w = primary.workArea || primary.bounds;
+    return {
+      left: Math.max(0, w.left + w.width - GUIDEBOOK_WIN_W - 8),
+      top: Math.max(0, w.top + w.height - GUIDEBOOK_WIN_H - 48), // above taskbar
+    };
   } catch (e) {
-    guidebookTabId = null;
+    return {};
   }
 }
 
-async function escalateGuidebookTab() {
-  if (guidebookTabId == null) return;
-  if (guidebookTabActivated) {
-    // Already tried foregrounding — give up and tell the user.
-    broadcastToWindow('guidebook-refresh-failed', true);
-    closeGuidebookTab();
-    return;
-  }
-  guidebookTabActivated = true;
+async function installResourceBlock(winId, tabId) {
+  // Block heavy resources for THIS tab only (images/media/fonts) so the
+  // guidebook page loads fast. The rule is session-scoped to the tab id,
+  // so the player's main game tab is unaffected.
+  const rule = {
+    id: GUIDEBOOK_BLOCK_RULE_ID,
+    priority: 1,
+    action: { type: 'block' },
+    condition: {
+      tabIds: [tabId],
+      resourceTypes: ['image', 'media', 'font'],
+    },
+  };
   try {
-    // Foregrounding defeats background throttling so the SPA runs its
-    // router and fires spacebook_status_list. Immediately return focus to
-    // the helper window (if open) so the user barely notices.
-    await chrome.tabs.update(guidebookTabId, { active: true });
-    if (helperWindowId != null) {
-      try { await chrome.windows.update(helperWindowId, { focused: true }); } catch (e) { /* closed */ }
+    await chrome.declarativeNetRequest.updateSessionRules({
+      addRules: [rule],
+      removeRuleIds: [GUIDEBOOK_BLOCK_RULE_ID],
+    });
+  } catch (e) { /* rule may be unsupported on some platforms — non-fatal */ }
+}
+
+async function removeResourceBlock() {
+  try {
+    await chrome.declarativeNetRequest.updateSessionRules({
+      removeRuleIds: [GUIDEBOOK_BLOCK_RULE_ID],
+    });
+  } catch (e) { /* non-fatal */ }
+}
+
+async function openGuidebookTab() {
+  // If a refresh is already pending, keep it.
+  if (guidebookWinId != null) return;
+  try {
+    const pos = await getCornerPosition();
+    const win = await chrome.windows.create({
+      url: GUIDEBOOK_URL,
+      type: 'popup',
+      width: GUIDEBOOK_WIN_W,
+      height: GUIDEBOOK_WIN_H,
+      focused: false,
+      ...pos,
+    });
+    guidebookWinId = win.id;
+    guidebookTabId = win.tabs && win.tabs[0] ? win.tabs[0].id : null;
+    // Re-assert unfocused (some platforms briefly focus a new window).
+    if (guidebookWinId != null) {
+      try { await chrome.windows.update(guidebookWinId, { focused: false }); } catch (e) { /* ignore */ }
     }
-    guidebookTabTimer = setTimeout(escalateGuidebookTab, GUIDEBOOK_TAB_AFTER_ACTIVATE_MS);
+    if (guidebookTabId != null) installResourceBlock(guidebookWinId, guidebookTabId);
+    broadcastToWindow('guidebook-refresh-started', true);
+    // Safety net: close and notify even if no status_list response arrives.
+    guidebookTabTimer = setTimeout(() => {
+      broadcastToWindow('guidebook-refresh-failed', true);
+      closeGuidebookTab();
+    }, GUIDEBOOK_TAB_TIMEOUT_MS);
   } catch (e) {
-    closeGuidebookTab();
+    guidebookWinId = null;
+    guidebookTabId = null;
   }
 }
 
 function closeGuidebookTab() {
   if (guidebookTabTimer) { clearTimeout(guidebookTabTimer); guidebookTabTimer = null; }
-  if (guidebookTabId == null) return;
-  const id = guidebookTabId;
+  removeResourceBlock();
+  const winId = guidebookWinId;
+  guidebookWinId = null;
   guidebookTabId = null;
-  guidebookTabActivated = false;
-  try { chrome.tabs.remove(id); } catch (e) { /* tab already gone */ }
+  if (winId == null) return;
+  try { chrome.windows.remove(winId); } catch (e) { /* window already gone */ }
 }
 
 // Fetch guidebook icon images from the game CDN that aren't bundled in the
