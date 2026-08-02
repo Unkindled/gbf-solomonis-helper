@@ -146,10 +146,7 @@ function init() {
   });
   document.getElementById('pick-overlay-close').addEventListener('click', hidePickOverlay);
   document.getElementById('custom-path-confirm').addEventListener('click', confirmCustomPath);
-  document.getElementById('custom-path-cancel').addEventListener('click', () => {
-    exitCustomMode();
-    renderer.setCustomWaypoints([]);
-  });
+  document.getElementById('custom-path-cancel').addEventListener('click', exitCustomMode);
   // Codex filter inputs → re-render
   const codexInputs = [
     'gb-codex-search', 'gb-codex-rarity', 'gb-codex-type',
@@ -1392,6 +1389,7 @@ function exitCustomMode() {
   customMode = false;
   customWaypoints = [];
   document.getElementById('custom-path-overlay').classList.add('hidden');
+  if (renderer) renderer.setCustomWaypoints([]); // clear blue markers
 }
 
 function updateCustomPathHint() {

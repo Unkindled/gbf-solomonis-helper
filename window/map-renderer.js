@@ -607,23 +607,28 @@ export class MapRenderer {
       if (!n) return;
       const x = n.position_x;
       const y = n.position_y;
-      // Glow ring + numbered marker
+      // Glow ring + numbered marker (large enough to see over node icons)
+      ctx.save();
       ctx.beginPath();
-      ctx.arc(x, y, 22, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(88, 166, 255, 0.18)';
+      ctx.arc(x, y, 36, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(88, 166, 255, 0.22)';
       ctx.fill();
       ctx.strokeStyle = '#58a6ff';
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 4;
       ctx.stroke();
       ctx.beginPath();
-      ctx.arc(x, y, 14, 0, Math.PI * 2);
+      ctx.arc(x, y, 22, 0, Math.PI * 2);
       ctx.fillStyle = '#58a6ff';
+      ctx.shadowColor = 'rgba(88,166,255,0.9)';
+      ctx.shadowBlur = 14;
       ctx.fill();
+      ctx.shadowBlur = 0;
       ctx.fillStyle = '#0d1117';
-      ctx.font = 'bold 14px sans-serif';
+      ctx.font = 'bold 18px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(String(i + 1), x, y + 1);
+      ctx.restore();
     });
   }
 
