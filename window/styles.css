@@ -224,6 +224,14 @@ body::before {
   box-shadow: 0 4px 12px rgba(0,0,0,0.6), 0 0 10px var(--gold-glow), inset 0 0 0 1px rgba(0,0,0,0.4);
 }
 
+.party-member.party-dead .party-portrait {
+  filter: grayscale(0.9) brightness(0.55);
+}
+.party-member.party-dead .party-hpval,
+.party-member.party-dead .party-hpmax {
+  color: #6e7681;
+}
+
 .party-portrait {
   width: 42px;
   height: 84px;

@@ -358,15 +358,16 @@ function renderPartyBar(party) {
     return;
   }
   el.innerHTML = party.map((m, i) => {
-    const hp = Number(m.hp) || 0;
+    const dead = m.alive === 0;
+    const hp = dead ? 0 : (Number(m.hp) || 0);
     const maxHp = Number(m.max_hp) || 1;
     const pct = Math.max(0, Math.min(100, Math.round(hp / maxHp * 100)));
-    // Game rule: hpPercent <= 25 → red gauge, otherwise green
-    const color = pct <= 25 ? '#e03131' : '#4caf50';
+    // Game rule: hpPercent <= 25 → red gauge, otherwise green; dead → gray
+    const color = dead ? '#5a5f6e' : (pct <= 25 ? '#e03131' : '#4caf50');
     const label = m.is_pc ? 'PC' : `N${i}`;
     const base = 'https://prd-game-a-granbluefantasy.akamaized.net/assets_en/img/sp/assets/';
     const imgUrl = m.image_id ? `${base}${m.is_pc ? 'leader' : 'npc'}/raid_normal/${m.image_id}.jpg` : '';
-    return `<div class="party-member" title="${label}">
+    return `<div class="party-member${dead ? ' party-dead' : ''}" title="${label}">
       <div class="party-card">
         ${imgUrl ? `<img class="party-portrait" src="${imgUrl}" alt="">` : '<div class="party-portrait party-portrait-empty"></div>'}
         <div class="party-hpbar">

@@ -108,6 +108,9 @@ function handleGameData(type, data) {
     case 'partyStatus':
       handlePartyStatus(data);
       break;
+    case 'raidStart':
+      handleRaidStart(data);
+      break;
     case 'shopLineup':
       handleShopLineup(data);
       break;
@@ -429,6 +432,27 @@ function handlePartyStatus(data) {
   if (!Array.isArray(data)) return;
   gameState.partyStatus = data;
   broadcastToWindow('party-status', data);
+}
+
+// Battle start: raid/start.json carries a full snapshot of the player's
+// party HP (player.param[] with hp/hpmax/pid/alive). The game doesn't push
+// mid-battle HP changes, so this snapshot is the freshest data we can get
+// passively — shown until the next party_status / battle end.
+function handleRaidStart(data) {
+  if (!data || !data.player || !Array.isArray(data.player.param)) return;
+  const params = data.player.param;
+  const party = params.map((p, i) => ({
+    attribute: p.attr != null ? Number(p.attr) : null,
+    image_id: p.pid || '',
+    max_hp: Number(p.hpmax) || 0,
+    hp: String(p.hp != null ? p.hp : 0),
+    is_pc: i === 0,
+    user_npc_id: null,
+    alive: p.alive,
+  }));
+  if (party.length === 0) return;
+  gameState.partyStatus = party;
+  broadcastToWindow('party-status', party);
 }
 
 // --- Broadcast to helper window ---
