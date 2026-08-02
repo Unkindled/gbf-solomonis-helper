@@ -633,25 +633,38 @@ function matchCodexEntry(gameBook) {
   }
   if (hit) {
     learnStatusId(gameBook, hit.id);
-    learnJaText(hit.id, gameBook.name); // collect JA text for searching
+    learnJaText(hit.id, gameBook.status_id, gameBook.name); // collect JA text for searching
   }
   return hit || null;
 }
 
-// Runtime-collected JA effect text per entry id, so the codex search can
-// match Japanese queries even though the bundled DB has no ja field yet.
-// Persisted; grows as the player runs the JA client.
+// Runtime-collected JA effect text for searching. Two key namespaces:
+//   entry:<wiki id>  → JA text of a matched entry
+//   status:<status_id> → JA text seen from ANY book (matched or not)
+// so JA queries can find uncatalogued books too, and DB entries whose
+// status_id we've seen in JA match even before text mapping exists.
 let learnedJaText = {};
-function learnJaText(entryId, name) {
+function learnJaText(entryId, statusId, name) {
   if (!name || !/[\u3040-\u30ff\u4e00-\u9fff]/.test(name)) return;
-  const key = String(entryId);
-  if (learnedJaText[key] === name) return;
-  learnedJaText[key] = name;
-  chrome.storage.local.set({ gbfHelperLearnedJaText: learnedJaText });
+  let changed = false;
+  if (entryId != null) {
+    const k = 'entry:' + entryId;
+    if (learnedJaText[k] !== name) { learnedJaText[k] = name; changed = true; }
+  }
+  if (statusId != null) {
+    const k = 'status:' + statusId;
+    if (learnedJaText[k] !== name) { learnedJaText[k] = name; changed = true; }
+  }
+  if (changed) chrome.storage.local.set({ gbfHelperLearnedJaText: learnedJaText });
 }
 function loadLearnedJaText() {
   chrome.storage.local.get('gbfHelperLearnedJaText', (res) => {
-    learnedJaText = res.gbfHelperLearnedJaText || {};
+    const raw = res.gbfHelperLearnedJaText || {};
+    learnedJaText = {};
+    for (const [k, v] of Object.entries(raw)) {
+      // migrate old format (plain entry id) to 'entry:' namespace
+      learnedJaText[k.startsWith('entry:') || k.startsWith('status:') ? k : 'entry:' + k] = v;
+    }
   });
 }
 
@@ -754,6 +767,9 @@ function collectUnknownBooks(books) {
   if (!Array.isArray(books)) return;
   let changed = false;
   for (const b of books) {
+    // Collect JA text UNCONDITIONALLY — even books that fail to match the
+    // DB must be searchable in JA (their status_id is the stable key).
+    learnJaText(null, b.status_id, b.name);
     if (matchCodexEntry(b) != null) continue;
     const key = b.status_id != null ? String(b.status_id) : b.name;
     const prev = unknownBooks.get(key);
@@ -815,7 +831,11 @@ function renderCodex() {
     if (own === 'missing' && isOwned) continue;
     if (fav === 'fav' && !isFav) continue;
     if (q) {
-      const hay = [entry.text, entry.ja, entry.zh, learnedJaText[entry.id]].filter(Boolean).map(normText).join(' ');
+      const entryJa = learnedJaText['entry:' + entry.id] || '';
+      // status: keys — a DB entry's JA text learned under its status_id
+      const statusKey = Object.entries(GUIDEBOOK_STATUS_ID).find(([, eid]) => eid === entry.id)?.[0];
+      const statusJa = statusKey ? (learnedJaText['status:' + statusKey] || '') : '';
+      const hay = [entry.text, entry.ja, entry.zh, entryJa, statusJa].filter(Boolean).map(normText).join(' ');
       if (!hay.includes(q)) continue;
     }
     rows.push({ entry, isOwned, isFav });
@@ -843,6 +863,10 @@ function renderCodex() {
   const unknownList = [...unknownBooks.values()].filter(b => {
     if (own === 'owned' && !latestGuideBooks?.some(g => String(g.status_id) === String(b.status_id))) return false;
     if (own === 'missing' && latestGuideBooks?.some(g => String(g.status_id) === String(b.status_id))) return false;
+    if (q) {
+      const hay = [b.name, learnedJaText['status:' + b.status_id]].filter(Boolean).map(normText).join(' ');
+      if (!hay.includes(q)) return false;
+    }
     return true;
   });
   if (unknownList.length > 0 && own !== 'missing') {
