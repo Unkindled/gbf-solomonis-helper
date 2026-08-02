@@ -156,12 +156,18 @@ function init() {
     });
   }
 
-  // 'My Guide Books' display language toggle (Chinese / original text)
+  // 'My Guide Books' display language toggle (Chinese / original text).
+  // The button shows what clicking it will DO:
+  //   currently original → '显示译文 / Show translation'
+  //   currently Chinese  → '显示原文 / Show original text'
   const ownedLangBtn = document.getElementById('gb-owned-lang');
+  function updateOwnedLangBtn() {
+    ownedLangBtn.textContent = ownedLang === 'zh' ? I18N.t('gb.langShowOrig') : I18N.t('gb.langShowZh');
+    ownedLangBtn.title = I18N.t('gb.langSwitchTitle');
+  }
   ownedLangBtn.addEventListener('click', () => {
     ownedLang = ownedLang === 'zh' ? 'original' : 'zh';
-    ownedLangBtn.textContent = ownedLang === 'zh' ? 'EN' : '中';
-    ownedLangBtn.title = I18N.t('gb.langSwitchTitle');
+    updateOwnedLangBtn();
     renderGuideBooks(latestGuideBooks);
   });
   loadFavorites(() => { renderGuideBooks(latestGuideBooks); });
@@ -1241,7 +1247,7 @@ function applyGuidebookUI() {
   if (openCodex) openCodex.textContent = I18N.t('gb.openCodex');
   const ownedLangBtn = document.getElementById('gb-owned-lang');
   if (ownedLangBtn) {
-    ownedLangBtn.textContent = ownedLang === 'zh' ? 'EN' : '中';
+    ownedLangBtn.textContent = ownedLang === 'zh' ? I18N.t('gb.langShowOrig') : I18N.t('gb.langShowZh');
     ownedLangBtn.title = I18N.t('gb.langSwitchTitle');
   }
   renderGuideBooks(latestGuideBooks);
