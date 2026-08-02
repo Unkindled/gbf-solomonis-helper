@@ -86,6 +86,11 @@
             <option value="">Favorite: All</option>
             <option value="fav">Favorites</option>
           </select>
+          <span class="gb-data-actions">
+            <button id="gb-export-data" class="btn-small" title="Export learned data (JA text, id maps, uncatalogued) as JSON">⬇ Export</button>
+            <button id="gb-import-data" class="btn-small" title="Import learned data from JSON">⬆ Import</button>
+            <input type="file" id="gb-import-file" accept=".json,application/json" class="hidden">
+          </span>
         </div>
         <div id="guidebook-codex-body"></div>
       </div>

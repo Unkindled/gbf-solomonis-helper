@@ -536,6 +536,24 @@ body::before {
   background: rgba(60,10,40,0.25);
 }
 
+.gb-data-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+  align-items: center;
+}
+.gb-data-actions .btn-small {
+  border-color: var(--gold-3);
+  color: var(--gold-1);
+  font-size: 11px;
+  padding: 3px 8px;
+}
+.gb-data-actions .btn-small:hover {
+  border-color: var(--gold-1);
+  color: var(--gold-0);
+}
+#gb-import-file { display: none; }
+
 /* --- Guide book codex (separate large modal) --- */
 
 /* The codex opens like a book: a big centered panel with a title spine. */

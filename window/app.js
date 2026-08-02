@@ -153,6 +153,17 @@ function init() {
   loadLearnedStatusId();
   loadLearnedJaText();
 
+  // Export / import learned guidebook data (JA text, id maps, unknowns)
+  document.getElementById('gb-export-data').addEventListener('click', exportGuidebookData);
+  document.getElementById('gb-import-data').addEventListener('click', () => {
+    document.getElementById('gb-import-file').click();
+  });
+  document.getElementById('gb-import-file').addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = ''; // allow re-selecting the same file
+    if (file) importGuidebookData(file);
+  });
+
   // Export miasma log button
   document.getElementById('btn-export-miasma').addEventListener('click', () => {
     chrome.runtime.sendMessage({ channel: 'gbf-helper:get-miasma-log' }, (log) => {
@@ -666,6 +677,83 @@ function loadLearnedJaText() {
       learnedJaText[k.startsWith('entry:') || k.startsWith('status:') ? k : 'entry:' + k] = v;
     }
   });
+}
+
+/**
+ * Export all runtime-learned guidebook data as a JSON file the user can
+ * save, share, or hand back to the project so it can be merged into the
+ * bundled database (ja text etc.).
+ */
+function exportGuidebookData() {
+  const payload = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    jaText: learnedJaText,            // 'entry:<id>' | 'status:<sid>' → JA text
+    idMaps: learnedMap,               // { user: {uid→id}, status: {sid→id} }
+    unknownBooks: [...unknownBooks.values()],
+    favorites: [...favoriteBookIds],
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `gbf_guidebook_data_${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Import a JSON file produced by exportGuidebookData (or hand-edited),
+ * merging its learned data into runtime + chrome.storage.
+ */
+function importGuidebookData(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      let changed = false;
+
+      if (data.jaText && typeof data.jaText === 'object') {
+        for (const [k, v] of Object.entries(data.jaText)) {
+          if (learnedJaText[k] !== v) { learnedJaText[k] = v; changed = true; }
+        }
+      }
+      if (data.idMaps && typeof data.idMaps === 'object') {
+        for (const ns of ['user', 'status']) {
+          const src = data.idMaps[ns];
+          if (!src || typeof src !== 'object') continue;
+          for (const [k, v] of Object.entries(src)) {
+            if (learnedMap[ns][k] !== v) { learnedMap[ns][k] = v; changed = true; }
+          }
+        }
+      }
+      if (Array.isArray(data.unknownBooks)) {
+        for (const ub of data.unknownBooks) {
+          const key = String(ub.status_id ?? ub.name);
+          if (!unknownBooks.has(key)) { unknownBooks.set(key, ub); changed = true; }
+        }
+      }
+      if (Array.isArray(data.favorites)) {
+        for (const id of data.favorites) favoriteBookIds.add(String(id));
+        changed = true;
+      }
+
+      if (changed) {
+        chrome.storage.local.set({
+          gbfHelperLearnedJaText: learnedJaText,
+          gbfHelperStatusIdMap: learnedMap,
+          gbfHelperUnknownBooks: [...unknownBooks.values()],
+          gbfHelperFavoriteBooks: [...favoriteBookIds],
+        });
+      }
+      renderCodex();
+      renderGuideBooks(latestGuideBooks);
+      updateStatusBar('✓ Guidebook data imported');
+    } catch (err) {
+      updateStatusBar('✗ Import failed: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
 }
 
 /** Remove progress/remaining-use suffixes for fuzzy matching:
