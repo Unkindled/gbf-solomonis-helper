@@ -996,8 +996,10 @@ function stripRemainingUses(s) {
   return String(s || '')
     .replace(/\(\s*remaining\s+uses\s*:\s*\d+\s*\/\s*\d+\s*\)/gi, '')
     .replace(/\(\s*\d+\s*\/\s*\d+\s*(?:spaces?|spaces?\s+moved)?\s*\)/gi, '')
-    .replace(/\(\s*\d+%\s*\/\s*max\s*:\s*\d+%\s*\)/gi, '')
-    .replace(/\(\s*max\s*:\s*\d+%\s*\)/gi, '');
+    // live-value counters the game appends but the wiki omits:
+    //   (+0 / Max: +10)  (+20% / Max: 100%)  (Max: +10)  (Max: 100%)
+    .replace(/\(\s*[+-]?\d+%?\s*\/\s*max\s*:\s*[+-]?\d+%?\s*\)/gi, '')
+    .replace(/\(\s*max\s*:\s*[+-]?\d+%?\s*\)/gi, '');
 }
 
 // Runtime-learned id maps (persisted in chrome.storage):
