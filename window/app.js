@@ -144,6 +144,7 @@ function init() {
   document.getElementById('gb-codex-close').addEventListener('click', () => {
     codex.classList.add('hidden');
   });
+  document.getElementById('pick-overlay-close').addEventListener('click', hidePickOverlay);
   // Codex filter inputs → re-render
   const codexInputs = [
     'gb-codex-search', 'gb-codex-rarity', 'gb-codex-type',
@@ -478,7 +479,14 @@ function handleWindowMessage(type, payload) {
 
     case 'pick-candidates':
       // payload: [{status_id,name,icon_type,rarity}] from the 3-way pick UI
-      if (Array.isArray(payload)) absorbBookInfo(payload);
+      if (Array.isArray(payload)) {
+        absorbBookInfo(payload);
+        showPickOverlay(payload);
+      }
+      break;
+
+    case 'pick-done':
+      hidePickOverlay();
       break;
   }
 }
@@ -514,6 +522,45 @@ function absorbBookInfo(recs) {
     if (!document.getElementById('guidebook-codex')?.classList.contains('hidden')) renderCodex();
   }
 }
+
+// --- 3-way guidebook pick overlay ---
+// When the in-game 3-way choice UI appears, show the three options in the
+// helper window with their Chinese translation (via status_id → wiki map),
+// so JA/EN players can read what each guidebook does without switching.
+function showPickOverlay(candidates) {
+  const overlay = document.getElementById('pick-overlay');
+  const body = document.getElementById('pick-overlay-body');
+  if (!overlay || !body) return;
+  const rarLabel = { 1: '★', 2: '★★', 3: '★★★', 99: '☠' };
+  const rows = candidates.map((c, i) => {
+    const entry = matchCodexEntry(c);
+    const zh = entry?.zh || '';
+    const original = (c.name || '').replace(/@@/g, ' ');
+    const isJa = /[\u3040-\u30ff\u4e00-\u9fff]/.test(original);
+    const mapped = entry != null && entryHasStatusMap(entry.id);
+    const icon = c.icon_type != null ? bookIconImg(c.icon_type) : '<div class="gb-icon"></div>';
+    const main = zh || original;
+    const sub = zh ? original : '';
+    return `<div class="pick-option${entry ? '' : ' unmapped'}">
+      ${icon}
+      <div class="pick-option-info">
+        <div class="pick-option-zh">${escapeHtml(main)}${!mapped && isJa ? ' <span class="gb-lang">△</span>' : ''}</div>
+        ${sub ? `<div class="pick-option-orig">${escapeHtml(sub)}</div>` : ''}
+      </div>
+      <span class="gb-rarity">${rarLabel[c.rarity] || ''}</span>
+    </div>`;
+  }).join('');
+  body.innerHTML = rows;
+  overlay.classList.remove('hidden');
+  clearTimeout(pickOverlayTimer);
+  pickOverlayTimer = setTimeout(hidePickOverlay, 45000); // safety auto-hide
+}
+function hidePickOverlay() {
+  const overlay = document.getElementById('pick-overlay');
+  if (overlay) overlay.classList.add('hidden');
+  clearTimeout(pickOverlayTimer);
+}
+let pickOverlayTimer = null;
 
 // --- HUD rendering: dungeon point / party / guide books ---
 

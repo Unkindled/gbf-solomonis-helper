@@ -514,6 +514,7 @@ function handleProceed(data) {
 // Resolve those against the cached candidates and add them to guideBooks.
 function handleSpacebookAdd(data) {
   handleProceed(data); // still update common state
+  broadcastToWindow('pick-done', true); // 3-way choice resolved → hide overlay
 
   const body = data && data._requestBody;
   const pickedIds = (body && Array.isArray(body.status_ids)) ? body.status_ids.map(Number) : [];

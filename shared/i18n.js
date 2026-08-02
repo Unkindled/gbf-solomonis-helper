@@ -68,6 +68,7 @@
       'gb.empty': 'No guide books match the filters',
       'gb.emptyOwned': 'No guide books yet',
       'gb.uncatalogued': 'Uncatalogued ({n}) — seen in your runs, not yet in the wiki DB',
+      'pick.title': 'Guide Book Choice',
       // navigation (compass menu)
       'nav.center': 'Center on player',
       'nav.farm': 'Farm route (≤9 steps)',
@@ -168,6 +169,7 @@
       'gb.empty': '没有符合条件的导本',
       'gb.emptyOwned': '还没有导本',
       'gb.uncatalogued': '未收录（{n}）— 你遇到过但 wiki 数据库还没有',
+      'pick.title': '导本三选一',
       // navigation (compass menu)
       'nav.center': '定位玩家',
       'nav.farm': '发育路线（≤9 步）',
