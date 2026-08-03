@@ -15,6 +15,7 @@ import {
   TYPE_GUIDEBOOK_REFRESH_FAILED, TYPE_SHOP_STOCK, TYPE_SHOP_GUIDEBOOKS,
   TYPE_PICK_CANDIDATES, TYPE_PICK_DONE, TYPE_REPORT_BOOKS, TYPE_DUNGEON_POINT,
 } from './shared/protocol.js';
+import { applyMove, applyFinish } from './shared/dungeon-mutations.js';
 
 let helperWindowId = null;
 let gameState = {
@@ -430,15 +431,11 @@ function handleMoveNode(data) {
 
   // Update node visited status in map + accumulate miasma consumption
   if (gameState.map && gameState.map.node_list) {
-    const node = gameState.map.node_list.find(n => n.node_id === data.after_current_node_id);
-    if (node) node.is_visited = true;
-
-    // Mark newly consumed nodes as shrinking (exact from server)
-    const shrinkIds = (data.miasma_info && data.miasma_info.shrink_node_ids) || [];
-    for (const sid of shrinkIds) {
-      const sn = gameState.map.node_list.find(n => n.node_id === Number(sid));
-      if (sn) sn.is_shrinking = true;
-    }
+    applyMove(
+      gameState.map.node_list,
+      data.after_current_node_id,
+      (data.miasma_info && data.miasma_info.shrink_node_ids) || [],
+    );
   }
 
   broadcastToWindow(TYPE_MOVE_UPDATE, {
@@ -462,35 +459,7 @@ function handleFinishNode(data) {
 
   // Update map nodes
   if (gameState.map && gameState.map.node_list) {
-    // finish_node_event confirms the current node was cleared (battle/event
-    // consumed). The node is NOT destroyed — it becomes a Path (node_type=0)
-    // and stays traversable, exactly like the game.
-    if ((data.is_delete_node || data.is_visited_node) && gameState.currentNodeId != null) {
-      const cleared = gameState.map.node_list.find(n => n.node_id === gameState.currentNodeId);
-      if (cleared) {
-        cleared.node_type = 0;
-        cleared.is_visited = true;
-      }
-    }
-    // Accumulate newly consumed nodes (exact from server)
-    const shrinkIds = (data.miasma_info && data.miasma_info.shrink_node_ids) || [];
-    for (const sid of shrinkIds) {
-      const sn = gameState.map.node_list.find(n => n.node_id === Number(sid));
-      if (sn) sn.is_shrinking = true;
-    }
-    // Update special incident appearances
-    if (data.special_incident_appearance_info) {
-      const info = data.special_incident_appearance_info;
-      const appearances = Array.isArray(info) ? info : Object.values(info);
-      for (const app of appearances) {
-        if (app.appearance_list) {
-          for (const a of app.appearance_list) {
-            const node = gameState.map.node_list.find(n => n.node_id === a.node_id);
-            if (node) node.special_incident_id = a.special_incident_id;
-          }
-        }
-      }
-    }
+    applyFinish(gameState.map.node_list, gameState.currentNodeId, data);
   }
 
   broadcastToWindow(TYPE_FINISH_NODE, {

@@ -17,6 +17,7 @@ import {
   TYPE_GUIDEBOOK_REFRESH_FAILED, TYPE_SHOP_STOCK, TYPE_SHOP_GUIDEBOOKS,
   TYPE_PICK_CANDIDATES, TYPE_PICK_DONE, TYPE_REPORT_BOOKS, TYPE_DUNGEON_POINT,
 } from '../shared/protocol.js';
+import { applyMove, applyFinish } from '../shared/dungeon-mutations.js';
 
 // Merge the community ZH translation into the DB entries' zh field.
 for (const entry of GUIDEBOOK_DB) {
@@ -375,21 +376,14 @@ function handleWindowMessage(type, payload) {
         dungeon.current_node_id = payload.currentNodeId;
         dungeon.total_turn = payload.totalTurn;
         if (payload.dungeonStatus) dungeon.dungeon_status = payload.dungeonStatus;
-        const node = nodeMap.get(payload.currentNodeId);
-        if (node) node.is_visited = true;
       }
       currentMiasmaInfo = payload.miasmaInfo || currentMiasmaInfo;
       currentTurn = payload.totalTurn !== undefined ? payload.totalTurn : currentTurn;
       checkMiasmaTransition(currentMiasmaInfo);
       hidePickOverlay(); // player moved — shop overlay (if any) closes
 
-      // Mark newly consumed nodes as shrinking (exact from server)
-      if (payload.shrinkNodeIds) {
-        for (const sid of payload.shrinkNodeIds) {
-          const sn = nodeMap.get(Number(sid));
-          if (sn) sn.is_shrinking = true;
-        }
-      }
+      // Shared mutation: mark destination visited + consumed nodes shrinking
+      applyMove([...nodeMap.values()], payload.currentNodeId, payload.shrinkNodeIds);
 
       // Sync renderer
       renderer.miasmaInfo = currentMiasmaInfo;
@@ -423,28 +417,10 @@ function handleWindowMessage(type, payload) {
       if (payload.miasmaInfo) currentMiasmaInfo = payload.miasmaInfo;
       checkMiasmaTransition(currentMiasmaInfo);
 
-      if (payload.specialIncidentAppearance) {
-        const info = payload.specialIncidentAppearance;
-        const appearances = Array.isArray(info) ? info : Object.values(info);
-        for (const app of appearances) {
-          if (app && app.appearance_list) {
-            for (const a of app.appearance_list) {
-              const node = nodeMap.get(a.node_id);
-              if (node) node.special_incident_id = a.special_incident_id;
-            }
-          }
-        }
+      // Shared mutation: cleared node → Path, shrink marks, special incidents
+      if (payload.nodeId != null || payload.specialIncidentAppearance) {
+        applyFinish([...nodeMap.values()], payload.nodeId, payload);
         if (filterPanel) filterPanel.setPresentSpecials(getPresentSpecialIds());
-      }
-
-      // finish_node_event: the node the player just cleared becomes a Path
-      // (node_type=0) — it's NOT destroyed, just no longer an encounter.
-      if ((payload.isVisitedNode || payload.isDeleteNode) && payload.nodeId != null) {
-        const curNode = nodeMap.get(payload.nodeId);
-        if (curNode) {
-          curNode.node_type = 0;
-          curNode.is_visited = true;
-        }
       }
       renderer.miasmaInfo = currentMiasmaInfo;
       renderer.totalTurn = currentTurn;
