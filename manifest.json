@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "GBF Solomonis Map Helper",
+  "name": "gbf肉鸽助手",
+  "short_name": "gbf-solomonis-helper",
   "version": "0.1.0",
-  "description": "Read-only map overlay for Evoking Solomonis. No game modification.",
+  "description": "GBF Solomonis Map Helper — 只读地图/导本辅助。Read-only map & guidebook overlay for Evoking Solomonis. No game modification.",
   "permissions": ["notifications", "storage", "system.display"],
   "host_permissions": [
     "https://game.granbluefantasy.jp/*",
