@@ -79,7 +79,11 @@ async function restoreGameState() {
     gameState.shopGuidebooks = saved.shopGuidebooks ?? {};
     gameState.map = saved.map ?? null;
     if (saved.shopStock) {
-      gameState.shopStock = new Map(Object.entries(saved.shopStock));
+      // Object.entries yields STRING keys, but the handlers index with the
+      // numeric currentNodeId — coerce back so get()/set() hit the same slot.
+      gameState.shopStock = new Map(
+        Object.entries(saved.shopStock).map(([k, v]) => [Number(k), v]),
+      );
     }
   } catch (e) { /* non-fatal */ }
 }
@@ -221,6 +225,7 @@ function handleGameData(type, data) {
       // guidebook page (which triggers spacebook_status_list).
       gameState.guideBooksStale = true;
       broadcastToWindow(TYPE_GUIDEBOOKS_STALE, true);
+      persistGameState();
       break;
   }
 }
@@ -246,6 +251,7 @@ function handleSpacebookList(data) {
   // Auto-fetch any guidebook icons we don't have bundled yet
   const iconTypes = [...new Set(books.map(b => b.icon_type).filter(t => t != null))];
   fetchMissingBookIcons(iconTypes);
+  persistGameState();
 }
 
 // --- Background guidebook refresh window ---
@@ -638,6 +644,7 @@ function handlePartyStatus(data) {
   if (!Array.isArray(data)) return;
   gameState.partyStatus = data;
   broadcastToWindow(TYPE_PARTY_STATUS, data);
+  persistGameState();
 }
 
 // Battle start: raid/start.json carries a full snapshot of the player's
@@ -662,6 +669,7 @@ function handleRaidStart(data) {
   }));
   if (party.length === 0) return;
   gameState.partyStatus = party;
+  persistGameState();
   // NOTE: deliberately no broadcast — battle-time portraits are broken
   // (pid ≠ image_id), and HP doesn't change mid-battle anyway.
 }
