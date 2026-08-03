@@ -724,24 +724,44 @@ export class MapRenderer {
       ctx.stroke();
     }
 
-    // Step number labels on path nodes (above the icon)
+    // Step number labels on path nodes (above the icon).
+    // A node may appear MULTIPLE times when the route backtracks; drawing
+    // every label at the same spot makes the later one cover the earlier
+    // (e.g. 1→2→3→2→4 shows only …3→4). Group steps by node and fan the
+    // labels out horizontally so each step number stays readable.
     ctx.font = 'bold 24px system-ui';
     ctx.textAlign = 'center';
+    const stepGroups = new Map(); // node_id → step indices (1-based)
     for (let i = 1; i < this.path.length; i++) {
-      const node = this.nodeMap.get(this.path[i]);
+      const id = this.path[i];
+      if (!stepGroups.has(id)) stepGroups.set(id, []);
+      stepGroups.get(id).push(i);
+    }
+    for (const [id, steps] of stepGroups) {
+      const node = this.nodeMap.get(id);
       if (!node) continue;
-      const label = String(i);
-      const tw = ctx.measureText(label).width + 14;
+      const n = steps.length;
+      // Label width varies with digits; space them by the widest in the
+      // group so no two labels overlap.
+      let maxTw = 0;
+      for (const i of steps) maxTw = Math.max(maxTw, ctx.measureText(String(i)).width + 14);
+      const gap = maxTw + 6;
+      const totalW = (n - 1) * gap;
       const ly = node.position_y - NODE_H - 16;
-      ctx.fillStyle = 'rgba(160, 130, 0, 0.9)';
-      ctx.beginPath();
-      ctx.roundRect(node.position_x - tw / 2, ly, tw, 26, 6);
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-      ctx.fillStyle = '#fff';
-      ctx.fillText(label, node.position_x, ly + 19);
+      steps.forEach((i, k) => {
+        const label = String(i);
+        const tw = ctx.measureText(label).width + 14;
+        const cx = node.position_x - totalW / 2 + k * gap;
+        ctx.fillStyle = 'rgba(160, 130, 0, 0.9)';
+        ctx.beginPath();
+        ctx.roundRect(cx - tw / 2, ly, tw, 26, 6);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.fillStyle = '#fff';
+        ctx.fillText(label, cx, ly + 19);
+      });
     }
   }
 
