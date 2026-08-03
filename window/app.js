@@ -18,6 +18,19 @@ import {
   TYPE_PICK_CANDIDATES, TYPE_PICK_DONE, TYPE_REPORT_BOOKS, TYPE_DUNGEON_POINT,
 } from '../shared/protocol.js';
 import { applyMove, applyFinish } from '../shared/dungeon-mutations.js';
+import {
+  learnedJaText, seenBookIcons, unknownBooks,
+  normText, matchCodexEntry, statusIdOfEntry, entryHasStatusMap, ownedCodexMap,
+  getDisplayText, absorbBookInfo, collectUnknownBooks,
+  loadLearnedJaText, loadLearnedStatusId, loadSeenBookIcons, loadUnknownBooks,
+  exportGuidebookData, importGuidebookData,
+} from './guidebook-store.js';
+
+/** onChange for the store's absorb/import paths — re-render guidebook UI. */
+function guidebookOnChange() {
+  renderGuideBooks(latestGuideBooks);
+  if (!document.getElementById('guidebook-codex')?.classList.contains('hidden')) renderCodex();
+}
 
 // Merge the community ZH translation into the DB entries' zh field.
 for (const entry of GUIDEBOOK_DB) {
@@ -216,7 +229,10 @@ function init() {
   document.getElementById('gb-import-file').addEventListener('change', (e) => {
     const file = e.target.files && e.target.files[0];
     e.target.value = ''; // allow re-selecting the same file
-    if (file) importGuidebookData(file);
+    if (file) importGuidebookData(file, (changed, err) => {
+      if (changed) guidebookOnChange();
+      updateStatusBar(err ? '✗ Import failed: ' + err : '✓ Guidebook data imported');
+    });
   });
 
   // Export miasma log button
@@ -485,7 +501,7 @@ function handleWindowMessage(type, payload) {
       // guidebooks in the options overlay (translations via status map).
       if (payload && typeof payload === 'object') {
         const recs = Object.values(payload);
-        absorbBookInfo(recs);
+        absorbBookInfo(recs, guidebookOnChange);
         if (recs.length > 0) showPickOverlay(recs);
       }
       break;
@@ -493,7 +509,7 @@ function handleWindowMessage(type, payload) {
     case TYPE_PICK_CANDIDATES:
       // payload: [{status_id,name,icon_type,rarity}] from the 3-way pick UI
       if (Array.isArray(payload)) {
-        absorbBookInfo(payload);
+        absorbBookInfo(payload, guidebookOnChange);
         showPickOverlay(payload);
       }
       break;
@@ -502,7 +518,7 @@ function handleWindowMessage(type, payload) {
       // payload: guidebooks obtained in a battle-report run (record page).
       // Feed into the learning pool only — no overlay; toast new mappings.
       if (Array.isArray(payload)) {
-        const { newMappings, newJa, unmappedJaBooks } = absorbBookInfo(payload);
+        const { newMappings, newJa, unmappedJaBooks } = absorbBookInfo(payload, guidebookOnChange);
         const msgs = [];
         if (newMappings > 0) msgs.push(I18N.t('report.newMappings', { n: newMappings }));
         if (newJa > 0) msgs.push(I18N.t('report.newJa', { n: newJa }));
@@ -520,65 +536,6 @@ function handleWindowMessage(type, payload) {
       hidePickOverlay();
       break;
   }
-}
-
-/** Absorb guidebook info seen from any source (shop, 3-way pick, etc.) into
- *  the learned pools: icons, JA text, and status_id → wiki mappings.
- *  @returns {{newMappings:number, newJa:number, unmappedJaBooks:string[]}} */
-function absorbBookInfo(recs) {
-  let reRender = false;
-  let newMappings = 0;
-  let newJa = 0;
-  const unmappedJaBooks = [];
-  const newIconTypes = new Set();
-  for (const rec of recs) {
-    const sid = rec.status_id != null ? String(rec.status_id) : null;
-    if (sid == null) continue;
-    if (rec.icon_type != null && seenBookIcons[sid] !== rec.icon_type) {
-      seenBookIcons[sid] = rec.icon_type;
-      newIconTypes.add(rec.icon_type);
-      reRender = true;
-    }
-    if (rec.name && /[\u3040-\u30ff\u4e00-\u9fff]/.test(rec.name) && learnedJaText['status:' + sid] !== rec.name) {
-      learnedJaText['status:' + sid] = rec.name;
-      reRender = true;
-    }
-    if (rec.name) {
-      // Try to teach a mapping (works when the name matches wiki text)
-      const alreadyMapped = learnedMap.status[sid] != null || GUIDEBOOK_STATUS_ID[sid] != null;
-      const hit = matchCodexEntry({ status_id: rec.status_id, name: rec.name, rarity: rec.rarity, icon_type: rec.icon_type });
-      if (hit && hit.id != null) {
-        if (!alreadyMapped) newMappings++;
-        reRender = true;
-        // Backfill the entry's JA field from the runtime JA pool (JA-client
-        // sessions teach translations for mappings made in EN sessions).
-        const jaText = (learnedJaText['status:' + sid] || (hit.ja || '')).replace(/@@/g, ' ');
-        if (jaText && hit.ja !== jaText) {
-          hit.ja = jaText;
-          newJa++;
-        }
-      } else if (/[\u3040-\u30ff\u4e00-\u9fff]/.test(rec.name)) {
-        // JA book with no mapping yet — report its content so the player
-        // knows what it does even before switching to EN.
-        unmappedJaBooks.push((rec.name || '').replace(/@@/g, ' '));
-      }
-    }
-  }
-  // Ask the background to fetch any icon PNGs we don't have bundled/cached
-  // (e.g. a pick option's icon_type seen for the first time).
-  if (newIconTypes.size > 0) {
-    chrome.runtime.sendMessage({ channel: MSG_FETCH_BOOK_ICONS, iconTypes: [...newIconTypes] });
-  }
-  if (reRender) {
-    chrome.storage.local.set({
-      gbfHelperSeenBookIcons: seenBookIcons,
-      gbfHelperLearnedJaText: learnedJaText,
-      gbfHelperStatusIdMap: learnedMap,
-    });
-    renderGuideBooks(latestGuideBooks);
-    if (!document.getElementById('guidebook-codex')?.classList.contains('hidden')) renderCodex();
-  }
-  return { newMappings, newJa, unmappedJaBooks };
 }
 
 // --- 3-way guidebook pick overlay ---
@@ -786,283 +743,6 @@ let codexLang = 'text';
 // Display language for 'My Guide Books': 'original' (game text) | 'zh'
 let ownedLang = 'original';
 
-function normText(s) {
-  return String(s || '')
-    .toLowerCase()
-    // Keep ASCII letters/digits and CJK; drop symbols like '/', '(', ')',
-    // '@', '・' etc. \p{L} covers all letters (incl. JA).
-    .replace(/[^\p{L}\p{N}+% ]/gu, ' ')
-    // '+50%' ≡ '50%': drop '+' in front of digits (ATK +20% vs ATK 20%).
-    .replace(/\+\s*(?=\p{N})/gu, '')
-    .replace(/\s*([+%])\s*/g, (m, c) => c)
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-/**
- * Display text for a codex entry in the selected language, with fallback:
- *   zh → ja (runtime-collected) → text (EN).
- * The bundled ja field is sparse; runtime-collected JA (learnedJaText
- * under 'entry:<id>') fills the gap while playing the JA client.
- */
-function getDisplayText(entry) {
-  if (codexLang === 'zh') return entry.zh || entry.text;
-  if (codexLang === 'ja') {
-    if (entry.ja) return entry.ja;
-    const entryJa = learnedJaText['entry:' + entry.id];
-    if (entryJa) return entryJa;
-    // status: pool — JA text learned under a status_id mapped to this entry
-    const statusKey = Object.entries(GUIDEBOOK_STATUS_ID).find(([, eid]) => eid === entry.id)?.[0];
-    if (statusKey && learnedJaText['status:' + statusKey]) return learnedJaText['status:' + statusKey];
-    return entry.text;
-  }
-  return entry.text;
-}
-
-/**
- * Whether a wiki entry already has a known game status_id mapping
- * (built-in table or runtime-learned user/status maps). Mapped entries
- * are recognized by the JA client immediately; unmapped ones fall into
- * Uncatalogued until an EN session teaches the id.
- */
-function entryHasStatusMap(entryId) {
-  const vals = [
-    ...Object.values(GUIDEBOOK_STATUS_ID),
-    ...Object.values(learnedMap.status || {}),
-    ...Object.values(learnedMap.user || {}),
-  ];
-  return vals.includes(entryId);
-}
-
-/**
- * Match a game book against the wiki DB.
- * Priority:
- *   1. learned status_id map (chrome.storage, extended at runtime when an
- *      EN-client match teaches a status_id → entry mapping)
- *   2. built-in status_id mapping (language-independent — works for EN and JA)
- *   3. normalized effect text in any available language
- * Side effect: when matched by text AND the game gave us a status_id, learn
- * the mapping so future JA/EN sessions match instantly.
- */
-function matchCodexEntry(gameBook) {
-  if (gameBook == null) return null;
-  const sid = gameBook.status_id != null ? String(gameBook.status_id) : null;
-  const uid = gameBook.user_status_id != null ? String(gameBook.user_status_id) : null;
-  // 1) learned user_status_id map (instance id — identical across EN/JA
-  //    for the same player, so a match learned in EN hits instantly in JA)
-  if (uid != null && learnedMap.user[uid] != null) {
-    return GUIDEBOOK_DB.find(b => b.id === learnedMap.user[uid]) || null;
-  }
-  // 2) learned status_id map (runtime)
-  if (sid != null && learnedMap.status[sid] != null) {
-    return GUIDEBOOK_DB.find(b => b.id === learnedMap.status[sid]) || null;
-  }
-  // 3) built-in status_id map
-  if (sid != null && GUIDEBOOK_STATUS_ID[sid] != null) {
-    return GUIDEBOOK_DB.find(b => b.id === GUIDEBOOK_STATUS_ID[sid]) || null;
-  }
-  // 4) text match in any language (en / ja / zh). Exact first; if that
-  //    fails, strip "(Remaining uses: x/y)" both sides and prefix-match —
-  //    remaining-use counts differ between players (e.g. 1/2 vs 2/2).
-  const n = normText(gameBook.name);
-  const nStripped = normText(stripRemainingUses(gameBook.name));
-  let hit = null;
-  for (const b of GUIDEBOOK_DB) {
-    for (const lang of ['text', 'ja', 'zh']) {
-      const t = b[lang];
-      if (!t) continue;
-      const tn = normText(t);
-      if (tn === n || (n.length >= 12 && tn.startsWith(n))) { hit = b; break; }
-      const tnStripped = normText(stripRemainingUses(t));
-      if (nStripped.length >= 12 && (tnStripped.startsWith(nStripped) || nStripped.startsWith(tnStripped))) { hit = b; break; }
-    }
-    if (hit) break;
-  }
-  if (hit) {
-    learnStatusId(gameBook, hit.id);
-    learnJaText(hit.id, gameBook.status_id, gameBook.name); // collect JA text for searching
-  }
-  return hit || null;
-}
-
-// Runtime-collected JA effect text for searching. Two key namespaces:
-//   entry:<wiki id>  → JA text of a matched entry
-//   status:<status_id> → JA text seen from ANY book (matched or not)
-// so JA queries can find uncatalogued books too, and DB entries whose
-// status_id we've seen in JA match even before text mapping exists.
-let learnedJaText = {};
-function learnJaText(entryId, statusId, name) {
-  if (!name || !/[\u3040-\u30ff\u4e00-\u9fff]/.test(name)) return;
-  let changed = false;
-  if (entryId != null) {
-    const k = 'entry:' + entryId;
-    if (learnedJaText[k] !== name) { learnedJaText[k] = name; changed = true; }
-  }
-  if (statusId != null) {
-    const k = 'status:' + statusId;
-    if (learnedJaText[k] !== name) { learnedJaText[k] = name; changed = true; }
-  }
-  if (changed) chrome.storage.local.set({ gbfHelperLearnedJaText: learnedJaText });
-}
-function loadLearnedJaText() {
-  chrome.storage.local.get('gbfHelperLearnedJaText', (res) => {
-    const raw = res.gbfHelperLearnedJaText || {};
-    learnedJaText = {};
-    for (const [k, v] of Object.entries(raw)) {
-      // migrate old format (plain entry id) to 'entry:' namespace
-      learnedJaText[k.startsWith('entry:') || k.startsWith('status:') ? k : 'entry:' + k] = v;
-    }
-  });
-}
-
-/**
- * Export all runtime-learned guidebook data as a JSON file the user can
- * save, share, or hand back to the project so it can be merged into the
- * bundled database (ja text etc.).
- */
-function exportGuidebookData() {
-  const payload = {
-    version: 2,
-    exportedAt: new Date().toISOString(),
-    jaText: learnedJaText,            // 'entry:<id>' | 'status:<sid>' → JA text
-    idMaps: learnedMap,               // { user: {uid→id}, status: {sid→id} }
-    bookIcons: seenBookIcons,         // status_id → icon_type (real icons)
-    unknownBooks: [...unknownBooks.values()],
-    favorites: [...favoriteBookIds],
-  };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `gbf_guidebook_data_${Date.now()}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-/**
- * Import a JSON file produced by exportGuidebookData (or hand-edited),
- * merging its learned data into runtime + chrome.storage.
- */
-function importGuidebookData(file) {
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const data = JSON.parse(reader.result);
-      let changed = false;
-
-      if (data.jaText && typeof data.jaText === 'object') {
-        for (const [k, v] of Object.entries(data.jaText)) {
-          if (learnedJaText[k] !== v) { learnedJaText[k] = v; changed = true; }
-        }
-      }
-      if (data.idMaps && typeof data.idMaps === 'object') {
-        for (const ns of ['user', 'status']) {
-          const src = data.idMaps[ns];
-          if (!src || typeof src !== 'object') continue;
-          for (const [k, v] of Object.entries(src)) {
-            if (learnedMap[ns][k] !== v) { learnedMap[ns][k] = v; changed = true; }
-          }
-        }
-      }
-      if (Array.isArray(data.unknownBooks)) {
-        for (const ub of data.unknownBooks) {
-          const key = String(ub.status_id ?? ub.name);
-          if (!unknownBooks.has(key)) { unknownBooks.set(key, ub); changed = true; }
-        }
-      }
-      if (Array.isArray(data.favorites)) {
-        for (const id of data.favorites) favoriteBookIds.add(String(id));
-        changed = true;
-      }
-      if (data.bookIcons && typeof data.bookIcons === 'object') {
-        for (const [k, v] of Object.entries(data.bookIcons)) {
-          if (seenBookIcons[k] !== v) { seenBookIcons[k] = v; changed = true; }
-        }
-      }
-
-      if (changed) {
-        chrome.storage.local.set({
-          gbfHelperLearnedJaText: learnedJaText,
-          gbfHelperStatusIdMap: learnedMap,
-          gbfHelperUnknownBooks: [...unknownBooks.values()],
-          gbfHelperFavoriteBooks: [...favoriteBookIds],
-          gbfHelperSeenBookIcons: seenBookIcons,
-        });
-      }
-      renderCodex();
-      renderGuideBooks(latestGuideBooks);
-      updateStatusBar('✓ Guidebook data imported');
-    } catch (err) {
-      updateStatusBar('✗ Import failed: ' + err.message);
-    }
-  };
-  reader.readAsText(file);
-}
-
-/** Remove progress/remaining-use suffixes for fuzzy matching:
- *  "(Remaining uses: x/y)", "(3/3 spaces)", "(0/5 spaces)", "(0% / Max: 100%)"
- *  — the game appends these counters but the wiki text omits them. */
-function stripRemainingUses(s) {
-  return String(s || '')
-    .replace(/\(\s*remaining\s+uses\s*:\s*\d+\s*\/\s*\d+\s*\)/gi, '')
-    .replace(/\(\s*\d+\s*\/\s*\d+\s*(?:spaces?|spaces?\s+moved)?\s*\)/gi, '')
-    // live-value counters the game appends but the wiki omits:
-    //   (+0 / Max: +10)  (+20% / Max: 100%)  (Max: +10)  (Max: 100%)
-    .replace(/\(\s*[+-]?\d+%?\s*\/\s*max\s*:\s*[+-]?\d+%?\s*\)/gi, '')
-    .replace(/\(\s*max\s*:\s*[+-]?\d+%?\s*\)/gi, '');
-}
-
-// Runtime-learned id maps (persisted in chrome.storage):
-//   user: user_status_id → entry.id  (instance id, identical across EN/JA
-//         for the same account — the fastest cross-language bridge)
-//   status: status_id → entry.id     (effect id, language-independent)
-let learnedMap = { user: {}, status: {} };
-function learnStatusId(gameBook, entryId) {
-  let changed = false;
-  if (gameBook.status_id != null) {
-    const k = String(gameBook.status_id);
-    if (learnedMap.status[k] !== entryId) { learnedMap.status[k] = entryId; changed = true; }
-  }
-  if (gameBook.user_status_id != null) {
-    const k = String(gameBook.user_status_id);
-    if (learnedMap.user[k] !== entryId) { learnedMap.user[k] = entryId; changed = true; }
-  }
-  if (changed) chrome.storage.local.set({ gbfHelperStatusIdMap: learnedMap });
-}
-function loadLearnedStatusId() {
-  chrome.storage.local.get('gbfHelperStatusIdMap', (res) => {
-    const raw = res.gbfHelperStatusIdMap;
-    if (raw && (raw.user || raw.status)) {
-      // v2 shape
-      learnedMap = { user: raw.user || {}, status: raw.status || {} };
-    } else if (raw) {
-      // v1 shape: plain status_id → id object
-      learnedMap = { user: {}, status: raw };
-    }
-  });
-}
-
-/** Build a Map<status_id, wiki entry> for all currently owned books. */
-function ownedCodexMap(books) {
-  const m = new Map();
-  for (const b of books) {
-    const entry = matchCodexEntry(b);
-    if (entry) m.set(entry.id, { gameBook: b, entry });
-  }
-  return m;
-}
-
-/** Reverse-lookup a wiki entry's game status_id (built-in or runtime maps). */
-function statusIdOfEntry(entryId) {
-  for (const [sid, eid] of Object.entries(GUIDEBOOK_STATUS_ID)) {
-    if (eid === entryId) return sid;
-  }
-  for (const [sid, eid] of Object.entries(learnedMap.status || {})) {
-    if (eid === entryId) return sid;
-  }
-  return null;
-}
-
 function bookCodexIcon(entry, ownedInfo) {
   // 1) Owned books have a real game icon_type (accurate art).
   if (ownedInfo && ownedInfo.gameBook && ownedInfo.gameBook.icon_type != null) {
@@ -1112,73 +792,6 @@ function updateGuidebookBadges() {
   }
 }
 
-// Icon types seen from the game: status_id → icon_type. Recorded for EVERY
-// book that appears in status_list (matched or not), so exported data can
-// fill in real game icons for codex entries the player has encountered —
-// even if they don't own them right now. The game only reveals icon_type
-// for books it actually returns, so never-owned books stay placeholders.
-let seenBookIcons = {}; // status_id → icon_type
-function recordSeenIcon(b) {
-  if (b == null || b.status_id == null || b.icon_type == null) return;
-  const k = String(b.status_id);
-  if (seenBookIcons[k] === b.icon_type) return;
-  seenBookIcons[k] = b.icon_type;
-  chrome.storage.local.set({ gbfHelperSeenBookIcons: seenBookIcons });
-}
-function loadSeenBookIcons() {
-  chrome.storage.local.get('gbfHelperSeenBookIcons', (res) => {
-    seenBookIcons = res.gbfHelperSeenBookIcons || {};
-  });
-}
-
-// Unknown books: guidebooks seen in spacebook_status_list that don't match
-// any wiki DB entry (new additions / localized text we haven't catalogued).
-// Keyed by status_id so EN and JA clients dedupe correctly.
-let unknownBooks = new Map(); // status_id → { status_id, name, rarity, icon_type, num }
-function collectUnknownBooks(books) {
-  if (!Array.isArray(books)) return;
-  let changed = false;
-  for (const b of books) {
-    recordSeenIcon(b);
-    // Collect JA text UNCONDITIONALLY — even books that fail to match the
-    // DB must be searchable in JA (their status_id is the stable key).
-    learnJaText(null, b.status_id, b.name);
-    if (matchCodexEntry(b) != null) continue;
-    const key = b.status_id != null ? String(b.status_id) : b.name;
-    const prev = unknownBooks.get(key);
-    const mergedNum = (prev?.num || 0) + (b.num || 1);
-    if (!prev || prev.num !== mergedNum) {
-      unknownBooks.set(key, {
-        status_id: b.status_id,
-        user_status_id: b.user_status_id,
-        name: b.name || 'status:' + b.status_id,
-        rarity: b.rarity,
-        icon_type: b.icon_type,
-        num: mergedNum,
-      });
-      changed = true;
-    }
-  }
-  // Prune: drop entries that can now be matched (learned maps / built-in
-  // map grew since they were collected).
-  for (const [key, ub] of unknownBooks) {
-    if (matchCodexEntry(ub) != null) { unknownBooks.delete(key); changed = true; }
-  }
-  if (changed) {
-    chrome.storage.local.set({ gbfHelperUnknownBooks: [...unknownBooks.values()] });
-  }
-}
-function loadUnknownBooks() {
-  chrome.storage.local.get('gbfHelperUnknownBooks', (res) => {
-    unknownBooks = new Map();
-    for (const b of (res.gbfHelperUnknownBooks || [])) {
-      unknownBooks.set(String(b.status_id ?? b.name), b);
-    }
-    // prune stale entries right after loading too
-    collectUnknownBooks([]);
-  });
-}
-
 function renderCodex() {
   const body = document.getElementById('guidebook-codex-body');
   if (!body) return;
@@ -1222,13 +835,13 @@ function renderCodex() {
   rows.sort((a, b) => {
     if (a.isFav !== b.isFav) return a.isFav ? -1 : 1;
     return (rarityOrder[a.entry.rarity] ?? 9) - (rarityOrder[b.entry.rarity] ?? 9)
-      || String(getDisplayText(a.entry)).localeCompare(String(getDisplayText(b.entry)));
+      || String(getDisplayText(a.entry, codexLang)).localeCompare(String(getDisplayText(b.entry, codexLang)));
   });
   const rarLabel = { 1: '★', 2: '★★', 3: '★★★', 99: '☠' };
 
   let html = '<div class="guidebook-codex-grid">';
   html += rows.map(({ entry, isOwned, isFav, isMapped }) => {
-    const label = getDisplayText(entry);
+    const label = getDisplayText(entry, codexLang);
     const langTag = codexLang === 'zh' && !entry.zh ? '<span class="gb-lang">EN</span>'
       : codexLang === 'ja' && !entry.ja && !learnedJaText['entry:' + entry.id] ? '<span class="gb-lang">EN</span>'
       : '';
