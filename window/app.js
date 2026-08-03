@@ -439,6 +439,12 @@ function handleWindowMessage(type, payload) {
       renderPartyBar(payload);
       break;
 
+    case 'party-deck':
+      // payload: deck.pc — {weapons, summons, sub_summons} from the party
+      // detail page. Render weapon grid + summons below the party bar.
+      renderPartyDeck(payload);
+      break;
+
     case 'guide-books':
       renderGuideBooks(payload);
       updateStatusBar(); // clear the 'refreshing…' override once data arrives
@@ -667,6 +673,51 @@ function renderPartyBar(party) {
       <div class="party-hpmax">${maxHp}</div>
     </div>`;
   }).join('');
+}
+
+// --- Party deck (weapons + summons) from the party detail page ---
+
+const WEAPON_IMG_BASE = 'https://prd-game-a-granbluefantasy.akamaized.net/assets_en/img/sp/assets/weapon/m/';
+const SUMMON_IMG_MAIN = 'https://prd-game-a-granbluefantasy.akamaized.net/assets_en/img/sp/assets/summon/party_main/';
+const SUMMON_IMG_SUB = 'https://prd-game-a-granbluefantasy.akamaized.net/assets_en/img/sp/assets/summon/party_sub/';
+
+function renderPartyDeck(pc) {
+  const el = document.getElementById('party-deck');
+  if (!el || !pc) return;
+  const weapons = pc.weapons || {};
+  const summons = pc.summons || {};
+  const subSummons = pc.sub_summons || {};
+  const wSlots = Object.values(weapons);
+  const sSlots = Object.values(summons);
+  const ssSlots = Object.values(subSummons);
+
+  const weaponHtml = wSlots.map(w => {
+    const p = w.param || {};
+    const lv = p.level != null ? `Lv${p.level}` : '';
+    return `<div class="deck-weapon" title="${(w.master?.name || p.image_id || '')} ${lv}">
+      <img src="${WEAPON_IMG_BASE}${p.image_id}.jpg" alt="" loading="lazy"
+        onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div class=&quot;deck-empty&quot;></div>');">
+      <span class="deck-lv">${lv}</span>
+    </div>`;
+  }).join('');
+
+  const summonHtml = [...sSlots, ...ssSlots].map((s, i) => {
+    const p = s.param || {};
+    const name = s.master?.name || '';
+    const lv = p.level != null ? `Lv${p.level}` : '';
+    const attrCls = `attr-${s.master?.attribute || 0}`;
+    const imgBase = i < sSlots.length ? SUMMON_IMG_MAIN : SUMMON_IMG_SUB;
+    return `<div class="deck-summon ${attrCls}" title="${name} ${lv}">
+      <img src="${imgBase}${p.image_id}.jpg" alt="" loading="lazy"
+        onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<div class=&quot;deck-empty&quot;></div>');">
+      <span class="deck-lv">${lv}</span>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="deck-weapons">${weaponHtml || '<div class="deck-empty">—</div>'}</div>
+    <div class="deck-summons">${summonHtml || '<div class="deck-empty">—</div>'}</div>`;
+  el.classList.remove('hidden');
 }
 
 // Guidebook icon cache: icon_type → data URL (fetched from CDN on demand).

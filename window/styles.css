@@ -197,6 +197,64 @@ body::before {
   max-width: 100%;
 }
 
+#party-deck {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 12px;
+  width: fit-content;
+  max-width: 100%;
+  border-top: 1px solid rgba(217,178,90,0.15);
+}
+#party-deck.hidden { display: none; }
+.deck-weapons,
+.deck-summons {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.deck-weapon,
+.deck-summon {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--gold-3);
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: rgba(10,16,30,0.6);
+}
+.deck-weapon img,
+.deck-summon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.deck-lv {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  font-size: 8px;
+  line-height: 10px;
+  text-align: center;
+  background: rgba(0,0,0,0.65);
+  color: #ffd54a;
+  font-weight: 700;
+}
+.deck-empty {
+  width: 34px;
+  height: 34px;
+  border: 1px dashed rgba(217,178,90,0.3);
+  border-radius: 4px;
+}
+.deck-summon.attr-1 { box-shadow: inset 0 0 0 2px rgba(255,80,80,0.4); }
+.deck-summon.attr-2 { box-shadow: inset 0 0 0 2px rgba(80,160,255,0.4); }
+.deck-summon.attr-3 { box-shadow: inset 0 0 0 2px rgba(255,200,80,0.4); }
+.deck-summon.attr-4 { box-shadow: inset 0 0 0 2px rgba(120,200,120,0.4); }
+.deck-summon.attr-5 { box-shadow: inset 0 0 0 2px rgba(200,120,255,0.4); }
+.deck-summon.attr-6 { box-shadow: inset 0 0 0 2px rgba(200,200,255,0.4); }
+
 .party-member {
   display: flex;
   flex-direction: column;
@@ -795,7 +853,22 @@ body::before {
   gap: 8px;
   padding: 10px 0;
 }
-#app.sidebar-collapsed #status-bar,
+#app.sidebar-collapsed #status-bar {
+  /* Keep miasma/turn info visible while collapsed: float it over the
+     map's top area, just right of the narrow sidebar (fixed = viewport,
+     since #status-bar lives inside the 46px sidebar). */
+  position: fixed;
+  top: 8px;
+  left: 54px;
+  right: auto;
+  width: auto;
+  max-width: calc(100% - 220px);
+  background: var(--panel-bg);
+  border: 1px solid var(--gold-edge);
+  border-radius: 6px;
+  box-shadow: var(--shadow-deep);
+  z-index: 28;
+}
 #app.sidebar-collapsed .sidebar-actions,
 #app.sidebar-collapsed #filter-panel { display: none; }
 #app.sidebar-collapsed #sidebar::after { display: none; }

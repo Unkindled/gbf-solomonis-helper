@@ -132,6 +132,13 @@ function handleGameData(type, data) {
     case 'spacebookAdd':
       handleSpacebookAdd(data);
       break;
+    case 'partyDeck':
+      // Party detail page: weapons (10 slots) + main/support summons.
+      // Just forward the deck to the helper window for display.
+      if (data && data.deck && data.deck.pc) {
+        broadcastToWindow('party-deck', data.deck.pc);
+      }
+      break;
     case 'incident':
       handleIncident(data);
       break;

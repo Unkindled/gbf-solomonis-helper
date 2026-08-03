@@ -64,12 +64,18 @@ export class FilterPanel {
     // Special incident section (collapsible)
     const spSection = document.createElement('details');
     spSection.className = 'filter-section';
-    spSection.open = false; // collapsed by default (long list)
+    spSection.open = true; // expanded by default; present events sort first
     spSection.innerHTML = `<summary class="filter-section-title">${I18N.t('filter.specialEvent')} <span class="filter-present-hint">${I18N.t('filter.presentHint')}</span></summary><div class="filter-section-body"></div>`;
     const spBody = spSection.querySelector('.filter-section-body');
     this.specialRows.clear();
-    for (const [idStr] of Object.entries(SPECIAL_NODE_LABELS)) {
-      const id = parseInt(idStr);
+    const ids = Object.keys(SPECIAL_NODE_LABELS).map(Number);
+    // Present (in this run) special events first, then the rest in order
+    ids.sort((a, b) => {
+      const pa = this.presentSpecials.has(a) ? 0 : 1;
+      const pb = this.presentSpecials.has(b) ? 0 : 1;
+      return pa - pb || a - b;
+    });
+    for (const id of ids) {
       const row = this._createSpecialRow(id);
       spBody.appendChild(row);
       this.specialRows.set(id, row);
@@ -121,6 +127,7 @@ export class FilterPanel {
     const row = document.createElement('label');
     row.className = 'filter-row filter-row-special';
     row.dataset.present = 'false';
+    row.dataset.sid = String(id);
     const cb = document.createElement('input');
     cb.type = 'checkbox';
     cb.addEventListener('change', () => {
@@ -144,6 +151,16 @@ export class FilterPanel {
    */
   setPresentSpecials(presentIds) {
     this.presentSpecials = presentIds;
+    // Re-sort rows: present events first (stable within groups)
+    const body = this.container.querySelector('.filter-section-body:last-of-type');
+    if (body) {
+      const rows = [...body.children].sort((a, b) => {
+        const pa = a.dataset.present === 'true' ? 0 : 1;
+        const pb = b.dataset.present === 'true' ? 0 : 1;
+        return pa - pb || Number(a.dataset.sid) - Number(b.dataset.sid);
+      });
+      rows.forEach(r => body.appendChild(r));
+    }
     for (const [id, row] of this.specialRows) {
       const present = presentIds.has(id);
       row.dataset.present = present ? 'true' : 'false';
