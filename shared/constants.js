@@ -1,49 +1,10 @@
 // GBF Evoking Solomonis - Game constants extracted from client source
+//
+// Node-type data (enum / labels / colors / icons) now lives in the
+// single source of truth: shared/node-registry.js. Re-exported here for
+// backward compatibility.
 
-export const DUNGEON_NODE_TYPE = {
-  NONE: 0,
-  ENCOUNTER_BOSS: 1,
-  ENCOUNTER_NORMAL: 2,
-  ENCOUNTER_HARD: 3,
-  ENCOUNTER_GUARDIAN: 4,
-  INCIDENT: 5,
-  TREASURE_CHEST: 6,
-  RECOVERY_HP: 7,
-  SHOP: 8,
-  TELEPORT: 9,
-  SPECIAL: 10,
-  ENCOUNTER_VERY_HARD: 11,
-};
-
-export const NODE_TYPE_LABELS = {
-  0: 'Path',
-  1: 'Boss',
-  2: 'Battle',
-  3: 'Strong Foe',
-  4: 'Ruler',
-  5: 'Event',
-  6: 'Treasure',
-  7: 'Healing',
-  8: 'Shop',
-  9: 'Teleporter',
-  10: 'Special',
-  11: 'Terrifying Foe',
-};
-
-export const NODE_TYPE_COLORS = {
-  0: '#9e9e9e',
-  1: '#ff1744',
-  2: '#ef5350',
-  3: '#c62828',
-  4: '#ab47bc',
-  5: '#42a5f5',
-  6: '#ffd54f',
-  7: '#66bb6a',
-  8: '#ffa726',
-  9: '#26c6da',
-  10: '#ec407a',
-  11: '#8e0000',
-};
+export { DUNGEON_NODE_TYPE, NODE_TYPE_LABELS, NODE_TYPE_COLORS } from './node-registry.js';
 
 export const DUNGEON_SPECIAL_NODE_TYPE = {
   GURU: 1,

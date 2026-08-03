@@ -1,6 +1,7 @@
 // Canvas-based map renderer using original game assets
 
-import { NODE_TYPE_COLORS, MIASMA_RADIUS } from '../shared/constants.js';
+import { NODE_TYPE_COLORS, NODE_TYPE_LABELS, MIASMA_RADIUS } from '../shared/constants.js';
+import { nodeIconAsset, SPECIAL_INCIDENT_ICONS } from '../shared/node-registry.js';
 
 // Game asset dimensions
 const BG_W = 2680, BG_H = 1830;
@@ -51,6 +52,24 @@ export class MapRenderer {
   }
 
   _loadAssets() {
+    // Node-body icons derive from the node registry (single source of
+    // truth) — new node_type only needs its entry + the PNG file.
+    const nodeIcons = {};
+    const seen = new Set();
+    for (const t of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]) {
+      const asset = nodeIconAsset({ node_type: t, special_incident_id: null });
+      if (!asset || seen.has(asset)) continue;
+      seen.add(asset);
+      const key = 'icon' + t;
+      nodeIcons[key] = 'node_icon/' + asset;
+    }
+    // special-incident icons (node_type 10)
+    for (const [spId, asset] of Object.entries(SPECIAL_INCIDENT_ICONS)) {
+      if (seen.has(asset)) continue;
+      seen.add(asset);
+      const base = asset.replace('.png', '');
+      nodeIcons['icon10_' + base] = 'node_icon/' + asset;
+    }
     const defs = {
       bg: 'map_bg/1.jpg',
       base: 'node_icon/base.png',
@@ -61,27 +80,12 @@ export class MapRenderer {
       baseMiasmaCanMove: 'node_icon/base_miasma_can_move.png',
       piece: 'node_icon/piece_1.png',
       pieceGlow: 'node_icon/piece_glow.png',
-      icon1: 'node_icon/1.png',
-      icon2: 'node_icon/2.png',
-      icon3: 'node_icon/3.png',
-      icon4: 'node_icon/4.png',
-      icon5: 'node_icon/5.png',
-      icon6: 'node_icon/6.png',
-      icon7: 'node_icon/7.png',
-      icon8: 'node_icon/8.png',
-      icon9: 'node_icon/9.png',
-      icon10: 'node_icon/10_incident.png',
-      icon10fanatic: 'node_icon/10_fanatic.png',
-      icon10guru: 'node_icon/10_guru.png',
-      icon10teleport: 'node_icon/10_teleport.png',
-      icon10research: 'node_icon/10_research.png',
-      icon11: 'node_icon/11.png',
       miasmaCircle1: 'miasma_circle_1.png',
       miasmaCircle2: 'miasma_circle_2.png',
+      ...nodeIcons,
     };
 
-    // Circle image radii (from PNG dimensions / 2)
-    this.miasmaCircleRadius = { 1: 670, 2: 67 };
+    // Circle image radii — single source: shared/constants.js MIASMA_RADIUS
 
     let pending = Object.keys(defs).length;
     const done = () => {
@@ -102,15 +106,15 @@ export class MapRenderer {
   }
 
   _iconForNode(node) {
-    if (node.node_type === 10 && node.special_incident_id != null) {
-      const sp = node.special_incident_id;
-      if (sp === 1) return this.images.icon10guru || null;          // Cult Founder
-      if (sp === 2 || sp === 3) return this.images.icon10fanatic || null; // Cultists
-      if (sp === 4) return this.images.icon10teleport || null;      // Floating Castle
-      if (sp === 5 || sp === 6 || sp === 7) return this.images.icon10teleport || null; // FC Portals
-      if (sp === 8) return this.images.icon10research || null;      // FC Researcher
+    const asset = nodeIconAsset(node); // registry: sp icon or type icon
+    if (!asset) return null;
+    // special-incident icons are keyed icon10_<basename>
+    let key;
+    if (node.node_type === 10 && node.special_incident_id != null && SPECIAL_INCIDENT_ICONS[node.special_incident_id]) {
+      key = 'icon10_' + asset.replace('.png', '');
+    } else {
+      key = 'icon' + node.node_type;
     }
-    const key = 'icon' + node.node_type;
     return this.images[key] || null;
   }
 
@@ -454,7 +458,7 @@ export class MapRenderer {
     if (a.center_position_x == null || a.center_position_y == null) return;
 
     const level = a.level || 1;
-    const safeRadius = this.miasmaCircleRadius[level] || this.miasmaCircleRadius[1];
+    const safeRadius = MIASMA_RADIUS[level] || MIASMA_RADIUS[1];
     const img = level === 2 ? this.images.miasmaCircle2 : this.images.miasmaCircle1;
     // center_position 是中心节点的地面点；本插件节点地面点 = position，
     // 而 position = 地面点 - MIASMA_CENTER_OFFSET，故圆心需减去该偏移对齐。
@@ -832,7 +836,7 @@ export class MapRenderer {
     const node = this.hoveredNode;
     const screen = this._worldToScreen(node.position_x, node.position_y);
 
-    const typeNames = { 0: 'Path', 1: 'Boss', 2: 'Battle', 3: 'Strong Foe', 4: 'Ruler', 5: 'Event', 6: 'Treasure', 7: 'Healing', 8: 'Shop', 9: 'Teleporter', 10: 'Special', 11: 'Terrifying' };
+    const typeNames = NODE_TYPE_LABELS; // from the node registry
     const spNames = { 1: 'Cult Founder', 2: 'Cultist I', 3: 'Cultist II', 4: 'Floating Castle', 5: 'FC Portal I', 6: 'FC Portal II', 7: 'FC Portal III', 8: 'FC Researcher', 9: 'Clock Tower', 10: 'Flower Garden', 11: 'Prison', 12: 'Hot Spring', 13: 'Blacksmith', 14: 'Fort', 15: 'Cathedral', 16: 'Cave', 17: 'Stone Face', 18: 'Village' };
 
     let label;

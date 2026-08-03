@@ -2,22 +2,10 @@
 // Uses game-native icons (scaled) + i18n labels.
 
 import { NODE_TYPE_LABELS, NODE_TYPE_COLORS, SPECIAL_NODE_LABELS } from '../shared/constants.js';
+import { NODE_TYPE_ICON_ASSETS } from '../shared/node-registry.js';
 
 // Node type → icon asset file (type 0 'Path' has no icon; show base plate)
-const NODE_TYPE_ICON = {
-  0: 'base.png',
-  1: '1.png',
-  2: '2.png',
-  3: '3.png',
-  4: '4.png',
-  5: '5.png',
-  6: '6.png',
-  7: '7.png',
-  8: '8.png',
-  9: '9.png',
-  10: '10_incident.png',
-  11: '11.png',
-};
+const NODE_TYPE_ICON = NODE_TYPE_ICON_ASSETS;
 
 const ASSET_BASE = '../assets/node_icon/';
 const ICON_W = 20, ICON_H = 22; // scaled display size (90x100 → 20x22)
