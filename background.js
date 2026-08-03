@@ -1,6 +1,21 @@
 // Background Service Worker
 // Manages: helper window lifecycle, game state storage, message routing.
 
+import {
+  MSG_OPEN_WINDOW, MSG_GET_STATE, MSG_GET_MIASMA_LOG,
+  MSG_OPEN_GUIDEBOOK_TAB, MSG_FETCH_BOOK_ICONS, MSG_GAME_DATA,
+  MSG_WINDOW_DATA,
+  DATA_MAP_INIT, DATA_MOVE_NODE, DATA_FINISH_NODE, DATA_PROCEED,
+  DATA_SPACEBOOK_ADD, DATA_SPACEBOOK_LIST, DATA_REPORT_BOOK, DATA_INCIDENT,
+  DATA_PARTY_STATUS, DATA_SHOP_LINEUP, DATA_SHOP_PURCHASE, DATA_BATTLE_RESULT,
+  DATA_RAID_START,
+  TYPE_MAP_INIT, TYPE_MOVE_UPDATE, TYPE_FINISH_NODE, TYPE_PROCEED,
+  TYPE_PARTY_STATUS, TYPE_GUIDE_BOOKS, TYPE_GUIDEBOOK_ICONS,
+  TYPE_GUIDEBOOKS_STALE, TYPE_GUIDEBOOK_REFRESH_STARTED,
+  TYPE_GUIDEBOOK_REFRESH_FAILED, TYPE_SHOP_STOCK, TYPE_SHOP_GUIDEBOOKS,
+  TYPE_PICK_CANDIDATES, TYPE_PICK_DONE, TYPE_REPORT_BOOKS, TYPE_DUNGEON_POINT,
+} from './shared/protocol.js';
+
 let helperWindowId = null;
 let gameState = {
   map: null,           // Full dungeon map data
@@ -57,23 +72,23 @@ chrome.windows.onRemoved.addListener((windowId) => {
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg || !msg.channel) return;
 
-  if (msg.channel === 'gbf-helper:open-window') {
+  if (msg.channel === MSG_OPEN_WINDOW) {
     openHelperWindow();
     return;
   }
 
-  if (msg.channel === 'gbf-helper:open-guidebook-tab') {
+  if (msg.channel === MSG_OPEN_GUIDEBOOK_TAB) {
     openGuidebookTab();
     return;
   }
 
-  if (msg.channel === 'gbf-helper:fetch-book-icons') {
+  if (msg.channel === MSG_FETCH_BOOK_ICONS) {
     const types = Array.isArray(msg.iconTypes) ? msg.iconTypes : [];
     if (types.length > 0) fetchMissingBookIcons(types);
     return;
   }
 
-  if (msg.channel === 'gbf-helper:get-state') {
+  if (msg.channel === MSG_GET_STATE) {
     // shopStock is a Map — serialize to a plain object for the response
     const shopStock = {};
     for (const [k, v] of gameState.shopStock) shopStock[k] = v;
@@ -81,12 +96,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
-  if (msg.channel === 'gbf-helper:get-miasma-log') {
+  if (msg.channel === MSG_GET_MIASMA_LOG) {
     sendResponse(miasmaLog);
     return true;
   }
 
-  if (msg.channel === 'gbf-helper:game-data') {
+  if (msg.channel === MSG_GAME_DATA) {
     handleGameData(msg.type, msg.data);
     return;
   }
@@ -96,22 +111,22 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 function handleGameData(type, data) {
   switch (type) {
-    case 'mapInit':
+    case DATA_MAP_INIT:
       handleMapInit(data);
       break;
-    case 'moveNode':
+    case DATA_MOVE_NODE:
       handleMoveNode(data);
       break;
-    case 'finishNode':
+    case DATA_FINISH_NODE:
       handleFinishNode(data);
       break;
-    case 'proceed':
+    case DATA_PROCEED:
       handleProceed(data);
       break;
-    case 'spacebookList':
+    case DATA_SPACEBOOK_LIST:
       handleSpacebookList(data);
       break;
-    case 'reportBook':
+    case DATA_REPORT_BOOK:
       // Battle-report page: per-run guidebook list. Do NOT overwrite the
       // owned list — just feed the books into the learning pool so the
       // codex gains mappings/icons/JA text (and fetch their icons).
@@ -123,36 +138,36 @@ function handleGameData(type, data) {
           icon_type: b.icon_type,
         }));
         if (books.length > 0) {
-          broadcastToWindow('report-books', books);
+          broadcastToWindow(TYPE_REPORT_BOOKS, books);
           const iconTypes = [...new Set(books.map(b => b.icon_type).filter(t => t != null))];
           fetchMissingBookIcons(iconTypes);
         }
       }
       break;
-    case 'spacebookAdd':
+    case DATA_SPACEBOOK_ADD:
       handleSpacebookAdd(data);
       break;
-    case 'incident':
+    case DATA_INCIDENT:
       handleIncident(data);
       break;
-    case 'partyStatus':
+    case DATA_PARTY_STATUS:
       handlePartyStatus(data);
       break;
-    case 'raidStart':
+    case DATA_RAID_START:
       handleRaidStart(data);
       break;
-    case 'shopLineup':
+    case DATA_SHOP_LINEUP:
       handleShopLineup(data);
       break;
-    case 'shopPurchase':
+    case DATA_SHOP_PURCHASE:
       handleShopPurchase(data);
       break;
-    case 'battleResult':
+    case DATA_BATTLE_RESULT:
       // Battle ended → guidebook drops may have happened silently.
       // Flag stale so the UI reminds the player to open the in-game
       // guidebook page (which triggers spacebook_status_list).
       gameState.guideBooksStale = true;
-      broadcastToWindow('guidebooks-stale', true);
+      broadcastToWindow(TYPE_GUIDEBOOKS_STALE, true);
       break;
   }
 }
@@ -172,8 +187,8 @@ function handleSpacebookList(data) {
   }));
   gameState.guideBooks = books;
   gameState.guideBooksStale = false; // full sync → no longer stale
-  broadcastToWindow('guide-books', books);
-  broadcastToWindow('guidebooks-stale', false);
+  broadcastToWindow(TYPE_GUIDE_BOOKS, books);
+  broadcastToWindow(TYPE_GUIDEBOOKS_STALE, false);
   closeGuidebookTab(); // data refreshed → safe to close the background tab
   // Auto-fetch any guidebook icons we don't have bundled yet
   const iconTypes = [...new Set(books.map(b => b.icon_type).filter(t => t != null))];
@@ -234,10 +249,10 @@ async function openGuidebookTab() {
     if (guidebookWinId != null) {
       try { await chrome.windows.update(guidebookWinId, { focused: false }); } catch (e) { /* ignore */ }
     }
-    broadcastToWindow('guidebook-refresh-started', true);
+    broadcastToWindow(TYPE_GUIDEBOOK_REFRESH_STARTED, true);
     // Safety net: close and notify even if no status_list response arrives.
     guidebookTabTimer = setTimeout(() => {
-      broadcastToWindow('guidebook-refresh-failed', true);
+      broadcastToWindow(TYPE_GUIDEBOOK_REFRESH_FAILED, true);
       closeGuidebookTab();
     }, GUIDEBOOK_TAB_TIMEOUT_MS);
   } catch (e) {
@@ -282,7 +297,7 @@ async function fetchMissingBookIcons(iconTypes) {
 
     const next = { ...cache, ...fetched };
     await chrome.storage.local.set({ [BOOK_ICON_CACHE_KEY]: next });
-    broadcastToWindow('guidebook-icons', fetched);
+    broadcastToWindow(TYPE_GUIDEBOOK_ICONS, fetched);
   } catch (e) { /* storage may be unavailable */ }
 }
 
@@ -324,7 +339,7 @@ function handleShopLineup(data) {
   const items = [...mergedMap.values()].sort((a, b) => a.lineup_id - b.lineup_id);
 
   gameState.shopStock.set(nodeId, { items, coinAfter: prev.coinAfter });
-  broadcastToWindow('shop-stock', { nodeId, stock: { items, coinAfter: prev.coinAfter } });
+  broadcastToWindow(TYPE_SHOP_STOCK, { nodeId, stock: { items, coinAfter: prev.coinAfter } });
 
   // Collect guidebooks sold in the shop: the shop lineup reveals books the
   // player does NOT own, with their status_id + icon_type + rarity. These
@@ -348,7 +363,7 @@ function handleShopLineup(data) {
         added = true;
       }
     }
-    if (added) broadcastToWindow('shop-guidebooks', gameState.shopGuidebooks);
+    if (added) broadcastToWindow(TYPE_SHOP_GUIDEBOOKS, gameState.shopGuidebooks);
   }
 }
 
@@ -356,7 +371,7 @@ function handleShopPurchase(data) {
   if (!data) return;
   if (data.after_coin != null) {
     gameState.dungeonPoint = Number(data.after_coin);
-    broadcastToWindow('dungeon-point', gameState.dungeonPoint);
+    broadcastToWindow(TYPE_DUNGEON_POINT, gameState.dungeonPoint);
   }
   // Refresh the current shop's stock (server re-sends lineup after purchase)
   const nodeId = gameState.currentNodeId;
@@ -381,8 +396,8 @@ function handleMapInit(data) {
     gameState.dungeonPoint = Number(dungeon.possession_arcarum3_dungeon_point);
   }
 
-  broadcastToWindow('map-init', dungeon);
-  broadcastToWindow('dungeon-point', gameState.dungeonPoint);
+  broadcastToWindow(TYPE_MAP_INIT, dungeon);
+  broadcastToWindow(TYPE_DUNGEON_POINT, gameState.dungeonPoint);
 }
 
 function recordMiasma(source, data) {
@@ -426,7 +441,7 @@ function handleMoveNode(data) {
     }
   }
 
-  broadcastToWindow('move-update', {
+  broadcastToWindow(TYPE_MOVE_UPDATE, {
     currentNodeId: data.after_current_node_id,
     beforeNodeId: data.before_current_node_id,
     nodeType: data.node_type,
@@ -478,7 +493,7 @@ function handleFinishNode(data) {
     }
   }
 
-  broadcastToWindow('finish-node', {
+  broadcastToWindow(TYPE_FINISH_NODE, {
     miasmaInfo: data.miasma_info,
     dungeonStatus: data.dungeon_status,
     totalTurn: data.total_turn,
@@ -523,10 +538,10 @@ function handleProceed(data) {
     // The 3-way pick UI reveals up to 3 guidebooks (status_id + name +
     // icon + rarity) — including ones the player doesn't own. Feed them
     // to the helper window for icon/JA-text/mapping collection.
-    broadcastToWindow('pick-candidates', candidates);
+    broadcastToWindow(TYPE_PICK_CANDIDATES, candidates);
   }
 
-  broadcastToWindow('proceed', {
+  broadcastToWindow(TYPE_PROCEED, {
     dungeonStatus: data.dungeon_status,
     miasmaInfo: data.miasma_info,
     totalTurn: data.total_turn,
@@ -538,7 +553,7 @@ function handleProceed(data) {
 // Resolve those against the cached candidates and add them to guideBooks.
 function handleSpacebookAdd(data) {
   handleProceed(data); // still update common state
-  broadcastToWindow('pick-done', true); // 3-way choice resolved → hide overlay
+  broadcastToWindow(TYPE_PICK_DONE, true); // 3-way choice resolved → hide overlay
 
   const body = data && data._requestBody;
   const pickedIds = (body && Array.isArray(body.status_ids)) ? body.status_ids.map(Number) : [];
@@ -558,7 +573,7 @@ function handleSpacebookAdd(data) {
     added = true;
   }
   if (added) {
-    broadcastToWindow('guide-books', gameState.guideBooks);
+    broadcastToWindow(TYPE_GUIDE_BOOKS, gameState.guideBooks);
   }
 }
 
@@ -585,7 +600,7 @@ function extractPartyStatus(data) {
       : (Array.isArray(s.before_party_status) && s.before_party_status.length > 0 ? s.before_party_status : null);
     if (snap) {
       gameState.partyStatus = snap;
-      broadcastToWindow('party-status', snap);
+      broadcastToWindow(TYPE_PARTY_STATUS, snap);
       return;
     }
   }
@@ -594,7 +609,7 @@ function extractPartyStatus(data) {
 function handlePartyStatus(data) {
   if (!Array.isArray(data)) return;
   gameState.partyStatus = data;
-  broadcastToWindow('party-status', data);
+  broadcastToWindow(TYPE_PARTY_STATUS, data);
 }
 
 // Battle start: raid/start.json carries a full snapshot of the player's
@@ -627,7 +642,7 @@ function handleRaidStart(data) {
 
 function broadcastToWindow(type, payload) {
   chrome.runtime.sendMessage({
-    channel: 'gbf-helper:window-data',
+    channel: MSG_WINDOW_DATA,
     type,
     payload,
   }).catch(() => { /* window may not be open */ });

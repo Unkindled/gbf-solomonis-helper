@@ -12,7 +12,7 @@
     if (!msg || msg.source !== 'gbf-rouge-helper') return;
 
     chrome.runtime.sendMessage({
-      channel: 'gbf-helper:game-data',
+      channel: 'gbf-helper:game-data', // == shared/protocol.js MSG_GAME_DATA
       type: msg.type,
       data: msg.data,
     }).catch(() => { /* service worker may be inactive */ });

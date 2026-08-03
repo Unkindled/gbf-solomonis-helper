@@ -8,6 +8,15 @@ import { DUNGEON_STATUS_LABELS, NODE_TYPE_LABELS } from '../shared/constants.js'
 import { GUIDEBOOK_DB, GUIDEBOOK_STATUS_ID } from '../shared/guidebook-data.js';
 import { GUIDEBOOK_ICONS } from '../shared/guidebook-icons.js';
 import { GUIDEBOOK_ZH } from '../shared/guidebook-zh.js';
+import {
+  MSG_GET_STATE, MSG_GET_MIASMA_LOG, MSG_OPEN_GUIDEBOOK_TAB,
+  MSG_FETCH_BOOK_ICONS, MSG_WINDOW_DATA,
+  TYPE_MAP_INIT, TYPE_MOVE_UPDATE, TYPE_FINISH_NODE, TYPE_PROCEED,
+  TYPE_PARTY_STATUS, TYPE_GUIDE_BOOKS, TYPE_GUIDEBOOK_ICONS,
+  TYPE_GUIDEBOOKS_STALE, TYPE_GUIDEBOOK_REFRESH_STARTED,
+  TYPE_GUIDEBOOK_REFRESH_FAILED, TYPE_SHOP_STOCK, TYPE_SHOP_GUIDEBOOKS,
+  TYPE_PICK_CANDIDATES, TYPE_PICK_DONE, TYPE_REPORT_BOOKS, TYPE_DUNGEON_POINT,
+} from '../shared/protocol.js';
 
 // Merge the community ZH translation into the DB entries' zh field.
 for (const entry of GUIDEBOOK_DB) {
@@ -68,7 +77,7 @@ function init() {
   });
 
   // Request current state from background
-  chrome.runtime.sendMessage({ channel: 'gbf-helper:get-state' }, (state) => {
+  chrome.runtime.sendMessage({ channel: MSG_GET_STATE }, (state) => {
     if (chrome.runtime.lastError) return;
     if (state && state.map) {
       applyFullMap(state.map);
@@ -86,7 +95,7 @@ function init() {
 
   // Listen for live updates
   chrome.runtime.onMessage.addListener((msg) => {
-    if (!msg || msg.channel !== 'gbf-helper:window-data') return;
+    if (!msg || msg.channel !== MSG_WINDOW_DATA) return;
     handleWindowMessage(msg.type, msg.payload);
   });
 
@@ -146,7 +155,7 @@ function init() {
       renderGuideBooks(latestGuideBooks); // refresh active tab view
     }
     if (guideBooksStale) {
-      chrome.runtime.sendMessage({ channel: 'gbf-helper:open-guidebook-tab' });
+      chrome.runtime.sendMessage({ channel: MSG_OPEN_GUIDEBOOK_TAB });
     }
   });
   document.getElementById('guidebook-popup-close').addEventListener('click', () => {
@@ -211,7 +220,7 @@ function init() {
 
   // Export miasma log button
   document.getElementById('btn-export-miasma').addEventListener('click', () => {
-    chrome.runtime.sendMessage({ channel: 'gbf-helper:get-miasma-log' }, (log) => {
+    chrome.runtime.sendMessage({ channel: MSG_GET_MIASMA_LOG }, (log) => {
       if (chrome.runtime.lastError || !log) return;
       const blob = new Blob([JSON.stringify(log, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -356,12 +365,12 @@ function checkMiasmaTransition(newMiasmaInfo) {
 
 function handleWindowMessage(type, payload) {
   switch (type) {
-    case 'map-init':
+    case TYPE_MAP_INIT:
       applyFullMap(payload);
       updateStatusBar();
       break;
 
-    case 'move-update':
+    case TYPE_MOVE_UPDATE:
       if (dungeon) {
         dungeon.current_node_id = payload.currentNodeId;
         dungeon.total_turn = payload.totalTurn;
@@ -405,7 +414,7 @@ function handleWindowMessage(type, payload) {
       reEvaluatePath();
       break;
 
-    case 'finish-node':
+    case TYPE_FINISH_NODE:
       if (payload.dungeonStatus && dungeon) dungeon.dungeon_status = payload.dungeonStatus;
       if (payload.totalTurn !== undefined) {
         currentTurn = payload.totalTurn;
@@ -444,7 +453,7 @@ function handleWindowMessage(type, payload) {
       reEvaluatePath();
       break;
 
-    case 'proceed':
+    case TYPE_PROCEED:
       if (payload.dungeonStatus && dungeon) dungeon.dungeon_status = payload.dungeonStatus;
       if (payload.miasmaInfo) currentMiasmaInfo = payload.miasmaInfo;
       if (payload.totalTurn !== undefined) currentTurn = payload.totalTurn;
@@ -453,40 +462,40 @@ function handleWindowMessage(type, payload) {
       updateStatusBar();
       break;
 
-    case 'party-status':
+    case TYPE_PARTY_STATUS:
       renderPartyBar(payload);
       break;
 
-    case 'guide-books':
+    case TYPE_GUIDE_BOOKS:
       renderGuideBooks(payload);
       updateStatusBar(); // clear the 'refreshing…' override once data arrives
       break;
 
-    case 'guidebook-icons':
+    case TYPE_GUIDEBOOK_ICONS:
       cacheBookIcons(payload);
       break;
 
-    case 'dungeon-point':
+    case TYPE_DUNGEON_POINT:
       renderDungeonPoint(payload);
       break;
 
-    case 'guidebooks-stale':
+    case TYPE_GUIDEBOOKS_STALE:
       setGuideBooksStale(!!payload);
       break;
 
-    case 'guidebook-refresh-started':
+    case TYPE_GUIDEBOOK_REFRESH_STARTED:
       // Background tab opened; game SPA should fire status_list soon.
       updateStatusBar(I18N.t('status.guidebookRefreshing'));
       break;
 
-    case 'guidebook-refresh-failed':
+    case TYPE_GUIDEBOOK_REFRESH_FAILED:
       // Background refresh couldn't get a status_list response (browser
       // throttled the tab). Tell the user to open the guidebook page
       // manually in the game.
       updateStatusBar(I18N.t('status.guidebookManual'));
       break;
 
-    case 'shop-stock':
+    case TYPE_SHOP_STOCK:
       // payload: {nodeId, stock:{items, coinAfter}}
       if (payload && payload.nodeId != null && payload.stock) {
         renderer.shopStock[payload.nodeId] = payload.stock;
@@ -494,7 +503,7 @@ function handleWindowMessage(type, payload) {
       }
       break;
 
-    case 'shop-guidebooks':
+    case TYPE_SHOP_GUIDEBOOKS:
       // payload: status_id → {status_id,name,icon_type,rarity} seen in shop
       // lineups. Feed them into the learned pools AND show the shop's
       // guidebooks in the options overlay (translations via status map).
@@ -505,7 +514,7 @@ function handleWindowMessage(type, payload) {
       }
       break;
 
-    case 'pick-candidates':
+    case TYPE_PICK_CANDIDATES:
       // payload: [{status_id,name,icon_type,rarity}] from the 3-way pick UI
       if (Array.isArray(payload)) {
         absorbBookInfo(payload);
@@ -513,7 +522,7 @@ function handleWindowMessage(type, payload) {
       }
       break;
 
-    case 'report-books':
+    case TYPE_REPORT_BOOKS:
       // payload: guidebooks obtained in a battle-report run (record page).
       // Feed into the learning pool only — no overlay; toast new mappings.
       if (Array.isArray(payload)) {
@@ -531,7 +540,7 @@ function handleWindowMessage(type, payload) {
       }
       break;
 
-    case 'pick-done':
+    case TYPE_PICK_DONE:
       hidePickOverlay();
       break;
   }
@@ -582,7 +591,7 @@ function absorbBookInfo(recs) {
   // Ask the background to fetch any icon PNGs we don't have bundled/cached
   // (e.g. a pick option's icon_type seen for the first time).
   if (newIconTypes.size > 0) {
-    chrome.runtime.sendMessage({ channel: 'gbf-helper:fetch-book-icons', iconTypes: [...newIconTypes] });
+    chrome.runtime.sendMessage({ channel: MSG_FETCH_BOOK_ICONS, iconTypes: [...newIconTypes] });
   }
   if (reRender) {
     chrome.storage.local.set({

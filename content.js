@@ -1,6 +1,8 @@
 // Content Script - runs in MAIN world at document_start
 // Passively hooks fetch/XHR to read game API responses.
 // NEVER modifies requests, responses, or the DOM.
+// PATTERNS keys below MUST match DATA_* in shared/protocol.js
+// (this file is an IIFE injected into MAIN world — it cannot import).
 
 (function () {
   'use strict';
@@ -52,6 +54,13 @@
       // Clone so we don't consume the body
       const clone = response.clone();
       clone.json().then(json => {
+        // Attach the request body BEFORE postMessage — postMessage clones
+        // synchronously, so mutating after the call never reaches the
+        // background (e.g. spacebook_status_add's picked status_ids).
+        const body = (typeof args[1] === 'object' && args[1] != null) ? args[1].body : undefined;
+        if (typeof body === 'string' && body.length > 0) {
+          try { json._requestBody = JSON.parse(body); } catch (e) { /* not json */ }
+        }
         postToExtension(type, json);
       }).catch(() => { /* ignore non-JSON */ });
       return response;
@@ -75,12 +84,11 @@
       this.addEventListener('load', function () {
         try {
           const json = JSON.parse(this.responseText);
-          postToExtension(type, json);
-          // Also forward the request body for actions that need it
-          // (e.g. spacebook_status_add carries the picked status_ids)
+          // Attach the request body BEFORE postToExtension (see above).
           if (body) {
             try { json._requestBody = JSON.parse(body); } catch (e) { /* not json */ }
           }
+          postToExtension(type, json);
         } catch (e) { /* ignore */ }
       });
     }
