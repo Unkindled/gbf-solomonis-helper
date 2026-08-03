@@ -63,6 +63,50 @@ export const SPECIAL_INCIDENT_ICONS = {
   8: '10_research.png',   // FC Researcher
 };
 
+// --- special-incident enum (game-facing ids) ---
+export const DUNGEON_SPECIAL_NODE_TYPE = {
+  GURU: 1,
+  FANATIC_1: 2,
+  FANATIC_2: 3,
+  FLOATING_CASTLE: 4,
+  FLOATING_CASTLE_TELEPORT_1: 5,
+  FLOATING_CASTLE_TELEPORT_2: 6,
+  FLOATING_CASTLE_TELEPORT_3: 7,
+  FLOATING_CASTLE_RESEARCHER: 8,
+  CLOCK_TOWER: 9,
+  FLOWER_GARDEN: 10,
+  PRISON: 11,
+  HOT_SPRING: 12,
+  BLACKSMITH_TABLE: 13,
+  FORT: 14,
+  CATHEDRAL: 15,
+  CAVE: 16,
+  STONE_FACE: 17,
+  VILLAGE: 18,
+};
+
+// --- special-incident display labels (single source for tooltip + panels) ---
+export const SPECIAL_INCIDENT_LABELS = {
+  1: 'Cult Founder',
+  2: 'Cultist I',
+  3: 'Cultist II',
+  4: 'Floating Castle',
+  5: 'FC Portal I',
+  6: 'FC Portal II',
+  7: 'FC Portal III',
+  8: 'FC Researcher',
+  9: 'Clock Tower',
+  10: 'Flower Garden',
+  11: 'Prison',
+  12: 'Hot Spring',
+  13: 'Blacksmith',
+  14: 'Fort',
+  15: 'Cathedral',
+  16: 'Cave',
+  17: 'Stone Face',
+  18: 'Village',
+};
+
 /** Default icon asset for a node, or null. */
 export function nodeIconAsset(node) {
   if (node.node_type === 10 && node.special_incident_id != null) {

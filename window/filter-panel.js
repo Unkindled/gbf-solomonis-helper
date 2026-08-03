@@ -140,6 +140,15 @@ export class FilterPanel {
    */
   setPresentSpecials(presentIds) {
     this.presentSpecials = presentIds;
+    // Dynamically add rows for UNKNOWN special events seen this run
+    // (ids not in the bundled labels — game added new incidents).
+    for (const id of presentIds) {
+      if (!this.specialRows.has(id)) {
+        const row = this._createSpecialRow(id);
+        this.specialBody.appendChild(row);
+        this.specialRows.set(id, row);
+      }
+    }
     // 1) update markers first
     for (const [id, row] of this.specialRows) {
       const present = presentIds.has(id);

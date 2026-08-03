@@ -1,6 +1,6 @@
 // Canvas-based map renderer using original game assets
 
-import { NODE_TYPE_COLORS, NODE_TYPE_LABELS, MIASMA_RADIUS } from '../shared/constants.js';
+import { NODE_TYPE_COLORS, NODE_TYPE_LABELS, SPECIAL_NODE_LABELS, MIASMA_RADIUS } from '../shared/constants.js';
 import { nodeIconAsset, SPECIAL_INCIDENT_ICONS } from '../shared/node-registry.js';
 
 // Game asset dimensions
@@ -837,7 +837,7 @@ export class MapRenderer {
     const screen = this._worldToScreen(node.position_x, node.position_y);
 
     const typeNames = NODE_TYPE_LABELS; // from the node registry
-    const spNames = { 1: 'Cult Founder', 2: 'Cultist I', 3: 'Cultist II', 4: 'Floating Castle', 5: 'FC Portal I', 6: 'FC Portal II', 7: 'FC Portal III', 8: 'FC Researcher', 9: 'Clock Tower', 10: 'Flower Garden', 11: 'Prison', 12: 'Hot Spring', 13: 'Blacksmith', 14: 'Fort', 15: 'Cathedral', 16: 'Cave', 17: 'Stone Face', 18: 'Village' };
+    const spNames = SPECIAL_NODE_LABELS; // from the node registry
 
     let label;
     if (node.node_type === 10 && node.special_incident_id != null) {
