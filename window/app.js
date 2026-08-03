@@ -549,9 +549,9 @@ function absorbBookInfo(recs) {
         reRender = true;
         // Backfill the entry's JA field from the runtime JA pool (JA-client
         // sessions teach translations for mappings made in EN sessions).
-        const jaText = learnedJaText['status:' + sid] || (hit.ja || null);
+        const jaText = (learnedJaText['status:' + sid] || (hit.ja || '')).replace(/@@/g, ' ');
         if (jaText && hit.ja !== jaText) {
-          hit.ja = jaText.replace(/@@/g, ' '); // strip @@ separators
+          hit.ja = jaText;
           newJa++;
         }
       } else if (/[\u3040-\u30ff\u4e00-\u9fff]/.test(rec.name)) {
