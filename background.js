@@ -36,6 +36,54 @@ let gameState = {
 // Miasma data recorder — stores every miasma snapshot for formula analysis
 let miasmaLog = [];
 
+// --- Game-state persistence (chrome.storage.session) ---
+//
+// MV3 service workers are killed when idle; without persistence a
+// restart loses the in-progress run (map, position, miasma...) until the
+// next content/index. We snapshot the core fields to session storage so
+// the helper window's get-state can restore them. shopStock is a Map →
+// serialized to an object; guideBooks/parties are arrays (fine).
+const SESSION_KEY = 'gbfHelperSessionState';
+let persistTimer = null;
+
+function snapshotGameState() {
+  const { map, currentNodeId, totalTurn, dungeonStatus, miasmaInfo,
+    partyStatus, dungeonPoint, guideBooks, guideBooksStale, shopGuidebooks } = gameState;
+  const shopStock = {};
+  for (const [k, v] of gameState.shopStock) shopStock[k] = v;
+  return { map, currentNodeId, totalTurn, dungeonStatus, miasmaInfo,
+    partyStatus, dungeonPoint, guideBooks, guideBooksStale, shopGuidebooks, shopStock };
+}
+
+function persistGameState() {
+  // Debounce: multiple handlers fire in quick succession.
+  clearTimeout(persistTimer);
+  persistTimer = setTimeout(() => {
+    chrome.storage.session.set({ [SESSION_KEY]: snapshotGameState() }).catch(() => { /* non-fatal */ });
+  }, 300);
+}
+
+async function restoreGameState() {
+  try {
+    const res = await chrome.storage.session.get(SESSION_KEY);
+    const saved = res[SESSION_KEY];
+    if (!saved) return;
+    gameState.currentNodeId = saved.currentNodeId ?? null;
+    gameState.totalTurn = saved.totalTurn ?? 0;
+    gameState.dungeonStatus = saved.dungeonStatus ?? null;
+    gameState.miasmaInfo = saved.miasmaInfo ?? null;
+    gameState.partyStatus = saved.partyStatus ?? null;
+    gameState.dungeonPoint = saved.dungeonPoint ?? 0;
+    gameState.guideBooks = saved.guideBooks ?? [];
+    gameState.guideBooksStale = !!saved.guideBooksStale;
+    gameState.shopGuidebooks = saved.shopGuidebooks ?? {};
+    gameState.map = saved.map ?? null;
+    if (saved.shopStock) {
+      gameState.shopStock = new Map(Object.entries(saved.shopStock));
+    }
+  } catch (e) { /* non-fatal */ }
+}
+
 // --- Window management ---
 
 async function openHelperWindow() {
@@ -69,6 +117,10 @@ chrome.windows.onRemoved.addListener((windowId) => {
 });
 
 // --- Message handling ---
+
+// Restore the in-progress run when the SW wakes (storage.session survives
+// SW restarts within the browser session).
+restoreGameState();
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg || !msg.channel) return;
@@ -366,6 +418,7 @@ function handleShopLineup(data) {
     }
     if (added) broadcastToWindow(TYPE_SHOP_GUIDEBOOKS, gameState.shopGuidebooks);
   }
+  persistGameState();
 }
 
 function handleShopPurchase(data) {
@@ -381,6 +434,7 @@ function handleShopPurchase(data) {
     entry.coinAfter = data.after_coin != null ? Number(data.after_coin) : entry.coinAfter;
   }
   // The subsequent shopLineup call will update stock counts.
+  persistGameState();
 }
 
 function handleMapInit(data) {
@@ -399,6 +453,7 @@ function handleMapInit(data) {
 
   broadcastToWindow(TYPE_MAP_INIT, dungeon);
   broadcastToWindow(TYPE_DUNGEON_POINT, gameState.dungeonPoint);
+  persistGameState();
 }
 
 function recordMiasma(source, data) {
@@ -447,6 +502,7 @@ function handleMoveNode(data) {
     dungeonStatus: data.dungeon_status,
     shrinkNodeIds: (data.miasma_info && data.miasma_info.shrink_node_ids) || [],
   });
+  persistGameState();
 }
 
 function handleFinishNode(data) {
@@ -473,6 +529,7 @@ function handleFinishNode(data) {
     nodeId: gameState.currentNodeId,
     beforeNodeId: data.before_current_node_id != null ? data.before_current_node_id : gameState.currentNodeId,
   });
+  persistGameState();
 }
 
 function handleProceed(data) {
@@ -515,6 +572,7 @@ function handleProceed(data) {
     miasmaInfo: data.miasma_info,
     totalTurn: data.total_turn,
   });
+  persistGameState();
 }
 
 // spacebook_status_add: the 3-way pick confirm. The response body is empty of
@@ -543,6 +601,7 @@ function handleSpacebookAdd(data) {
   }
   if (added) {
     broadcastToWindow(TYPE_GUIDE_BOOKS, gameState.guideBooks);
+    persistGameState();
   }
 }
 
