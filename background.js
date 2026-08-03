@@ -287,12 +287,18 @@ function handleSpacebookList(data) {
 // When guidebook data may be stale (e.g. after battle drops that didn't
 // trigger a status_list response), the user can tap the guidebook button
 // to open the in-game guidebook page in a TINY, INCONSPICUOUS popup
-// window (bottom-right corner, unfocused). Unlike a background TAB, a
-// visible popup window keeps document.hidden === false, so the browser
-// does NOT throttle it — the game SPA runs immediately and fires
+// window at the bottom-right corner. Unlike a background TAB, a VISIBLE
+// popup window keeps document.hidden === false, so the browser does NOT
+// throttle it — the game SPA runs immediately and fires
 // spacebook_status_list on its own. The window is closed right after
 // data arrives. The extension never sends any request itself — only the
 // game does.
+//
+// CRITICAL (Windows): the window must be created FOCUSED and only then
+// have focus handed back to the player's window. Creating it with
+// focused:false makes Windows instantly MINIMIZE it; Chrome throttles
+// minimized pages, so the SPA never loads and status_list never arrives
+// (we'd only get data at the 12s timeout).
 
 let guidebookWinId = null;
 let guidebookTabId = null;
@@ -321,20 +327,30 @@ async function openGuidebookTab() {
   // If a refresh is already pending, keep it.
   if (guidebookWinId != null) return;
   try {
+    // Remember the currently focused window so we can hand focus back
+    // right after creating the refresh window.
+    let prevFocused = null;
+    try { prevFocused = await chrome.windows.getLastFocused(); } catch (e) { /* ignore */ }
+
     const pos = await getCornerPosition();
+    // IMPORTANT: do NOT create with focused:false. On Windows that makes
+    // the popup instantly MINIMIZE, and Chrome throttles minimized pages
+    // — the game SPA never runs, so spacebook_status_list never fires and
+    // we'd only get data at the 12s timeout. Create normally (visible,
+    // focused), then hand focus back to the previous window.
     const win = await chrome.windows.create({
       url: GUIDEBOOK_URL,
       type: 'popup',
       width: GUIDEBOOK_WIN_W,
       height: GUIDEBOOK_WIN_H,
-      focused: false,
       ...pos,
     });
     guidebookWinId = win.id;
     guidebookTabId = win.tabs && win.tabs[0] ? win.tabs[0].id : null;
-    // Re-assert unfocused (some platforms briefly focus a new window).
-    if (guidebookWinId != null) {
-      try { await chrome.windows.update(guidebookWinId, { focused: false }); } catch (e) { /* ignore */ }
+    // Give focus back so we don't steal it from the player — the popup
+    // stays a normal, non-minimized window (visible → not throttled).
+    if (prevFocused && prevFocused.id != null && prevFocused.id !== win.id) {
+      try { await chrome.windows.update(prevFocused.id, { focused: true }); } catch (e) { /* ignore */ }
     }
     broadcastToWindow(TYPE_GUIDEBOOK_REFRESH_STARTED, true);
     // Safety net: close and notify even if no status_list response arrives.
