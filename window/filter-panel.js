@@ -67,6 +67,7 @@ export class FilterPanel {
     spSection.open = true; // expanded by default; present events sort first
     spSection.innerHTML = `<summary class="filter-section-title">${I18N.t('filter.specialEvent')} <span class="filter-present-hint">${I18N.t('filter.presentHint')}</span></summary><div class="filter-section-body"></div>`;
     const spBody = spSection.querySelector('.filter-section-body');
+    this.specialBody = spBody;
     this.specialRows.clear();
     const ids = Object.keys(SPECIAL_NODE_LABELS).map(Number);
     // Present (in this run) special events first, then the rest in order
@@ -151,8 +152,15 @@ export class FilterPanel {
    */
   setPresentSpecials(presentIds) {
     this.presentSpecials = presentIds;
-    // Re-sort rows: present events first (stable within groups)
-    const body = this.container.querySelector('.filter-section-body:last-of-type');
+    // 1) update markers first
+    for (const [id, row] of this.specialRows) {
+      const present = presentIds.has(id);
+      row.dataset.present = present ? 'true' : 'false';
+      row.classList.toggle('filter-row-present', present);
+      row.classList.toggle('filter-row-absent', !present);
+    }
+    // 2) THEN re-sort: present events first (stable within groups)
+    const body = this.specialBody;
     if (body) {
       const rows = [...body.children].sort((a, b) => {
         const pa = a.dataset.present === 'true' ? 0 : 1;
@@ -160,12 +168,6 @@ export class FilterPanel {
         return pa - pb || Number(a.dataset.sid) - Number(b.dataset.sid);
       });
       rows.forEach(r => body.appendChild(r));
-    }
-    for (const [id, row] of this.specialRows) {
-      const present = presentIds.has(id);
-      row.dataset.present = present ? 'true' : 'false';
-      row.classList.toggle('filter-row-present', present);
-      row.classList.toggle('filter-row-absent', !present);
     }
   }
 

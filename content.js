@@ -18,10 +18,8 @@
     reportBook: /rest\/arcarum3\/dungeon\/report\/spacebook_status_list\//,
     incident: /rest\/arcarum3\/dungeon\/incident_choose/,
     partyStatus: /rest\/arcarum3\/dungeon\/party_status/,
-    partyDeck: /rest\/arcarum3\/party\/deck\//,
     shopLineup: /rest\/arcarum3\/dungeon\/dungeon_shop_lineup\//,
     shopPurchase: /rest\/arcarum3\/dungeon\/purchase_dungeon_shop_item/,
-    unlockEquipment: /rest\/arcarum3\/dungeon\/proceed_node_event_unlock_(weapon|summon|npc)/,
     battleResult: /\/result\/content\/index\//,
     raidStart: /rest\/raid\/start\.json/,
   };

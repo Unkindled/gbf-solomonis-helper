@@ -197,105 +197,6 @@ body::before {
   max-width: 100%;
 }
 
-#party-deck {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 6px 12px;
-  width: fit-content;
-  max-width: 100%;
-  border-top: 1px solid rgba(217,178,90,0.15);
-}
-#party-deck.hidden { display: none; }
-#party-deck-wrap {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-}
-.deck-toggle {
-  margin-top: 8px;
-  border-color: var(--gold-3);
-  color: var(--gold-1);
-  font-size: 14px;
-  padding: 3px 8px;
-  flex-shrink: 0;
-}
-.deck-toggle:hover { border-color: var(--gold-1); }
-.deck-toggle.active { background: rgba(217,178,90,0.15); }
-.deck-weapon.sealed,
-.deck-summon.sealed {
-  opacity: 0.5;
-  border-style: dashed;
-  border-color: rgba(200,120,255,0.5);
-  filter: grayscale(0.5);
-}
-.deck-seal {
-  position: absolute;
-  top: 0;
-  right: 0;
-  font-size: 10px;
-  background: rgba(0,0,0,0.55);
-  border-radius: 0 0 0 3px;
-  padding: 0 2px;
-  line-height: 12px;
-}
-.deck-weapons,
-.deck-summons {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-.deck-weapon,
-.deck-summon {
-  position: relative;
-  width: 34px;
-  height: 34px;
-  border: 1px solid var(--gold-3);
-  border-radius: 4px;
-  overflow: hidden;
-  flex-shrink: 0;
-  background: rgba(10,16,30,0.6);
-}
-.deck-weapon img,
-.deck-summon img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.deck-lv {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  font-size: 8px;
-  line-height: 10px;
-  text-align: center;
-  background: rgba(0,0,0,0.65);
-  color: #ffd54a;
-  font-weight: 700;
-}
-.deck-empty {
-  width: 34px;
-  height: 34px;
-  border: 1px dashed rgba(217,178,90,0.3);
-  border-radius: 4px;
-}
-.deck-summon.attr-1 { box-shadow: inset 0 0 0 2px rgba(255,80,80,0.4); }
-.deck-summon.attr-2 { box-shadow: inset 0 0 0 2px rgba(80,160,255,0.4); }
-.deck-summon.attr-3 { box-shadow: inset 0 0 0 2px rgba(255,200,80,0.4); }
-.deck-summon.attr-4 { box-shadow: inset 0 0 0 2px rgba(120,200,120,0.4); }
-.deck-summon.attr-5 { box-shadow: inset 0 0 0 2px rgba(200,120,255,0.4); }
-.deck-summon.attr-6 { box-shadow: inset 0 0 0 2px rgba(200,200,255,0.4); }
-
-.party-member {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  flex: 0 0 auto;
-  min-width: 0;
-  transition: transform 0.18s ease;
-}
 .party-member:hover { transform: translateY(-2px); }
 
 .party-card {
@@ -886,27 +787,37 @@ body::before {
   padding: 10px 0;
 }
 #app.sidebar-collapsed #status-bar {
-  /* Keep miasma/turn info visible while collapsed: float it at the
-     BOTTOM-left of the map so it never covers the top HUD (party bar /
-     coins / navigation). Fixed = viewport since it lives in the 46px
-     sidebar. */
+  /* Collapsed: turn + miasma info sits below the coin chip, left of the
+     party bar (inside the HUD column). Fixed = viewport since the element
+     lives in the 46px sidebar. */
   position: fixed;
-  bottom: 12px;
-  left: 54px;
-  top: auto;
+  top: 56px;      /* below the coin chip (hud top:10 + ~38px chip) */
+  left: 10px;
+  bottom: auto;
   right: auto;
   width: auto;
-  max-width: calc(100% - 220px);
+  max-width: 260px;
   background: var(--panel-bg);
   border: 1px solid var(--gold-edge);
   border-radius: 6px;
   box-shadow: var(--shadow-deep);
   z-index: 28;
+  font-size: 11px;
 }
 #app.sidebar-collapsed .sidebar-actions,
 #app.sidebar-collapsed #filter-panel { display: none; }
 #app.sidebar-collapsed #sidebar::after { display: none; }
 #app.sidebar-collapsed #path-info { display: none; }
+
+/* Collapsed: path info floats to the RIGHT of the party bar (top HUD row) */
+#app.sidebar-collapsed #floating-path-info {
+  position: fixed;
+  top: 56px;
+  left: 340px;   /* right of the party bar (coin + party ≈ 330px) */
+  right: auto;
+  max-width: 420px;
+  z-index: 28;
+}
 
 /* Floating path info shown while collapsed — below the HUD (party bar,
    coin chip + their labels) so it never covers them. */

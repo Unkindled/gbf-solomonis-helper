@@ -132,19 +132,6 @@ function handleGameData(type, data) {
     case 'spacebookAdd':
       handleSpacebookAdd(data);
       break;
-    case 'partyDeck':
-      // Party detail page: weapons (10 slots) + main/support summons.
-      // Just forward the deck to the helper window for display.
-      if (data && data.deck && data.deck.pc) {
-        broadcastToWindow('party-deck', data.deck.pc);
-      }
-      break;
-    case 'unlockEquipment':
-      // Weapon/summon/NPC unlocked — the server does NOT say which slot.
-      // Only party/deck/{id} carries is_position_locked, so remind the
-      // player to reopen the party page to refresh seal states.
-      broadcastToWindow('equipment-unlocked', true);
-      break;
     case 'incident':
       handleIncident(data);
       break;
