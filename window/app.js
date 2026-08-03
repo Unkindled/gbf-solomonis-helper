@@ -111,9 +111,24 @@ function init() {
     document.getElementById('app').classList.toggle('sidebar-left');
   });
   const btnCollapse = document.getElementById('btn-sidebar-collapse');
+  const statusBarEl = document.getElementById('status-bar');
+  const floatingPathEl = document.getElementById('floating-path-info');
+  const hudLeft = document.getElementById('hud-left');
+  const sidebarEl = document.getElementById('sidebar');
+  const appEl = document.getElementById('app');
   btnCollapse.addEventListener('click', () => {
-    document.getElementById('app').classList.toggle('sidebar-collapsed');
-    btnCollapse.textContent = document.getElementById('app').classList.contains('sidebar-collapsed') ? '▸' : '▾';
+    const collapsed = document.getElementById('app').classList.toggle('sidebar-collapsed');
+    btnCollapse.textContent = collapsed ? '▸' : '▾';
+    if (collapsed) {
+      // Move turn/miasma + path info INTO the HUD flex flow so they lay
+      // out dynamically beside coins/party — no hardcoded pixels, no
+      // overlap. DOM is restored on expand.
+      hudLeft.appendChild(statusBarEl);
+      hudLeft.appendChild(floatingPathEl);
+    } else {
+      sidebarEl.insertBefore(statusBarEl, sidebarEl.querySelector('.sidebar-actions'));
+      appEl.insertBefore(floatingPathEl, document.getElementById('guidebook-popup'));
+    }
     // Refresh floating path info visibility
     updatePathInfo(currentPath ? currentPath : null);
   });

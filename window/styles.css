@@ -126,6 +126,7 @@ body::before {
   align-items: flex-start;
   gap: 10px;
   min-width: 0;
+  flex-wrap: wrap; /* collapsed state: status/path flow under coins/party */
 }
 
 #hud-right {
@@ -787,36 +788,27 @@ body::before {
   padding: 10px 0;
 }
 #app.sidebar-collapsed #status-bar {
-  /* Collapsed: turn + miasma info sits below the coin chip, left of the
-     party bar (inside the HUD column). Fixed = viewport since the element
-     lives in the 46px sidebar. */
-  position: fixed;
-  top: 56px;      /* below the coin chip (hud top:10 + ~38px chip) */
-  left: 10px;
-  bottom: auto;
-  right: auto;
-  width: auto;
-  max-width: 260px;
-  background: var(--panel-bg);
+  /* Inside the HUD flex flow (moved by JS): compact chip beside coins */
+  position: static;
+  font-size: 11px;
+  padding: 6px 10px;
   border: 1px solid var(--gold-edge);
   border-radius: 6px;
+  background: var(--panel-bg);
   box-shadow: var(--shadow-deep);
-  z-index: 28;
-  font-size: 11px;
+  white-space: nowrap;
 }
 #app.sidebar-collapsed .sidebar-actions,
 #app.sidebar-collapsed #filter-panel { display: none; }
 #app.sidebar-collapsed #sidebar::after { display: none; }
 #app.sidebar-collapsed #path-info { display: none; }
 
-/* Collapsed: path info floats to the RIGHT of the party bar (top HUD row) */
+/* Collapsed: path info sits inside the HUD flex flow (right of party) */
 #app.sidebar-collapsed #floating-path-info {
-  position: fixed;
-  top: 56px;
-  left: 340px;   /* right of the party bar (coin + party ≈ 330px) */
-  right: auto;
+  position: static;
+  align-self: flex-start;
   max-width: 420px;
-  z-index: 28;
+  pointer-events: none;
 }
 
 /* Floating path info shown while collapsed — below the HUD (party bar,
