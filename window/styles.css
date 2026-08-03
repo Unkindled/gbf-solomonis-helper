@@ -836,6 +836,10 @@ body::before {
   animation: popup-in 0.25s cubic-bezier(.2,.9,.3,1.15);
   overflow: hidden;
 }
+/* 'My Guide Books' popup occupies the right side — shift left beside it */
+#pick-overlay.pushed-left {
+  right: 362px; /* 340px popup + 10px margin + 12px gap */
+}
 #pick-overlay.hidden { display: none; }
 .pick-overlay-header {
   display: flex;

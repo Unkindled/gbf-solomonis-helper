@@ -124,6 +124,9 @@ function init() {
   const popup = document.getElementById('guidebook-popup');
   document.getElementById('btn-guidebook').addEventListener('click', () => {
     popup.classList.toggle('hidden');
+    // Keep the pick overlay clear of the popup (shift left when popup open)
+    const pick = document.getElementById('pick-overlay');
+    if (pick) pick.classList.toggle('pushed-left', !popup.classList.contains('hidden'));
     if (!popup.classList.contains('hidden')) {
       renderGuideBooks(latestGuideBooks); // refresh active tab view
     }
@@ -584,6 +587,10 @@ function showPickOverlay(candidates) {
   const overlay = document.getElementById('pick-overlay');
   const body = document.getElementById('pick-overlay-body');
   if (!overlay || !body) return;
+  // When 'My Guide Books' popup is open (right side), shift the options
+  // overlay left so it doesn't cover the popup.
+  const popupOpen = !document.getElementById('guidebook-popup')?.classList.contains('hidden');
+  overlay.classList.toggle('pushed-left', popupOpen);
   const rarLabel = { 1: '★', 2: '★★', 3: '★★★', 99: '☠' };
   const rows = candidates.map((c, i) => {
     const entry = matchCodexEntry(c);

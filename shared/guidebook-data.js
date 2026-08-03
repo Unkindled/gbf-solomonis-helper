@@ -846,7 +846,7 @@ export const GUIDEBOOK_DB = [
   "icon": "special",
   "text": "50% hit to all allies' DMG dealt until 3rd turn / From 4th turn or later: Amplify DMG dealt +100% / 20% DMG reduction",
   "id": 64,
-  "ja": null,
+  "ja": "味方全体が3ターン目まで与ダメージ DOWN(50%)/4ターン目以降与ダメージ UP(100%)/被ダメージを軽減(20%)",
   "zh": null
  },
  {
@@ -1164,7 +1164,7 @@ export const GUIDEBOOK_DB = [
   "icon": "curse def",
   "text": "Amplify DMG taken +20% (Changes to 20% DMG reduction upon clearing 3 battles)",
   "id": 89,
-  "ja": null,
+  "ja": "被ダメージUP(20%)　◆バトルに3回勝利すると 「被ダメージ軽減(20%)」に変化(1/3回)",
   "zh": null
  },
  {
@@ -1413,7 +1413,7 @@ export const GUIDEBOOK_DB = [
   "icon": "curse special",
   "text": "At battle start: DMG immunity to foe (30 hits) (Can't be stacked)",
   "id": 110,
-  "ja": null,
+  "ja": "バトル開始時、敵に被ダメージ無効(30回)(重複不 可)",
   "zh": null
  },
  {
@@ -1565,8 +1565,11 @@ export const GUIDEBOOK_STATUS_ID = {
  "118": 106,
  "119": 113,
  "120": 111,
+ "121": 59,
+ "122": 110,
  "124": 114,
  "126": 88,
+ "127": 89,
  "128": 90,
  "129": 105
 };
