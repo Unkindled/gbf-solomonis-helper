@@ -104,8 +104,12 @@ export function matchCodexEntry(gameBook) {
   const nStripped = normText(stripRemainingUses(gameBook.name));
   let hit = null;
   for (const b of GUIDEBOOK_DB) {
-    for (const lang of ['text', 'ja', 'zh']) {
-      const t = b[lang];
+    // Compare against the primary text and any alt alias texts (game's
+    // in-client wording may differ from the wiki phrasing, e.g. id20
+    // 'Autorevive (Keeps buffs / Once per battle)' vs wiki 'All allies
+    // gain Autorevived (with buffs) at battle start').
+    const haystack = [b.text, b.ja, b.zh, ...(b.alt || [])];
+    for (const t of haystack) {
       if (!t) continue;
       const tn = normText(t);
       if (tn === n || (n.length >= 12 && tn.startsWith(n))) { hit = b; break; }
@@ -203,8 +207,28 @@ export function absorbBookInfo(recs, onChange) {
           hit.ja = jaText;
           newJa++;
         }
-      } else if (/[\u3040-\u30ff\u4e00-\u9fff]/.test(rec.name)) {
-        unmappedJaBooks.push((rec.name || '').replace(/@@/g, ' '));
+      } else {
+        // Unmatched book (from a shop shelf / 3-way pick). Collect it into
+        // the uncatalogued pool too — previously only the guidebook page
+        // path (collectUnknownBooks) did this, so books seen in shops or
+        // pick choices never showed up in the codex's 'Uncatalogued' list.
+        const key = sid;
+        const prev = unknownBooks.get(key);
+        const mergedNum = (prev?.num || 0) + (rec.num || 1);
+        if (!prev || prev.num !== mergedNum) {
+          unknownBooks.set(key, {
+            status_id: rec.status_id,
+            user_status_id: rec.user_status_id,
+            name: rec.name || 'status:' + sid,
+            rarity: rec.rarity,
+            icon_type: rec.icon_type,
+            num: mergedNum,
+          });
+          reRender = true;
+        }
+        if (/[\u3040-\u30ff\u4e00-\u9fff]/.test(rec.name)) {
+          unmappedJaBooks.push((rec.name || '').replace(/@@/g, ' '));
+        }
       }
     }
   }
@@ -216,6 +240,7 @@ export function absorbBookInfo(recs, onChange) {
       [K_JA]: learnedJaText,
       [K_MAP]: learnedMap,
       [K_ICONS]: seenBookIcons,
+      [K_UNKNOWN]: [...unknownBooks.values()],
     });
     if (onChange) onChange();
   }

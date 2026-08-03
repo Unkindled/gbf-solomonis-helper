@@ -269,6 +269,9 @@ export const GUIDEBOOK_DB = [
   ],
   "icon": "special",
   "text": "Sharp hit to DEF / All allies gain Autorevived (with buffs) at battle start. / Amplify DMG for each time an ally was knocked out after obtaining this effect (10% per ally / Max: 100%) (Can't be stacked)",
+  "alt": [
+   "Sharp hit to DEF / Autorevive (Keeps buffs / Once per battle) / Amplify DMG for each time an ally was knocked out after obtaining this effect (0% / Max: 100%) (Can't be stacked)"
+  ],
   "id": 20,
   "ja": null,
   "zh": null

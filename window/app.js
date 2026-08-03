@@ -149,7 +149,13 @@ function init() {
   // spacebook_status_list (passively captured → tab auto-closes).
   const popup = document.getElementById('guidebook-popup');
   document.getElementById('btn-guidebook').addEventListener('click', () => {
-    popup.classList.toggle('hidden');
+    const wasOpen = !popup.classList.contains('hidden');
+    // If the menu is already open AND data is stale, don't toggle it
+    // closed — the click's purpose is to sync, and closing the menu while
+    // the refresh completes would hide the very data the user is looking at.
+    if (!(wasOpen && guideBooksStale)) {
+      popup.classList.toggle('hidden');
+    }
     // Keep the pick overlay clear of the popup (shift left when popup open)
     const pick = document.getElementById('pick-overlay');
     if (pick) pick.classList.toggle('pushed-left', !popup.classList.contains('hidden'));
