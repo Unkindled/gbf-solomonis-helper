@@ -15,7 +15,7 @@
       // window — status bar
       'status.waiting': 'Waiting for game data...',
       'status.turn': 'Turn {turn}',
-      'status.miasma': '☠ Miasma Lv{level} · {countdown} turns until shrink',
+      'status.miasma': '☠ Miasma Lv{level} · {countdown} turns until miasma stops',
       'status.miasmaBefore': '☠ Miasma in ~{turns} turns',
       'status.lv2Soon': '☠ Lv2 shrink in ~{turns} turns',
       'status.nextCycleSoon': '☠ Next Lv1 in ~{turns} turns',
@@ -23,6 +23,7 @@
       'status.guidebookManual': '⚠ Auto-refresh throttled — open the Guide Book page in-game to sync',
       'status.guidebookRefreshing': '⏳ Syncing guide books…',
       'status.newPhase': 'New phase — map refreshing...',
+      'party.empty': 'Open the party page in-game to sync your party',
       // window — path info
       'path.hint': 'Click a node to plan a route. Click again to extend. Click your position or Esc to clear.',
       'path.errorNoPath': 'No path found!',
@@ -74,6 +75,7 @@
       'report.unmappedJa': '⚠ {n} JA books unmapped — switch to EN once',
       // navigation (compass menu)
       'nav.center': 'Center on player',
+      'nav.reset': 'Reset map view',
       'nav.farm': 'Farm route (≤9 steps)',
       'nav.hard': 'Strong-foe route (≤20 steps)',
       'nav.shop': 'Nearest shop',
@@ -127,7 +129,7 @@
       // window — status bar
       'status.waiting': '等待游戏数据...',
       'status.turn': '回合 {turn}',
-      'status.miasma': '☠ 瘴气 Lv{level} · {countdown} 回合后缩圈',
+      'status.miasma': '☠ 瘴气 Lv{level} · {countdown} 回合后缩圈完成',
       'status.miasmaBefore': '☠ 约 {turns} 回合后出现瘴气',
       'status.lv2Soon': '☠ 约 {turns} 回合后 Lv2 缩圈',
       'status.nextCycleSoon': '☠ 约 {turns} 回合后下一轮 Lv1',
@@ -135,6 +137,7 @@
       'status.guidebookManual': '⚠ 后台刷新被节流 — 请在游戏内打开导本页面以同步',
       'status.guidebookRefreshing': '⏳ 导本同步中…',
       'status.newPhase': '新阶段 — 地图刷新中...',
+      'party.empty': '请在游戏内打开队伍页面以同步队伍',
       // window — path info
       'path.hint': '点击节点规划路线，再次点击延伸。点击自己位置或按 Esc 清除。',
       'path.errorNoPath': '找不到路径！',
@@ -186,6 +189,7 @@
       'report.unmappedJa': '⚠ {n} 本日文导本未映射 — 请切英文版一次',
       // navigation (compass menu)
       'nav.center': '定位玩家',
+      'nav.reset': '地图复位',
       'nav.farm': '发育路线（≤9 步）',
       'nav.hard': '强敌路线（≤20 步）',
       'nav.shop': '最近的商店',

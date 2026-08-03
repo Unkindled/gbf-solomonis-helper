@@ -1,58 +1,96 @@
-// Filter panel - node type and special incident checkboxes
-// Uses game-native icons (scaled) + i18n labels.
+// Filter panel - node type chips (topbar, horizontal) + special incident
+// rows (dropdown, collapsed by default). Uses game-native icons + i18n.
 
-import { NODE_TYPE_LABELS, NODE_TYPE_COLORS, SPECIAL_NODE_LABELS } from '../shared/constants.js';
+import { NODE_TYPE_LABELS, SPECIAL_NODE_LABELS } from '../shared/constants.js';
 import { NODE_TYPE_ICON_ASSETS } from '../shared/node-registry.js';
 
 // Node type → icon asset file (type 0 'Path' has no icon; show base plate)
 const NODE_TYPE_ICON = NODE_TYPE_ICON_ASSETS;
 
 const ASSET_BASE = '../assets/node_icon/';
-const ICON_W = 20, ICON_H = 22; // scaled display size (90x100 → 20x22)
+const ICON_W = 30, ICON_H = 34; // the icon IS the button (90x100 ratio)
 
 export class FilterPanel {
-  constructor(container, onChange) {
-    this.container = container;
+  /**
+   * @param {HTMLElement} chipContainer - topbar row for node-type chips
+   * @param {HTMLElement} specialContainer - dropdown body for special rows
+   * @param {(types:Set<number>, specials:Set<number>)=>void} onChange
+   */
+  constructor(chipContainer, specialContainer, onChange) {
+    this.chipContainer = chipContainer;
+    this.container = specialContainer;
     this.onChange = onChange;
     this.activeTypes = new Set();
     this.activeSpecials = new Set();
     this.presentSpecials = new Set();
     this.specialRows = new Map();
-    this.typeCountsEls = new Map();
-    this._build();
+    this.typeChips = new Map();      // type → chip button
+    this.typeCountsEls = new Map();  // type → count span
+    this._buildChips();
+    this._buildSpecials();
   }
 
-  _build() {
-    this.container.innerHTML = '';
+  // --- Node type chips: horizontal icon toggles in the topbar ---
 
-    // Header
-    const header = document.createElement('div');
-    header.className = 'filter-header';
-    header.innerHTML = `<span>${I18N.t('filter.title')}</span>`;
-    const btnClear = document.createElement('button');
-    btnClear.textContent = I18N.t('filter.clearAll');
-    btnClear.className = 'btn-small';
-    btnClear.addEventListener('click', () => this.clearAll());
-    header.appendChild(btnClear);
-    this.container.appendChild(header);
-
-    // Node type section (collapsible)
-    const typeSection = document.createElement('details');
-    typeSection.className = 'filter-section';
-    typeSection.open = true; // default expanded
-    typeSection.innerHTML = `<summary class="filter-section-title">${I18N.t('filter.nodeType')}</summary><div class="filter-section-body"></div>`;
-    const typeBody = typeSection.querySelector('.filter-section-body');
+  _buildChips() {
+    this.chipContainer.innerHTML = '';
+    this.typeChips.clear();
+    this.typeCountsEls.clear();
     for (const [typeStr] of Object.entries(NODE_TYPE_LABELS)) {
       const type = parseInt(typeStr);
-      const row = this._createTypeRow(type);
-      typeBody.appendChild(row);
+      const chip = document.createElement('button');
+      chip.className = 'type-chip';
+      chip.title = I18N.t('nodeType.' + type) || NODE_TYPE_LABELS[type] || type;
+      chip.setAttribute('aria-pressed', 'false');
+      const icon = document.createElement('img');
+      icon.className = 'chip-icon';
+      icon.src = ASSET_BASE + NODE_TYPE_ICON[type];
+      icon.width = ICON_W;
+      icon.height = ICON_H;
+      icon.alt = '';
+      const count = document.createElement('span');
+      count.className = 'chip-count';
+      chip.appendChild(icon);
+      chip.appendChild(count);
+      chip.addEventListener('click', () => {
+        if (this.activeTypes.has(type)) this.activeTypes.delete(type);
+        else this.activeTypes.add(type);
+        this._syncChip(type);
+        this._emit();
+      });
+      this.chipContainer.appendChild(chip);
+      this.typeChips.set(type, chip);
+      this.typeCountsEls.set(type, count);
     }
-    this.container.appendChild(typeSection);
+  }
 
-    // Special incident section (collapsible)
+  _syncChip(type) {
+    const chip = this.typeChips.get(type);
+    if (!chip) return;
+    const on = this.activeTypes.has(type);
+    chip.classList.toggle('active', on);
+    chip.setAttribute('aria-pressed', on ? 'true' : 'false');
+  }
+
+  /**
+   * Update per-type node counts shown in each chip, e.g. "3".
+   * Pass a Map of node_type -> count.
+   */
+  setTypeCounts(counts) {
+    for (const [type, el] of this.typeCountsEls) {
+      const c = counts.get(type) || 0;
+      el.textContent = c > 0 ? String(c) : '';
+    }
+  }
+
+  // --- Special incident rows (dropdown, collapsed by default) ---
+
+  _buildSpecials() {
+    this.container.innerHTML = '';
+
     const spSection = document.createElement('details');
     spSection.className = 'filter-section';
-    spSection.open = true; // expanded by default; present events sort first
+    spSection.open = true; // one click on the topbar button = list visible
     spSection.innerHTML = `<summary class="filter-section-title">${I18N.t('filter.specialEvent')} <span class="filter-present-hint">${I18N.t('filter.presentHint')}</span></summary><div class="filter-section-body"></div>`;
     const spBody = spSection.querySelector('.filter-section-body');
     this.specialBody = spBody;
@@ -70,46 +108,6 @@ export class FilterPanel {
       this.specialRows.set(id, row);
     }
     this.container.appendChild(spSection);
-  }
-
-  _createTypeRow(type) {
-    const row = document.createElement('label');
-    row.className = 'filter-row';
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.addEventListener('change', () => {
-      if (this.activeTypes.has(type)) this.activeTypes.delete(type);
-      else this.activeTypes.add(type);
-      this._emit();
-    });
-    const icon = document.createElement('img');
-    icon.className = 'filter-icon';
-    icon.src = ASSET_BASE + NODE_TYPE_ICON[type];
-    icon.width = ICON_W;
-    icon.height = ICON_H;
-    const text = document.createElement('span');
-    text.className = 'filter-label';
-    text.textContent = I18N.t('nodeType.' + type) || NODE_TYPE_LABELS[type] || type;
-    const count = document.createElement('span');
-    count.className = 'filter-count';
-    count.textContent = '0';
-    row.appendChild(cb);
-    row.appendChild(icon);
-    row.appendChild(text);
-    row.appendChild(count);
-    this.typeCountsEls.set(type, count);
-    return row;
-  }
-
-  /**
-   * Update per-type node counts shown next to each type label,
-   * e.g. "Ruler (3)". Pass a Map of node_type -> count.
-   */
-  setTypeCounts(counts) {
-    for (const [type, el] of this.typeCountsEls) {
-      const c = counts.get(type) || 0;
-      el.textContent = c > 0 ? `(${c})` : '';
-    }
   }
 
   _createSpecialRow(id) {
@@ -171,6 +169,7 @@ export class FilterPanel {
   clearAll() {
     this.activeTypes.clear();
     this.activeSpecials.clear();
+    for (const type of this.typeChips.keys()) this._syncChip(type);
     this.container.querySelectorAll('input[type=checkbox]').forEach(cb => cb.checked = false);
     this._emit();
   }

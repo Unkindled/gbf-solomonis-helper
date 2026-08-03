@@ -968,6 +968,14 @@ export class MapRenderer {
     });
   }
 
+  /** Reset the view: fit zoom + map centered (locate-player lives in the
+   *  compass menu / F key). Clears userAdjusted so resizes re-fit. */
+  resetView() {
+    this.userAdjusted = false;
+    this._fitView();
+    this.render();
+  }
+
   /** Center view on the player's current node */
   focusPlayer() {
     if (this.currentNodeId == null) return;

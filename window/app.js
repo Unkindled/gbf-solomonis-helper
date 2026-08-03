@@ -5,11 +5,12 @@ import { FilterPanel } from './filter-panel.js';
 import { findShortestPath, findFarmRoute, findNearestShop, findCustomPath, findHardRoute } from './pathfinder.js';
 import { MiasmaCalibration } from './miasma-predictor.js';
 import { DUNGEON_STATUS_LABELS, NODE_TYPE_LABELS } from '../shared/constants.js';
+import { NODE_TYPE_ICON_ASSETS } from '../shared/node-registry.js';
 import { GUIDEBOOK_DB, GUIDEBOOK_STATUS_ID } from '../shared/guidebook-data.js';
 import { GUIDEBOOK_ICONS } from '../shared/guidebook-icons.js';
 import { GUIDEBOOK_ZH } from '../shared/guidebook-zh.js';
 import {
-  MSG_GET_STATE, MSG_GET_MIASMA_LOG, MSG_OPEN_GUIDEBOOK_TAB,
+  MSG_GET_STATE, MSG_OPEN_GUIDEBOOK_TAB,
   MSG_FETCH_BOOK_ICONS, MSG_WINDOW_DATA,
   TYPE_MAP_INIT, TYPE_MOVE_UPDATE, TYPE_FINISH_NODE, TYPE_PROCEED,
   TYPE_PARTY_STATUS, TYPE_GUIDE_BOOKS, TYPE_GUIDEBOOK_ICONS,
@@ -68,9 +69,9 @@ function init() {
   window.addEventListener('resize', resizeCanvas);
   resizeCanvas();
 
-  // Watch the map container directly: collapsing the sidebar changes its
-  // width WITHOUT a window resize, and leaving the canvas CSS-stretched
-  // distorts the map. ResizeObserver keeps the backing store in sync.
+  // Keep the canvas backing store in sync with the map container's CSS
+  // size (window resize, topbar wrapping) — a CSS-stretched canvas would
+  // distort the map.
   const mapContainer = document.getElementById('map-container');
   if (typeof ResizeObserver !== 'undefined') {
     new ResizeObserver(() => resizeCanvas()).observe(mapContainer);
@@ -86,9 +87,11 @@ function init() {
   renderer.onNodeClick = handleNodeClick;
   renderer.onEmptyClick = handleEmptyClick;
 
-  filterPanel = new FilterPanel(document.getElementById('filter-panel'), (types, specials) => {
-    renderer.setFilter(types, specials);
-  });
+  filterPanel = new FilterPanel(
+    document.getElementById('type-chips'),
+    document.getElementById('filter-special'),
+    (types, specials) => renderer.setFilter(types, specials),
+  );
 
   // Request current state from background
   chrome.runtime.sendMessage({ channel: MSG_GET_STATE }, (state) => {
@@ -127,33 +130,18 @@ function init() {
     }
   });
 
-  // Sidebar: switch side / collapse
-  const sidebar = document.getElementById('sidebar');
-  const btnSide = document.getElementById('btn-sidebar-side');
-  btnSide.addEventListener('click', () => {
-    document.getElementById('app').classList.toggle('sidebar-left');
+  // Filter dropdown (topbar): toggle + outside-click close, same pattern
+  // as the compass nav-menu.
+  const filterDropdown = document.getElementById('filter-dropdown');
+  const btnFilter = document.getElementById('btn-filter');
+  btnFilter.addEventListener('click', (e) => {
+    e.stopPropagation();
+    filterDropdown.classList.toggle('hidden');
   });
-  const btnCollapse = document.getElementById('btn-sidebar-collapse');
-  const statusBarEl = document.getElementById('status-bar');
-  const floatingPathEl = document.getElementById('floating-path-info');
-  const hudLeft = document.getElementById('hud-left');
-  const sidebarEl = document.getElementById('sidebar');
-  const appEl = document.getElementById('app');
-  btnCollapse.addEventListener('click', () => {
-    const collapsed = document.getElementById('app').classList.toggle('sidebar-collapsed');
-    btnCollapse.textContent = collapsed ? '▸' : '▾';
-    if (collapsed) {
-      // Move turn/miasma + path info INTO the HUD flex flow so they lay
-      // out dynamically beside coins/party — no hardcoded pixels, no
-      // overlap. DOM is restored on expand.
-      hudLeft.appendChild(statusBarEl);
-      hudLeft.appendChild(floatingPathEl);
-    } else {
-      sidebarEl.insertBefore(statusBarEl, sidebarEl.querySelector('.sidebar-actions'));
-      appEl.insertBefore(floatingPathEl, document.getElementById('guidebook-popup'));
+  document.addEventListener('click', (e) => {
+    if (!filterDropdown.classList.contains('hidden') && !filterDropdown.contains(e.target) && e.target !== btnFilter && !btnFilter.contains(e.target)) {
+      filterDropdown.classList.add('hidden');
     }
-    // Refresh floating path info visibility
-    updatePathInfo(currentPath ? currentPath : null);
   });
 
   // Guide book popup toggle. When data is stale, clicking also opens the
@@ -235,22 +223,26 @@ function init() {
     });
   });
 
-  // Export miasma log button
-  document.getElementById('btn-export-miasma').addEventListener('click', () => {
-    chrome.runtime.sendMessage({ channel: MSG_GET_MIASMA_LOG }, (log) => {
-      if (chrome.runtime.lastError || !log) return;
-      const blob = new Blob([JSON.stringify(log, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `miasma_log_${Date.now()}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-    });
+  // Topbar position toggle (top ↔ bottom, like a taskbar) — persisted
+  const btnBarSide = document.getElementById('btn-topbar-side');
+  function applyBarSide(bottom) {
+    document.getElementById('app').classList.toggle('topbar-bottom', bottom);
+    btnBarSide.textContent = bottom ? '⬆' : '⬇';
+    btnBarSide.title = bottom ? 'Move bar to top' : 'Move bar to bottom';
+  }
+  chrome.storage.local.get('gbfHelperTopbarBottom', (res) => {
+    applyBarSide(!!res.gbfHelperTopbarBottom);
+  });
+  btnBarSide.addEventListener('click', () => {
+    const bottom = !document.getElementById('app').classList.contains('topbar-bottom');
+    applyBarSide(bottom);
+    chrome.storage.local.set({ gbfHelperTopbarBottom: bottom });
   });
 
-  // Weapons & summons display removed per user request — data capture
-  // (party/deck) is also removed.
+  // Clear-all filters (topbar button, next to the special-events button)
+  document.getElementById('btn-clear-filters').addEventListener('click', () => {
+    if (filterPanel) filterPanel.clearAll();
+  });
 
   // Language toggle
   const langBtn = document.getElementById('btn-lang');
@@ -262,15 +254,18 @@ function init() {
 
   function applyLanguage() {
     // Rebuild filter panel with new labels
-    filterPanel = new FilterPanel(document.getElementById('filter-panel'), (types, specials) => {
-      renderer.setFilter(types, specials);
-    });
+    filterPanel = new FilterPanel(
+      document.getElementById('type-chips'),
+      document.getElementById('filter-special'),
+      (types, specials) => renderer.setFilter(types, specials),
+    );
     if (dungeon) filterPanel.setPresentSpecials(getPresentSpecialIds());
     buildNavMenu();
     langBtn.textContent = I18N.t('btn.lang');
     langBtn.title = I18N.getLang() === 'zh' ? 'Switch to English' : '切换到中文';
     applyGuidebookUI(); // bilingual labels + re-render content
     updateStatusBar();
+    renderPartyBar(latestParty); // refresh empty-party hint text
     if (currentPath) updatePathInfo(currentPath); else updatePathInfo(null);
   }
   applyLanguage();
@@ -600,9 +595,10 @@ function setGuideBooksStale(stale) {
 }
 
 function renderPartyBar(party) {
+  latestParty = party;
   const el = document.getElementById('party-bar');
   if (!Array.isArray(party) || party.length === 0) {
-    el.innerHTML = '';
+    el.innerHTML = `<div class="party-empty">${escapeHtml(I18N.t('party.empty'))}</div>`;
     return;
   }
   el.innerHTML = party.map((m, i) => {
@@ -635,6 +631,7 @@ function renderPartyBar(party) {
 // Guidebook icon cache: icon_type → data URL (fetched from CDN on demand).
 const bookIconCache = {};
 let latestGuideBooks = [];
+let latestParty = null;
 
 function getBookIconUrl(iconType) {
   if (iconType == null) return '';
@@ -1027,6 +1024,7 @@ function buildNavMenu() {
 
 const NAV_ITEMS = [
   { id: 'center', icon: '⌖', labelKey: 'nav.center', action: () => { if (renderer) renderer.focusPlayer(); } },
+  { id: 'reset', icon: '⛶', labelKey: 'nav.reset', action: () => { if (renderer) renderer.resetView(); } },
   { id: 'custom', icon: '✎', labelKey: 'nav.custom', action: navigateCustomPath },
   { id: 'farm', icon: '🌾', labelKey: 'nav.farm', action: navigateFarmRoute },
   { id: 'hard', icon: '⚔', labelKey: 'nav.hard', action: navigateHardRoute },
@@ -1175,7 +1173,6 @@ function updateStatusBar(override) {
 
 function updatePathInfo(path, error) {
   const el = document.getElementById('path-info');
-  const floatEl = document.getElementById('floating-path-info');
   let html;
   if (error) {
     html = `<span class="path-error">${error}</span>`;
@@ -1183,22 +1180,27 @@ function updatePathInfo(path, error) {
     html = `<span class="path-hint">${I18N.t('path.hint')}</span>`;
   } else {
     const steps = path.length - 1;
-    const counts = {};
+    const counts = new Map(); // node_type -> count
     for (const id of path) {
       const n = nodeMap.get(id);
       if (!n) continue;
-      const label = I18N.t('nodeType.' + n.node_type) || NODE_TYPE_LABELS[n.node_type] || `type:${n.node_type}`;
-      counts[label] = (counts[label] || 0) + 1;
+      counts.set(n.node_type, (counts.get(n.node_type) || 0) + 1);
     }
-    const summary = Object.entries(counts).map(([k, v]) => `${k}×${v}`).join(', ');
+    const parts = [];
+    for (const [type, c] of counts) {
+      const label = I18N.t('nodeType.' + type) || NODE_TYPE_LABELS[type] || `type:${type}`;
+      if (type === 0) {
+        // Path has no distinct icon — keep the text label
+        parts.push(`${escapeHtml(label)}×${c}`);
+      } else {
+        const icon = NODE_TYPE_ICON_ASSETS[type] || `${type}.png`;
+        parts.push(`<img class="path-icon" src="../assets/node_icon/${icon}" alt="${escapeHtml(label)}" title="${escapeHtml(label)}">×${c}`);
+      }
+    }
+    const summary = parts.join(' ');
     html = `<div class="path-summary"><strong>${I18N.t('path.summary', { steps, summary })}</strong></div>`;
   }
   el.innerHTML = html;
-  if (floatEl) {
-    // Sync the floating copy; show it when collapsed and there's content
-    floatEl.innerHTML = html;
-    floatEl.classList.toggle('hidden', !document.getElementById('app').classList.contains('sidebar-collapsed'));
-  }
 }
 
 // --- Start ---

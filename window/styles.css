@@ -82,9 +82,62 @@ body::before {
   position: relative;
   z-index: 1;
   display: flex;
+  flex-direction: column;
   width: 100%;
   height: 100%;
 }
+
+/* ---------- Top bar ---------- */
+
+#topbar {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  background:
+    radial-gradient(120% 90% at 50% -20%, rgba(217,178,90,0.10), transparent 60%),
+    linear-gradient(180deg, #131a2c, #0b101d);
+  border-bottom: 1px solid var(--gold-edge);
+  box-shadow: 0 4px 18px rgba(0,0,0,0.5);
+  position: relative;
+  z-index: 20;
+}
+#topbar-left { display: flex; align-items: flex-start; gap: 10px; flex-shrink: 0; }
+#topbar-mid {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+#topbar-right {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Filter dropdown (topbar) — reuses the engraved panel look */
+.filter-dropdown {
+  position: absolute;
+  top: 46px;
+  right: 0;
+  z-index: 40;
+  width: 240px;
+  max-height: min(560px, 72vh);
+  overflow-y: auto;
+  background:
+    linear-gradient(180deg, rgba(22, 29, 49, 0.82), rgba(13, 19, 34, 0.82));
+  border: 1px solid var(--gold-edge);
+  border-radius: 10px;
+  box-shadow: var(--shadow-deep);
+  padding: 4px 0 8px;
+  animation: popup-in 0.18s cubic-bezier(.2,.9,.3,1.15);
+}
+.filter-dropdown.hidden { display: none; }
 
 /* ---------- Map stage ---------- */
 
@@ -105,42 +158,11 @@ body::before {
 }
 #map-canvas:active { cursor: grabbing; }
 
-/* ---------- Top HUD ---------- */
+/* ---------- Shared engraved-panel look ---------- */
 
-#hud-top {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  right: 10px;
-  z-index: 20;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-  pointer-events: none;
-}
-#hud-top > * { pointer-events: auto; }
-
-#hud-left {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  min-width: 0;
-  flex-wrap: wrap; /* collapsed state: status/path flow under coins/party */
-}
-
-#hud-right {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  flex-shrink: 0;
-}
-
-/* Shared engraved-panel look */
 .coin-chip,
 #party-bar,
-.guidebook-popup,
-#sidebar {
+.guidebook-popup {
   background: var(--panel-bg);
   border: 1px solid var(--gold-edge);
   border-radius: 9px;
@@ -150,8 +172,7 @@ body::before {
 /* A hairline gilt highlight tracing the top edge — the "lit metal" cue */
 .coin-chip::after,
 #party-bar::after,
-.guidebook-popup::after,
-#sidebar::after {
+.guidebook-popup::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -199,6 +220,27 @@ body::before {
 }
 
 .party-member:hover { transform: translateY(-2px); }
+
+/* Empty party: blinking reminder to open the in-game party page */
+.party-empty {
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--gold-1);
+  animation: party-blink 1.6s ease-in-out infinite;
+}
+@keyframes party-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+/* Node-type icons inside the path summary */
+.path-icon {
+  width: 18px;
+  height: 20px;
+  vertical-align: -5px;
+  margin: 0 1px;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.6));
+}
 
 .party-card {
   position: relative;
@@ -421,7 +463,7 @@ body::before {
 
 .guidebook-popup {
   position: absolute;
-  top: 78px;
+  top: 10px;
   right: 10px;
   width: 340px;
   max-height: 62%;
@@ -720,8 +762,6 @@ body::before {
 
 /* ---------- Navigation menu (compass dropdown) ---------- */
 
-#hud-right { position: relative; }
-
 .nav-menu {
   position: absolute;
   top: 64px;
@@ -764,74 +804,11 @@ body::before {
   flex-shrink: 0;
 }
 
-/* ---------- Sidebar toolbar (side-switch + collapse) ---------- */
-
-.sidebar-toolbar {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-  padding: 6px 10px 2px;
-}
-
-#app.sidebar-left #sidebar { order: -1; border-left: none; border-right: 1px solid var(--gold-edge); }
-
-#app.sidebar-collapsed #sidebar {
-  width: 46px;
-  min-width: 46px;
-}
-#app.sidebar-collapsed .sidebar-toolbar {
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 0;
-}
-#app.sidebar-collapsed #status-bar {
-  /* Inside the HUD flex flow (moved by JS): compact chip beside coins */
-  position: static;
-  font-size: 11px;
-  padding: 6px 10px;
-  border: 1px solid var(--gold-edge);
-  border-radius: 6px;
-  background: var(--panel-bg);
-  box-shadow: var(--shadow-deep);
-  white-space: nowrap;
-}
-#app.sidebar-collapsed .sidebar-actions,
-#app.sidebar-collapsed #filter-panel { display: none; }
-#app.sidebar-collapsed #sidebar::after { display: none; }
-#app.sidebar-collapsed #path-info { display: none; }
-
-/* Collapsed: path info sits inside the HUD flex flow (right of party) */
-#app.sidebar-collapsed #floating-path-info {
-  position: static;
-  align-self: flex-start;
-  max-width: 420px;
-  pointer-events: none;
-}
-
-/* Floating path info shown while collapsed — below the HUD (party bar,
-   coin chip + their labels) so it never covers them. */
-#floating-path-info {
-  position: absolute;
-  top: 152px;
-  left: 12px;
-  z-index: 25;
-  max-width: 340px;
-  padding: 8px 12px;
-  border: 1px solid var(--gold-edge);
-  border-radius: 9px;
-  background: var(--panel-bg);
-  box-shadow: var(--shadow-deep);
-  pointer-events: none;
-  animation: popup-in 0.18s ease;
-}
-#floating-path-info.hidden { display: none; }
-
 /* ---------- 3-way guidebook pick overlay ---------- */
 
 #pick-overlay {
   position: absolute;
-  top: 152px;
+  top: 10px;
   right: 12px;
   z-index: 35;
   width: 360px;
@@ -906,7 +883,7 @@ body::before {
 
 #custom-path-overlay {
   position: absolute;
-  top: 78px;
+  top: 10px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 40;
@@ -987,30 +964,17 @@ body::before {
 
 /* ---------- Sidebar ---------- */
 
-#sidebar {
-  width: 268px;
-  min-width: 268px;
-  height: 100%;
-  overflow-y: auto;
-  border-radius: 0;
-  border-left: 1px solid var(--gold-edge);
-  border-top: none;
-  border-right: none;
-  border-bottom: none;
-  display: flex;
-  flex-direction: column;
-  background:
-    radial-gradient(120% 60% at 50% -5%, rgba(217,178,90,0.08), transparent 55%),
-    linear-gradient(180deg, #131a2c, #0b101d 70%, #080b14);
-}
-#sidebar::after { border-radius: 0; }
+/* ---------- Topbar status / path info chips ---------- */
 
 #status-bar {
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--gold-edge);
-  background: linear-gradient(180deg, rgba(217,178,90,0.10), transparent);
+  padding: 8px 14px;
+  border: 1px solid var(--gold-edge);
+  border-radius: 9px;
+  background: var(--panel-bg);
+  box-shadow: var(--shadow-deep);
   font-size: 12px;
-  line-height: 1.7;
+  line-height: 1.6;
+  white-space: nowrap;
 }
 .status-turn {
   font-family: var(--display);
@@ -1032,10 +996,13 @@ body::before {
 .status-waiting { color: var(--parch-dim); font-style: italic; }
 
 #path-info {
-  padding: 11px 14px;
-  border-bottom: 1px solid rgba(217,178,90,0.18);
-  min-height: 46px;
+  padding: 8px 14px;
+  border: 1px solid rgba(217,178,90,0.18);
+  border-radius: 9px;
+  background: var(--panel-bg);
+  box-shadow: var(--shadow-deep);
   line-height: 1.6;
+  max-width: 460px;
 }
 .path-hint { color: var(--parch-dim); font-style: italic; font-size: 12px; }
 .path-error { color: var(--wound); font-weight: 600; }
@@ -1055,57 +1022,87 @@ body::before {
 .path-danger small { font-weight: 400; color: var(--parch-2); line-height: 1.5; }
 .path-safe { color: var(--vital); font-size: 12px; margin-top: 4px; }
 
-.sidebar-actions {
-  display: flex;
-  gap: 8px;
-  padding: 8px 12px;
-}
-.sidebar-actions .btn-export { margin: 0; flex: 1; }
+/* ---------- Prominent topbar action buttons (special events / clear) ---------- */
 
-/* Hidden debug button, bottom-left of the map stage.
-   Collapsed to a faint dot; expands to a labeled button on hover. */
-.btn-export-hidden {
-  position: absolute;
-  bottom: 10px;
-  left: 10px;
-  z-index: 15;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  border: 1px solid var(--gold-3);
-  border-radius: 50%;
-  background: rgba(13, 18, 32, 0.35);
-  color: var(--parch-dim);
+.btn-special {
+  padding: 6px 14px;
+  border: 1px solid var(--gold-2);
+  border-radius: 7px;
+  background: linear-gradient(180deg, rgba(217,178,90,0.22), rgba(217,178,90,0.06));
+  color: var(--gold-0);
+  font-family: var(--display);
   font-size: 12px;
-  line-height: 1;
+  font-weight: 700;
+  letter-spacing: 0.5px;
   cursor: pointer;
-  opacity: 0.35;
-  transition: all 0.2s ease;
-  overflow: hidden;
+  box-shadow: 0 0 10px rgba(217,178,90,0.25), inset 0 1px 0 rgba(243,226,176,0.15);
+  transition: box-shadow 0.15s ease, background 0.15s ease, transform 0.12s ease;
   white-space: nowrap;
+}
+.btn-special:hover {
+  background: linear-gradient(180deg, rgba(217,178,90,0.32), rgba(217,178,90,0.10));
+  box-shadow: 0 0 16px rgba(217,178,90,0.45);
+  transform: translateY(-1px);
+}
+
+/* ---------- Node type chips (topbar) ---------- */
+
+#type-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.type-chip {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  padding: 2px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  transition: transform 0.12s ease, filter 0.15s ease;
 }
-.btn-export-hidden .bex-label {
-  display: none;
+.type-chip:hover { transform: translateY(-2px) scale(1.08); }
+.type-chip.active {
+  transform: scale(1.22);
+  filter: drop-shadow(0 0 6px var(--gold-glow)) drop-shadow(0 0 2px var(--gold-1));
 }
-.btn-export-hidden:hover .bex-label {
-  display: inline;
+.type-chip .chip-icon {
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.6));
 }
-.btn-export-hidden:hover {
-  width: auto;
-  height: 26px;
-  padding: 0 12px;
-  border-radius: 13px;
-  background: rgba(13, 18, 32, 0.9);
-  color: var(--gold-0);
-  border-color: var(--gold-1);
-  opacity: 1;
-  font-size: 11px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+.type-chip .chip-count {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 8px;
+  background: radial-gradient(circle at 35% 30%, #ffd98a, var(--ember) 90%);
+  color: #2a0d05;
+  font-family: var(--display);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+  border: 1px solid rgba(0,0,0,0.5);
+  pointer-events: none;
 }
+
+/* ---------- Topbar at bottom (taskbar-style toggle) ---------- */
+
+#app.topbar-bottom { flex-direction: column-reverse; }
+#app.topbar-bottom #topbar {
+  border-bottom: none;
+  border-top: 1px solid var(--gold-edge);
+  box-shadow: 0 -4px 18px rgba(0,0,0,0.5);
+}
+#app.topbar-bottom .filter-dropdown { top: auto; bottom: 46px; }
+#app.topbar-bottom .nav-menu { top: auto; bottom: 64px; }
 
 .btn-export,
 .btn-small {
@@ -1131,7 +1128,7 @@ body::before {
 
 /* ---------- Filter panel ---------- */
 
-#filter-panel { flex: 1; overflow-y: auto; padding: 6px 0 12px; }
+#filter-special { padding: 4px 0 4px; }
 
 .filter-header {
   display: flex;
@@ -1240,15 +1237,15 @@ body::before {
 
 /* ---------- Scrollbars ---------- */
 
-#sidebar::-webkit-scrollbar,
-#filter-panel::-webkit-scrollbar,
+#filter-dropdown::-webkit-scrollbar,
+#filter-special::-webkit-scrollbar,
 #guidebook-popup-body::-webkit-scrollbar { width: 7px; }
-#sidebar::-webkit-scrollbar-thumb,
-#filter-panel::-webkit-scrollbar-thumb,
+#filter-dropdown::-webkit-scrollbar-thumb,
+#filter-special::-webkit-scrollbar-thumb,
 #guidebook-popup-body::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, var(--gold-2), var(--gold-3));
   border-radius: 4px;
 }
-#sidebar::-webkit-scrollbar-track,
-#filter-panel::-webkit-scrollbar-track,
+#filter-dropdown::-webkit-scrollbar-track,
+#filter-special::-webkit-scrollbar-track,
 #guidebook-popup-body::-webkit-scrollbar-track { background: transparent; }

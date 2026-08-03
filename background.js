@@ -90,6 +90,12 @@ async function restoreGameState() {
 
 // --- Window management ---
 
+// Default helper window size (landscape, generous); the last size the user
+// closed the window at is remembered in storage.local and wins over this.
+const DEFAULT_WIN_W = 1280;
+const DEFAULT_WIN_H = 860;
+const WIN_SIZE_KEY = 'gbfHelperWindowSize';
+
 async function openHelperWindow() {
   // If window already exists, focus it
   if (helperWindowId !== null) {
@@ -104,14 +110,36 @@ async function openHelperWindow() {
     }
   }
 
+  let width = DEFAULT_WIN_W, height = DEFAULT_WIN_H;
+  try {
+    const stored = await chrome.storage.local.get(WIN_SIZE_KEY);
+    const s = stored[WIN_SIZE_KEY];
+    if (s && s.width >= 480 && s.height >= 360) { width = s.width; height = s.height; }
+  } catch (e) { /* first run */ }
+
   const win = await chrome.windows.create({
     url: chrome.runtime.getURL('window/index.html'),
     type: 'popup',
-    width: 820,
-    height: 920,
+    width,
+    height,
   });
   helperWindowId = win.id;
 }
+
+// Remember the helper window's size (debounced) so the next open restores it.
+let winSizeTimer = null;
+chrome.windows.onBoundsChanged.addListener((win) => {
+  if (win.id !== helperWindowId) return;
+  clearTimeout(winSizeTimer);
+  winSizeTimer = setTimeout(async () => {
+    try {
+      const w = await chrome.windows.get(helperWindowId);
+      if (w && w.width && w.height && w.state === 'normal') {
+        chrome.storage.local.set({ [WIN_SIZE_KEY]: { width: w.width, height: w.height } });
+      }
+    } catch (e) { /* window gone */ }
+  }, 400);
+});
 
 // Track window close
 chrome.windows.onRemoved.addListener((windowId) => {

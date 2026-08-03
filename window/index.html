@@ -10,33 +10,46 @@
 </head>
 <body>
   <div id="app">
-    <div id="map-container">
-      <div id="hud-top">
-        <div id="hud-left">
-          <div id="dungeon-point" class="hud-chip coin-chip" title="Sephira Coins">0</div>
-          <div id="party-bar"></div>
+    <div id="topbar">
+      <div id="topbar-left">
+        <div id="dungeon-point" class="hud-chip coin-chip" title="Sephira Coins">0</div>
+        <div id="party-bar"></div>
+      </div>
+      <div id="topbar-mid">
+        <div id="status-bar">Waiting for game data...</div>
+        <div id="path-info">
+          <span class="path-hint">Click a node to plan a route from your position.</span>
         </div>
-        <div id="hud-right">
-          <div id="nav-menu" class="nav-menu hidden"></div>
-          <button id="btn-focus" class="hud-iconbtn compass" title="Navigation" aria-label="Navigation" aria-haspopup="true">
-            <svg viewBox="0 0 24 24" class="compass-svg" aria-hidden="true">
-              <circle cx="12" cy="12" r="9" class="compass-ring"/>
-              <path d="M12 3 L13.6 10.4 L12 9 L10.4 10.4 Z" class="compass-needle-n"/>
-              <path d="M12 21 L10.4 13.6 L12 15 L13.6 13.6 Z" class="compass-needle-s"/>
-              <circle cx="12" cy="12" r="1.6" class="compass-hub"/>
-            </svg>
-          </button>
-          <button id="btn-guidebook" class="hud-iconbtn tome" title="Guide Books" aria-label="Guide Books">
-            <img src="../assets/book_thumb_1.png" alt="Guide Books">
-            <span id="guidebook-badge" class="hud-btn-badge hud-badge-total hidden">0</span>
-            <span id="guidebook-badge-fav" class="hud-btn-badge hud-badge-fav hidden">♥0</span>
-            <span id="guidebook-badge-cursed" class="hud-btn-badge hud-badge-cursed hidden">☠0</span>
-            <span id="guidebook-stale" class="hud-btn-stale hidden" title="Guide books may be out of date — open the in-game guidebook page to refresh">!</span>
-          </button>
+        <div id="type-chips" role="group" aria-label="Node type filters"></div>
+        <button id="btn-filter" class="btn-special" title="Special event filters" aria-haspopup="true"><span data-i18n="filter.specialEvent">Special Events</span></button>
+        <button id="btn-clear-filters" class="btn-special" title="Clear all filters"><span data-i18n="filter.clearAll">Clear All</span></button>
+        <div id="filter-dropdown" class="filter-dropdown hidden">
+          <div id="filter-special"></div>
         </div>
       </div>
+      <div id="topbar-right">
+        <button id="btn-lang" class="btn-small" title="Switch language">中文</button>
+        <button id="btn-topbar-side" class="btn-small" title="Move bar to bottom" aria-label="Move bar to bottom">⬇</button>
+        <button id="btn-focus" class="hud-iconbtn compass" title="Navigation" aria-label="Navigation" aria-haspopup="true">
+          <svg viewBox="0 0 24 24" class="compass-svg" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" class="compass-ring"/>
+            <path d="M12 3 L13.6 10.4 L12 9 L10.4 10.4 Z" class="compass-needle-n"/>
+            <path d="M12 21 L10.4 13.6 L12 15 L13.6 13.6 Z" class="compass-needle-s"/>
+            <circle cx="12" cy="12" r="1.6" class="compass-hub"/>
+          </svg>
+        </button>
+        <button id="btn-guidebook" class="hud-iconbtn tome" title="Guide Books" aria-label="Guide Books">
+          <img src="../assets/book_thumb_1.png" alt="Guide Books">
+          <span id="guidebook-badge" class="hud-btn-badge hud-badge-total hidden">0</span>
+          <span id="guidebook-badge-fav" class="hud-btn-badge hud-badge-fav hidden">♥0</span>
+          <span id="guidebook-badge-cursed" class="hud-btn-badge hud-badge-cursed hidden">☠0</span>
+          <span id="guidebook-stale" class="hud-btn-stale hidden" title="Guide books may be out of date — open the in-game guidebook page to refresh">!</span>
+        </button>
+        <div id="nav-menu" class="nav-menu hidden"></div>
+      </div>
+    </div>
+    <div id="map-container">
       <canvas id="map-canvas"></canvas>
-      <div id="floating-path-info" class="hidden"></div>
       <div id="pick-overlay" class="pick-overlay hidden">
         <div class="pick-overlay-header">
           <span data-i18n="pick.title">Guide Book Choice</span>
@@ -126,21 +139,6 @@
         <div id="guidebook-codex-body"></div>
       </div>
     </div>
-    <div id="sidebar">
-      <div class="sidebar-toolbar">
-        <button id="btn-sidebar-side" class="btn-small" title="Move panel to the other side">⇄</button>
-        <button id="btn-sidebar-collapse" class="btn-small" title="Collapse filter panel">▾</button>
-      </div>
-      <div id="status-bar">Waiting for game data...</div>
-      <div id="path-info">
-        <span class="path-hint">Click a node to plan a route from your position.</span>
-      </div>
-      <div class="sidebar-actions">
-        <button id="btn-lang" class="btn-export" title="Switch language">中文</button>
-      </div>
-      <div id="filter-panel"></div>
-    </div>
-    <button id="btn-export-miasma" class="btn-export-hidden" title="Export Miasma Log"><span class="bex-emoji">📋</span><span class="bex-label">Export Miasma Log</span></button>
   </div>
   <script src="../shared/i18n.js"></script>
   <script type="module" src="app.js"></script>
