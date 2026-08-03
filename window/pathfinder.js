@@ -144,54 +144,96 @@ export function getTeleporterIds(nodeMap) {
 }
 
 /**
- * Custom route: visit a set of up to 6 waypoint nodes (in the player's
- * chosen ORDER) and return the concatenated shortest path. Teleporter
- * nodes connect to every other teleporter at zero cost, so a waypoint
- * sequence that includes teleporters can jump.
+ * Custom route: visit a set of up to 6 waypoint nodes and return the
+ * SHORTEST route that touches ALL of them — order-independent. Since the
+ * player may click the waypoints in any order, we try every permutation
+ * (≤ 6! = 720) of the waypoints, compute the concatenated shortest path
+ * for each (teleporter nodes connect to every other teleporter at zero
+ * cost), and keep the overall shortest.
  *
  * @param {Map<number,object>} nodeMap
  * @param {number} startId - player position
- * @param {number[]} waypoints - ordered node ids to visit
+ * @param {number[]} waypoints - node ids to visit (any order)
  * @returns {{path:number[], steps:number}|null}
  */
 export function findCustomPath(nodeMap, startId, waypoints) {
   if (!nodeMap.has(startId)) return null;
   const teleporters = getTeleporterIds(nodeMap);
-  const full = [startId];
-  let cur = startId;
-  for (const wp of waypoints) {
-    if (!nodeMap.has(wp)) continue;
-    if (wp === cur) continue;
-    const res = searchBest(nodeMap, cur, (n) => n.node_id === wp, { teleporters });
-    if (!res) return null; // unreachable waypoint
-    full.push(...res.path.slice(1));
-    cur = wp;
+  const unique = [...new Set(waypoints)].filter(id => nodeMap.has(id) && id !== startId);
+  if (unique.length === 0) return { path: [startId], steps: 0 };
+
+  // Memoized shortest path between any pair of relevant nodes.
+  const memo = new Map(); // "a|b" → {path, steps} | null
+  function segPath(a, b) {
+    const key = a + '|' + b;
+    if (memo.has(key)) return memo.get(key);
+    const res = searchBest(nodeMap, a, (n) => n.node_id === b, { teleporters });
+    const val = res ? { path: res.path, steps: res.dist } : null;
+    memo.set(key, val);
+    return val;
   }
-  // Clean up redundancy from concatenation + score-biased BFS:
-  // repeatedly remove A→A duplicates and A→B→A backtracks until stable,
-  // but NEVER delete a waypoint node (it must be visited even if the
-  // shortest path happens to backtrack through it).
-  const waypointSet = new Set(waypoints);
+
+  // Try every permutation of the waypoints; keep the shortest overall.
+  let best = null; // {path, steps}
+  const perm = (order, used) => {
+    if (order.length === unique.length) {
+      let total = 0;
+      let prev = startId;
+      const parts = [];
+      let ok = true;
+      for (const wp of order) {
+        const seg = segPath(prev, wp);
+        if (!seg) { ok = false; break; }
+        total += seg.steps;
+        parts.push(seg.path.slice(1));
+        prev = wp;
+      }
+      if (!ok) return;
+      const full = [startId, ...parts.flat()];
+      const cleaned = dedupeCustomPath(full, new Set(order), teleporters);
+      const steps = countCustomSteps(cleaned, teleporters);
+      if (!best || steps < best.steps) best = { path: cleaned, steps };
+      return;
+    }
+    for (let i = 0; i < unique.length; i++) {
+      if (used & (1 << i)) continue;
+      order.push(unique[i]);
+      perm(order, used | (1 << i));
+      order.pop();
+    }
+  };
+  perm([], 0);
+  return best;
+}
+
+/** Remove A→A duplicates and A→B→A backtracks until stable; never
+ *  delete a waypoint node (it must be visited). */
+function dedupeCustomPath(full, waypointSet, teleporters) {
+  const path = [...full];
   let changed = true;
   while (changed) {
     changed = false;
-    for (let i = full.length - 1; i >= 1; i--) {
-      if (full[i] === full[i - 1]) { full.splice(i, 1); changed = true; }
+    for (let i = path.length - 1; i >= 1; i--) {
+      if (path[i] === path[i - 1]) { path.splice(i, 1); changed = true; }
     }
-    for (let i = 1; i < full.length - 1; i++) {
-      if (full[i - 1] === full[i + 1] && !waypointSet.has(full[i])) {
-        full.splice(i, 1); changed = true; break;
+    for (let i = 1; i < path.length - 1; i++) {
+      if (path[i - 1] === path[i + 1] && !waypointSet.has(path[i])) {
+        path.splice(i, 1); changed = true; break;
       }
     }
   }
-  // steps: count non-teleport edges (teleport jumps are free)
+  return path;
+}
+
+/** Count steps: teleporter→teleporter edges are free. */
+function countCustomSteps(path, teleporters) {
   let steps = 0;
-  for (let i = 1; i < full.length; i++) {
-    const aTp = teleporters.has(full[i - 1]);
-    const bTp = teleporters.has(full[i]);
-    if (!(aTp && bTp)) steps++; // teleporter→teleporter edge is free
+  for (let i = 1; i < path.length; i++) {
+    const aTp = teleporters.has(path[i - 1]);
+    const bTp = teleporters.has(path[i]);
+    if (!(aTp && bTp)) steps++;
   }
-  return { path: full, steps };
+  return steps;
 }
 
 // Farm-route target types:
