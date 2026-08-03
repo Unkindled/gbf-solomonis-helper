@@ -72,6 +72,7 @@
       'report.newMappings': '✓ {n} new guidebook mappings established',
       'report.newJa': '✓ {n} JA translations backfilled',
       'report.unmappedJa': '⚠ {n} JA books unmapped — switch to EN once',
+      'deck.refreshHint': '⚔ Equipment unlocked — reopen the party page to refresh seal status',
       // navigation (compass menu)
       'nav.center': 'Center on player',
       'nav.farm': 'Farm route (≤9 steps)',
@@ -184,6 +185,7 @@
       'report.newMappings': '✓ 建立 {n} 个新导本映射',
       'report.newJa': '✓ 补全 {n} 个日文翻译',
       'report.unmappedJa': '⚠ {n} 本日文导本未映射 — 请切英文版一次',
+      'deck.refreshHint': '⚔ 装备已解锁 — 重新打开队伍详情页刷新封印状态',
       // navigation (compass menu)
       'nav.center': '定位玩家',
       'nav.farm': '发育路线（≤9 步）',

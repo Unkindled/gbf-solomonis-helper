@@ -21,6 +21,7 @@
     partyDeck: /rest\/arcarum3\/party\/deck\//,
     shopLineup: /rest\/arcarum3\/dungeon\/dungeon_shop_lineup\//,
     shopPurchase: /rest\/arcarum3\/dungeon\/purchase_dungeon_shop_item/,
+    unlockEquipment: /rest\/arcarum3\/dungeon\/proceed_node_event_unlock_(weapon|summon|npc)/,
     battleResult: /\/result\/content\/index\//,
     raidStart: /rest\/raid\/start\.json/,
   };

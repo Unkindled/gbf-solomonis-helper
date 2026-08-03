@@ -457,6 +457,12 @@ function handleWindowMessage(type, payload) {
       renderPartyDeck(payload);
       break;
 
+    case 'equipment-unlocked':
+      // A weapon/summon was unlocked, but the server doesn't say which.
+      // Ask the player to reopen the party page to refresh seal states.
+      showTransientToast(I18N.t('deck.refreshHint'));
+      break;
+
     case 'guide-books':
       renderGuideBooks(payload);
       updateStatusBar(); // clear the 'refreshing…' override once data arrives

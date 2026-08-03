@@ -139,6 +139,12 @@ function handleGameData(type, data) {
         broadcastToWindow('party-deck', data.deck.pc);
       }
       break;
+    case 'unlockEquipment':
+      // Weapon/summon/NPC unlocked — the server does NOT say which slot.
+      // Only party/deck/{id} carries is_position_locked, so remind the
+      // player to reopen the party page to refresh seal states.
+      broadcastToWindow('equipment-unlocked', true);
+      break;
     case 'incident':
       handleIncident(data);
       break;
