@@ -250,9 +250,9 @@ fetch/XHR hook ──postMessage──▶ relay ──MSG_GAME_DATA──▶ han
 核心函数：
 - `normText`：小写、去非字母数字符号（保留 CJK、`+`、`%`）、去 `+` 前缀数字的 `+`、压缩空白。**搜索/匹配的规范化器**。
 - `stripRemainingUses`：剥掉实时计数括号（`(remaining uses: 1/2)`、`(0/3 spaces)`、`(+0 / Max: +10)`）——匹配时必须剥，否则和 wiki 静态文本对不上。
-- `matchCodexEntry(gameBook)`：匹配优先级：user_status_id 学习映射 → status_id 学习映射 → `GUIDEBOOK_STATUS_ID` 内置 → 文本模糊匹配（剥计数后 startsWith）。命中即 `learnStatusId` + `learnJaText` 回写。
+- `matchCodexEntry(gameBook)`：匹配优先级：user_status_id 学习映射 → status_id 学习映射 → `GUIDEBOOK_STATUS_ID` 内置 → 文本模糊匹配（剥计数后 startsWith；**同时匹配 DB 条目的 `alt` 别名数组**——游戏内措辞可能与 wiki 不同，如 id20）。命中即 `learnStatusId` + `learnJaText` 回写。
 - `statusIdOfEntry` / `entryHasStatusMap` / `ownedCodexMap` / `getDisplayText`（zh→ja→en）/ `entryIconType`。
-- `absorbBookInfo(recs, onChange)`：商店货架/三选一/战斗记录导本的统一吸收入口——记图标、记日文、尝试匹配映射；返回 `{newMappings, newJa, unmappedJaBooks}`。
+- `absorbBookInfo(recs, onChange)`：商店货架/三选一/战斗记录导本的统一吸收入口——记图标、记日文、尝试匹配映射；**未命中的导本（无论英/日）都会收集进 `unknownBooks`**（此前只有导本页路径收集，导致商店/三选一看到的未知导本不出现在图鉴"未收录"区）；返回 `{newMappings, newJa, unmappedJaBooks}`。
 - `collectUnknownBooks`：owned 列表更新时收集未收录书，能匹配的自动从 unknown 中移除。
 - `exportGuidebookData` / `importGuidebookData`：JSON 导入导出（版本 2：`{version, exportedAt, jaText, idMaps, bookIcons, unknownBooks}`）。
 
