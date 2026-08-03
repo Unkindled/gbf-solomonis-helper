@@ -422,7 +422,12 @@ function handleShopLineup(data) {
         added = true;
       }
     }
-    if (added) broadcastToWindow(TYPE_SHOP_GUIDEBOOKS, gameState.shopGuidebooks);
+    if (added) {
+      // Broadcast THIS visit's lineups (not the accumulated pool) — the
+      // overlay must show only what's on the current shelf. The pool stays
+      // for the learning engine / persistence.
+      broadcastToWindow(TYPE_SHOP_GUIDEBOOKS, shopBooks);
+    }
   }
   persistGameState();
 }

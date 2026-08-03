@@ -578,6 +578,9 @@ function showPickOverlay(candidates) {
 function hidePickOverlay() {
   const overlay = document.getElementById('pick-overlay');
   if (overlay) overlay.classList.add('hidden');
+  // Clear the cached candidates so a later icon-cache re-render can't
+  // resurrect a stale overlay (leaving a shop/pick).
+  lastPickCandidates = [];
   clearTimeout(pickOverlayTimer);
 }
 let pickOverlayTimer = null;

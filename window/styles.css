@@ -775,8 +775,6 @@ body::before {
 
 #app.sidebar-left #sidebar { order: -1; border-left: none; border-right: 1px solid var(--gold-edge); }
 
-/* Collapsed: sidebar becomes a narrow strip (toolbar only) so the map
-   gets full width; path info floats over the map's top-left. */
 #app.sidebar-collapsed #sidebar {
   width: 46px;
   min-width: 46px;
