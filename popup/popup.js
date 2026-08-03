@@ -6,6 +6,7 @@ I18N && document.addEventListener('DOMContentLoaded', () => {
 });
 
 document.getElementById('btn-open').addEventListener('click', () => {
+  // == shared/protocol.js MSG_OPEN_WINDOW (plain script — cannot import)
   chrome.runtime.sendMessage({ channel: 'gbf-helper:open-window' });
   window.close();
 });
