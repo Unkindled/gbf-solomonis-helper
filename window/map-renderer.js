@@ -36,6 +36,10 @@ export class MapRenderer {
 
     // View transform
     this.scale = 0.35;
+    this.fitScale = 0.35;      // zoom-out floor (= fit-to-stage scale)
+    this.userAdjusted = false; // user zoomed/panned → resize keeps their view
+    this._viewW = 0;           // last known CSS viewport size (resize anchor)
+    this._viewH = 0;
     this.offsetX = 0;
     this.offsetY = 0;
     this.isDragging = false;
@@ -47,6 +51,12 @@ export class MapRenderer {
     // Assets
     this.images = {};
     this.assetsLoaded = false;
+
+    // Ambient letterbox: fixed cloud-sea ground (post-processed) + seam feather
+    this._baseCanvas = null;
+    this._baseDirty = true;
+    this._miasmaFit = null; // cached circle fit (expensive; see _drawMiasmaOverlay)
+
     this._loadAssets();
     this._bindEvents();
   }
@@ -82,6 +92,7 @@ export class MapRenderer {
       pieceGlow: 'node_icon/piece_glow.png',
       miasmaCircle1: 'miasma_circle_1.png',
       miasmaCircle2: 'miasma_circle_2.png',
+      cloudBg: 'cloud_bg.png',
       ...nodeIcons,
     };
 
@@ -98,7 +109,7 @@ export class MapRenderer {
 
     for (const [key, file] of Object.entries(defs)) {
       const img = new Image();
-      img.onload = done;
+      img.onload = () => { if (key === 'cloudBg') this._baseDirty = true; done(); };
       img.onerror = done; // continue even if one fails
       img.src = ASSET_BASE + file;
       this.images[key] = img;
@@ -127,10 +138,13 @@ export class MapRenderer {
 
       const oldScale = this.scale;
       const delta = e.deltaY > 0 ? 0.9 : 1.1;
-      this.scale = Math.max(0.1, Math.min(3, this.scale * delta));
+      // Never zoom out below fit — the map always fills the stage
+      this.scale = Math.max(this.fitScale, Math.min(3, this.scale * delta));
+      this.userAdjusted = true;
 
       this.offsetX = mx - (mx - this.offsetX) * (this.scale / oldScale);
       this.offsetY = my - (my - this.offsetY) * (this.scale / oldScale);
+      this._clampOffset();
       this.render();
     });
 
@@ -146,6 +160,8 @@ export class MapRenderer {
       if (this.isDragging) {
         this.offsetX = this.dragOffsetX + (e.clientX - this.dragStartX);
         this.offsetY = this.dragOffsetY + (e.clientY - this.dragStartY);
+        this.userAdjusted = true;
+        this._clampOffset();
         this.render();
       } else {
         this._updateHover(e);
@@ -218,6 +234,8 @@ export class MapRenderer {
     this.currentNodeId = dungeon ? dungeon.current_node_id : null;
     this.miasmaInfo = dungeon ? dungeon.miasma_info : null;
     this.totalTurn = dungeon ? (dungeon.total_turn || 0) : 0;
+    this._mapId = dungeon ? dungeon.map_id : null;
+    this.userAdjusted = false; // new run → fresh fitted view
     this._updateAdjacentSet();
     this._fitView();
     this.render();
@@ -267,9 +285,13 @@ export class MapRenderer {
     const dpr = this.dpr || 1;
     const w = this.canvas.width / dpr;
     const h = this.canvas.height / dpr;
-    this.scale = Math.min(w / (BG_W + 80), h / (BG_H + 80)) * 0.95;
+    // fitScale is the zoom-out floor: at minimum zoom the map fills the stage
+    this.fitScale = Math.min(w / (BG_W + 80), h / (BG_H + 80)) * 0.95;
+    this.scale = this.fitScale;
     this.offsetX = (w - BG_W * this.scale) / 2;
     this.offsetY = (h - BG_H * this.scale) / 2;
+    this._viewW = w;
+    this._viewH = h;
   }
 
   _isNodeHighlighted(node) {
@@ -310,6 +332,9 @@ export class MapRenderer {
       return;
     }
 
+    // Letterbox: blurred chart extension + slow drifting fog (screen space)
+    this._drawAmbient(ctx, w / dpr, h / dpr);
+
     ctx.save();
     ctx.translate(this.offsetX, this.offsetY);
     ctx.scale(this.scale, this.scale);
@@ -325,6 +350,9 @@ export class MapRenderer {
     this._drawFocusArrow(ctx);
 
     ctx.restore();
+
+    // Feather the chart's hard rectangle edge into the ambient fog (E)
+    this._drawSeamFeather(ctx, w / dpr, h / dpr);
 
     this._drawTooltip(ctx);
   }
@@ -452,10 +480,28 @@ export class MapRenderer {
     return { x: cx, y: cy, R: bestR, err: bestErr, strict: false };
   }
 
+  /** Cheap per-frame signature of the inputs the miasma fit depends on
+   *  (level, server center, and which nodes are shrinking). */
+  _miasmaSignature(level, a) {
+    let sig = (this._mapId ?? '?') + '|' + level + '|' + a.center_position_x + ',' + a.center_position_y;
+    for (const [id, n] of this.nodeMap) {
+      if (n.is_shrinking) sig += ',' + id;
+    }
+    return sig;
+  }
+
   _drawMiasmaOverlay(ctx) {
     const a = this.miasmaInfo && this.miasmaInfo.after;
     if (!a || !a.is_miasmic) return;
     if (a.center_position_x == null || a.center_position_y == null) return;
+
+    // Clip to the chart rectangle: the purple haze and its front ring must
+    // not leak into the letterbox — the old ±200 rect showed as a hard
+    // purple frame floating on the ambient fog.
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, BG_W, BG_H);
+    ctx.clip();
 
     const level = a.level || 1;
     const safeRadius = MIASMA_RADIUS[level] || MIASMA_RADIUS[1];
@@ -465,16 +511,26 @@ export class MapRenderer {
     const OFFSET = MIASMA_CENTER_OFFSET;
 
     let cx, cy, miasmaR;
+    // The circle fit depends only on node positions + is_shrinking flags,
+    // which change on game events, not per frame. The Lv2 strict fit is an
+    // ~10^6-hypot grid search — recomputing it every frame turned miasma
+    // into a slideshow. Cache it, keyed by a cheap data signature.
+    const sig = this._miasmaSignature(level, a);
+    if (!this._miasmaFit || this._miasmaFit.sig !== sig) {
+      this._miasmaFit = { sig, lv1: undefined, lv2: undefined };
+    }
     if (level === 1) {
       // Lv1: fit boundary from is_shrinking (center = center_position)
       cx = a.center_position_x - OFFSET.X;
       cy = a.center_position_y - OFFSET.Y;
-      const fit = this._fitMiasmaRadius(cx, cy);
+      if (this._miasmaFit.lv1 === undefined) this._miasmaFit.lv1 = this._fitMiasmaRadius(cx, cy);
+      const fit = this._miasmaFit.lv1;
       miasmaR = fit ? Math.max(fit.R, safeRadius) : 1600;
     } else {
       // Lv2: center_position is NOT the circle center — fit center + radius
       // from the polluted/unpolluted node states (strict: no misclassification).
-      const fit = this._fitMiasmaCircle();
+      if (this._miasmaFit.lv2 === undefined) this._miasmaFit.lv2 = this._fitMiasmaCircle();
+      const fit = this._miasmaFit.lv2;
       if (fit && fit.R > 0) {
         cx = fit.x;
         cy = fit.y;
@@ -540,6 +596,7 @@ export class MapRenderer {
     ctx.arc(safeCx, safeCy, 6, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
     ctx.fill();
+    ctx.restore(); // miasma clip
   }
 
   _drawEdges(ctx) {
@@ -925,10 +982,128 @@ export class MapRenderer {
     this.render();
   }
 
+  // --- Ambient letterbox: fixed cloud-sea ground + seam feather ---
+
+  /** Post-process the cloud-sea image once per viewport size: cover-fit,
+   *  night-grade it toward the inked palette, vignette the corners so the
+   *  chart stays the focal point. */
+  _ensureBase(w, h) {
+    if (!this._baseDirty && this._baseCanvas &&
+        this._baseCanvas.width === w && this._baseCanvas.height === h) return;
+    const img = this.images.cloudBg;
+    if (!img || !img.complete || !img.naturalWidth) return;
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(w));
+    c.height = Math.max(1, Math.round(h));
+    const x = c.getContext('2d');
+    // cover-fit
+    const s = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+    x.drawImage(img, (w - img.naturalWidth * s) / 2, (h - img.naturalHeight * s) / 2,
+      img.naturalWidth * s, img.naturalHeight * s);
+    // Night-grade the bright daytime clouds: ink-blue multiply + desaturate
+    x.globalCompositeOperation = 'multiply';
+    x.fillStyle = '#3a4668';
+    x.fillRect(0, 0, w, h);
+    x.globalCompositeOperation = 'saturation';
+    x.fillStyle = 'hsl(220, 30%, 50%)';
+    x.fillRect(0, 0, w, h);
+    x.globalCompositeOperation = 'source-over';
+    // Vignette: darker corners, chart area stays readable
+    const g = x.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.35,
+      w / 2, h / 2, Math.max(w, h) * 0.75);
+    g.addColorStop(0, 'rgba(6, 8, 15, 0)');
+    g.addColorStop(1, 'rgba(6, 8, 15, 0.72)');
+    x.fillStyle = g;
+    x.fillRect(0, 0, w, h);
+    this._baseCanvas = c;
+    this._baseDirty = false;
+  }
+
+  _drawAmbient(ctx, w, h) {
+    this._ensureBase(w, h);
+    if (this._baseCanvas) {
+      ctx.drawImage(this._baseCanvas, 0, 0);
+    } else {
+      ctx.fillStyle = '#0a0e14';
+      ctx.fillRect(0, 0, w, h);
+    }
+  }
+
+  /** Soft shadow halo straddling the chart's screen edges (E).
+   *  Symmetric fade (0 → peak at the edge → 0) so there is no hard line,
+   *  and each band is bounded to the chart's frame so it never streaks
+   *  across the letterbox. */
+  _drawSeamFeather(ctx, w, h) {
+    const B = 60;
+    const A = 0.5;
+    const x0 = this.offsetX, y0 = this.offsetY;
+    const x1 = this.offsetX + BG_W * this.scale;
+    const y1 = this.offsetY + BG_H * this.scale;
+    const top = Math.max(0, y0 - B), bot = Math.min(h, y1 + B);
+    const left = Math.max(0, x0 - B), right = Math.min(w, x1 + B);
+    const vBand = (ex) => { // vertical chart edge at screen x = ex
+      if (ex + B <= 0 || ex - B >= w || bot <= top) return;
+      const g = ctx.createLinearGradient(ex - B, 0, ex + B, 0);
+      g.addColorStop(0, 'rgba(6, 8, 15, 0)');
+      g.addColorStop(0.5, `rgba(6, 8, 15, ${A})`);
+      g.addColorStop(1, 'rgba(6, 8, 15, 0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(ex - B, top, 2 * B, bot - top);
+    };
+    const hBand = (ey) => { // horizontal chart edge at screen y = ey
+      if (ey + B <= 0 || ey - B >= h || right <= left) return;
+      const g = ctx.createLinearGradient(0, ey - B, 0, ey + B);
+      g.addColorStop(0, 'rgba(6, 8, 15, 0)');
+      g.addColorStop(0.5, `rgba(6, 8, 15, ${A})`);
+      g.addColorStop(1, 'rgba(6, 8, 15, 0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(left, ey - B, right - left, 2 * B);
+    };
+    vBand(x0); vBand(x1);
+    hBand(y0); hBand(y1);
+  }
+
   resize(width, height, dpr) {
+    // Preserve what the user is looking at across a window resize:
+    // unadjusted view → re-fit; adjusted → keep zoom, re-center on the
+    // same world point. NOTE: app.js resizes the canvas BEFORE calling
+    // resize(), so this.canvas.width is already the NEW size — anchor on
+    // the viewport we last knew, not the canvas.
+    const newDpr = dpr || 1;
+    const w = width / newDpr;
+    const h = height / newDpr;
+    const oldW = this._viewW || w;
+    const oldH = this._viewH || h;
+    const cx = (oldW / 2 - this.offsetX) / this.scale;
+    const cy = (oldH / 2 - this.offsetY) / this.scale;
     this.canvas.width = width;
     this.canvas.height = height;
-    this.dpr = dpr || 1;
+    this.dpr = newDpr;
+    this._viewW = w;
+    this._viewH = h;
+    this._baseDirty = true; // letterbox ground depends on viewport size
+    this.fitScale = Math.min(w / (BG_W + 80), h / (BG_H + 80)) * 0.95;
+    if (this.userAdjusted) {
+      this.scale = Math.max(this.scale, this.fitScale);
+      this.offsetX = w / 2 - cx * this.scale;
+      this.offsetY = h / 2 - cy * this.scale;
+      this._clampOffset();
+    } else {
+      this._fitView();
+    }
     this.render();
+  }
+
+  /** Keep the map rectangle overlapping the viewport by at least M px on
+   *  every axis, so the chart can never be dragged/zoomed out of sight. */
+  _clampOffset() {
+    const dpr = this.dpr || 1;
+    const w = this.canvas.width / dpr;
+    const h = this.canvas.height / dpr;
+    const M = Math.min(120, w / 3, h / 3);
+    const mapW = BG_W * this.scale;
+    const mapH = BG_H * this.scale;
+    this.offsetX = Math.min(Math.max(this.offsetX, M - mapW), w - M);
+    this.offsetY = Math.min(Math.max(this.offsetY, M - mapH), h - M);
   }
 }
