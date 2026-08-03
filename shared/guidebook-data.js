@@ -1463,6 +1463,17 @@ export const GUIDEBOOK_DB = [
   "id": 114,
   "ja": null,
   "zh": null
+ },
+ {
+  "rarity": 99,
+  "availability": "global",
+  "type": "misc",
+  "effects": [],
+  "icon": "curse special",
+  "text": "At battle start: Confuse effect to a random ally",
+  "id": 115,
+  "ja": "バトル開始時、ランダムな味方1人に混乱効果",
+  "zh": null
  }
 ];
 
@@ -1574,5 +1585,6 @@ export const GUIDEBOOK_STATUS_ID = {
  "126": 88,
  "127": 89,
  "128": 90,
- "129": 105
+ "129": 105,
+ "125": 115
 };
