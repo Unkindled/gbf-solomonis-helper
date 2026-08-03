@@ -207,6 +207,38 @@ body::before {
   border-top: 1px solid rgba(217,178,90,0.15);
 }
 #party-deck.hidden { display: none; }
+#party-deck-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.deck-toggle {
+  margin-top: 8px;
+  border-color: var(--gold-3);
+  color: var(--gold-1);
+  font-size: 14px;
+  padding: 3px 8px;
+  flex-shrink: 0;
+}
+.deck-toggle:hover { border-color: var(--gold-1); }
+.deck-toggle.active { background: rgba(217,178,90,0.15); }
+.deck-weapon.sealed,
+.deck-summon.sealed {
+  opacity: 0.5;
+  border-style: dashed;
+  border-color: rgba(200,120,255,0.5);
+  filter: grayscale(0.5);
+}
+.deck-seal {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 10px;
+  background: rgba(0,0,0,0.55);
+  border-radius: 0 0 0 3px;
+  padding: 0 2px;
+  line-height: 12px;
+}
 .deck-weapons,
 .deck-summons {
   display: flex;
@@ -854,12 +886,14 @@ body::before {
   padding: 10px 0;
 }
 #app.sidebar-collapsed #status-bar {
-  /* Keep miasma/turn info visible while collapsed: float it over the
-     map's top area, just right of the narrow sidebar (fixed = viewport,
-     since #status-bar lives inside the 46px sidebar). */
+  /* Keep miasma/turn info visible while collapsed: float it at the
+     BOTTOM-left of the map so it never covers the top HUD (party bar /
+     coins / navigation). Fixed = viewport since it lives in the 46px
+     sidebar. */
   position: fixed;
-  top: 8px;
+  bottom: 12px;
   left: 54px;
+  top: auto;
   right: auto;
   width: auto;
   max-width: calc(100% - 220px);
