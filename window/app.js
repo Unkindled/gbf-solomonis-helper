@@ -113,7 +113,7 @@ function init() {
       renderer.render();
     }
     // Show the deck toggle even with no data (it becomes the blinking
-    // 开编成 hint then). Renders must have run first so maybeShowDeckToggle
+    // 请打开编成页 hint then). Renders must have run first so maybeShowDeckToggle
     // sees the latest latestDeck/latestSummon.
     maybeShowDeckToggle();
     updateStatusBar();
@@ -795,7 +795,7 @@ function renderWeaponDeck(deck) {
 }
 
 // The single 编成详情 toggle: with data it's the normal button; without
-// data it becomes a blinking 开编成 hint (vertical, ≤6 chars) telling the
+// data it becomes a blinking 请打开编成页 hint (vertical, ≤6 chars) telling the
 // player to open the in-game party page to populate the deck.
 function deckToggleText() {
   const hasWeapon = latestDeck && Array.isArray(latestDeck.slots) && latestDeck.slots.length > 0;
@@ -811,7 +811,7 @@ function maybeShowDeckToggle() {
     toggle.textContent = '编成详情';
     toggle.classList.remove('deck-toggle-empty');
   } else {
-    toggle.textContent = '开编成';
+    toggle.textContent = '请打开编成页';
     toggle.classList.add('deck-toggle-empty');
   }
 }
