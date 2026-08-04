@@ -1329,8 +1329,50 @@ body::before {
 }
 .ev-opt-title { display: block; color: var(--parch-0); font-weight: 600; font-size: 12.5px; }
 .ev-opt-text { display: block; color: var(--parch-1); font-size: 11.5px; margin-top: 2px; }
-.ev-key { color: #777; font-size: 10.5px; margin-top: 4px; }
+.ev-key { color: #aaa; font-size: 12px; font-weight: 600; }
 .guidebook-codex-row .ev-desc { color: var(--parch-1); font-size: 12.5px; line-height: 1.5; margin-bottom: 6px; }
+
+/* Event codex list: one card per event, vertical stack (not the
+   guidebook grid — event entries carry description + options and must
+   read top-down). */
+.ev-codex-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.ev-codex-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 9px 12px;
+  border: 1px solid rgba(217,178,90,0.14);
+  border-radius: 7px;
+  background: rgba(10,16,30,0.55);
+  transition: background 0.15s ease, border-color 0.15s;
+}
+.ev-codex-entry:hover { background: rgba(217,178,90,0.08); border-color: rgba(217,178,90,0.3); }
+.ev-codex-entry.owned { background: rgba(120,200,120,0.07); border-color: rgba(120,200,120,0.25); }
+.ev-codex-entry .ev-desc { color: var(--parch-1); font-size: 12.5px; line-height: 1.5; }
+.ev-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.ev-node {
+  font-size: 10.5px;
+  color: #9fb8d9;
+  background: rgba(100,160,255,0.12);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+.ev-nodetype {
+  font-size: 10.5px;
+  color: var(--gold-1);
+  background: rgba(217,178,90,0.1);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
 
 
 

@@ -1264,28 +1264,39 @@ function renderEventCodex() {
 
   const langKey = evCodexLang === 'zh' ? 'zh-CN' : evCodexLang;
 
-  let html = '<div class="guidebook-codex-grid">';
+  // Pick a text in the chosen language, falling back to the other CJK
+  // language, then EN (events carry only ja/zh-CN for descriptions).
+  const evText = (obj) => {
+    if (!obj) return '';
+    if (obj[langKey]) return obj[langKey];
+    return obj['zh-CN'] || obj['ja'] || obj['en'] || '';
+  };
+
+  let html = '<div class="ev-codex-list">';
   if (rows.length === 0) {
     body.innerHTML = '<div class="guidebook-popup-empty">No events match the filters</div>';
     return;
   }
   html += rows.map(({ entry, seen, isSpecial }) => {
-    const name = entry.name?.[langKey] || entry.name?.['en'] || entry.name?.['ja'] || entry.key;
-    const desc = entry.description?.[langKey] || entry.description?.['en'] || entry.description?.['ja'] || '';
+    const desc = evText(entry.description);
     const opts = Object.entries(entry.options || {}).map(([k, o]) => {
-      const t = o.title?.[langKey] || o.title?.['en'] || o.title?.['ja'] || '';
-      const tx = o.text?.[langKey] || o.text?.['en'] || o.text?.['ja'] || '';
-      return `<div class="ev-opt"><span class="ev-opt-title">${escapeHtml(t)}</span><span class="ev-opt-text">${escapeHtml(tx)}</span></div>`;
+      const t = evText(o.title);
+      const tx = evText(o.text);
+      return `<div class="ev-opt"><span class="ev-opt-title">${escapeHtml(t)}</span>${tx ? `<span class="ev-opt-text">${escapeHtml(tx)}</span>` : ''}</div>`;
     }).join('');
     const seenTag = seen ? '<span class="gb-map gb-map-ok" title="Seen in-game">✓</span>'
       : '<span class="gb-map gb-map-warn" title="Not yet encountered">△</span>';
     const kindTag = isSpecial ? '<span class="ev-kind">SP</span>' : '<span class="ev-kind">N</span>';
-    return `<div class="guidebook-codex-row${seen ? ' owned' : ''}">
-      <span class="gb-name">${escapeHtml(name)} <span class="gb-count">${seen ? '✓' : ''}</span></span>
-      ${kindTag} ${seenTag}
-      <div class="ev-desc">${escapeEventText(desc)}</div>
+    const nodeLabel = NODE_TYPE_LABELS[Number(entry.nodeType)] || '';
+    return `<div class="ev-codex-entry${seen ? ' owned' : ''}">
+      <div class="ev-head">
+        ${kindTag}
+        <span class="ev-node">${escapeHtml(entry.key)}</span>
+        ${nodeLabel ? `<span class="ev-nodetype">${escapeHtml(nodeLabel)}</span>` : ''}
+        ${seenTag}
+      </div>
+      ${desc ? `<div class="ev-desc">${escapeEventText(desc)}</div>` : ''}
       ${opts ? '<div class="ev-opts">' + opts + '</div>' : ''}
-      <div class="ev-key">key: ${escapeHtml(entry.key)}</div>
     </div>`;
   }).join('');
   html += '</div>';
@@ -1294,16 +1305,19 @@ function renderEventCodex() {
   const unknownList = [...unknownEvents.values()];
   if (unknownList.length > 0 && seenF !== 'seen') {
     html += `<div class="gb-unknown-header">Uncatalogued (${unknownList.length}) — seen in your runs, not yet in the static DB</div>`;
-    html += '<div class="guidebook-codex-grid">';
+    html += '<div class="ev-codex-list">';
     html += unknownList.map(e => {
       const opts = (e.gameChoices || []).map(c =>
-        `<div class="ev-opt"><span class="ev-opt-title">${escapeHtml(c.title || '')}</span><span class="ev-opt-text">${escapeHtml(c.text || '')}</span></div>`,
+        `<div class="ev-opt"><span class="ev-opt-title">${escapeHtml(c.title || '')}</span>${c.text ? `<span class="ev-opt-text">${escapeHtml(c.text || '')}</span>` : ''}</div>`,
       ).join('');
-      return `<div class="guidebook-codex-row unknown">
-        <span class="gb-name">${escapeHtml(e.gameText?.replace(/<br\s*\/?>/gi, '') || '(no text)')}</span>
-        <div class="ev-desc">${escapeEventText(e.gameText || '')}</div>
+      const label = e.specialIncidentId != null ? `sp:${e.specialIncidentId}` : e.key;
+      return `<div class="ev-codex-entry unknown">
+        <div class="ev-head">
+          <span class="ev-kind">?</span>
+          <span class="ev-key">${escapeHtml(label)}</span>
+        </div>
+        ${e.gameText ? `<div class="ev-desc">${escapeEventText(e.gameText)}</div>` : ''}
         ${opts ? '<div class="ev-opts">' + opts + '</div>' : ''}
-        <div class="ev-key">key: ${escapeHtml(e.key)}${e.specialIncidentId != null ? ' (sp:' + e.specialIncidentId + ')' : ''}</div>
       </div>`;
     }).join('');
     html += '</div>';
