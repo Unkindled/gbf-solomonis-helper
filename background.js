@@ -9,7 +9,7 @@ import {
   DATA_MAP_INIT, DATA_MOVE_NODE, DATA_FINISH_NODE, DATA_PROCEED,
   DATA_SPACEBOOK_ADD, DATA_SPACEBOOK_LIST, DATA_REPORT_BOOK, DATA_INCIDENT,
   DATA_PARTY_STATUS, DATA_SHOP_LINEUP, DATA_SHOP_PURCHASE, DATA_BATTLE_RESULT,
-  DATA_RAID_START,
+  DATA_DUNGEON_RESULT, DATA_RAID_START,
   TYPE_MAP_INIT, TYPE_MOVE_UPDATE, TYPE_FINISH_NODE, TYPE_PROCEED,
   TYPE_PARTY_STATUS, TYPE_GUIDE_BOOKS, TYPE_GUIDEBOOK_ICONS,
   TYPE_GUIDEBOOKS_STALE, TYPE_GUIDEBOOK_REFRESH_STARTED,
@@ -271,6 +271,19 @@ function handleGameData(type, data) {
       // guidebook page (which triggers spacebook_status_list).
       gameState.guideBooksStale = true;
       broadcastToWindow(TYPE_GUIDEBOOKS_STALE, true);
+      persistGameState();
+      break;
+    case DATA_DUNGEON_RESULT:
+      // The whole EXPEDITION finished (dungeon result page) — the run is
+      // over, so the party and owned guidebooks from that run are gone.
+      // Clear them and reset the stale flag so the UI starts fresh.
+      gameState.partyStatus = null;
+      gameState.guideBooks = [];
+      gameState.guideBooksStale = false;
+      gameState.shopStock = new Map();
+      broadcastToWindow(TYPE_PARTY_STATUS, []);
+      broadcastToWindow(TYPE_GUIDE_BOOKS, []);
+      broadcastToWindow(TYPE_GUIDEBOOKS_STALE, false);
       persistGameState();
       break;
   }

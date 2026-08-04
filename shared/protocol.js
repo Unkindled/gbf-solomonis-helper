@@ -57,4 +57,5 @@ export const DATA_PARTY_STATUS = 'partyStatus';
 export const DATA_SHOP_LINEUP = 'shopLineup';
 export const DATA_SHOP_PURCHASE = 'shopPurchase';
 export const DATA_BATTLE_RESULT = 'battleResult';
+export const DATA_DUNGEON_RESULT = 'dungeonResult';
 export const DATA_RAID_START = 'raidStart';

@@ -23,6 +23,9 @@
     shopLineup: /rest\/arcarum3\/dungeon\/dungeon_shop_lineup\//,
     shopPurchase: /rest\/arcarum3\/dungeon\/purchase_dungeon_shop_item/,
     battleResult: /\/result\/content\/index\//,
+    // Dungeon OVER (expedition finished) — the arcarum3 result page.
+    // Distinct from battleResult (a single battle's result page).
+    dungeonResult: /arcarum3\/dungeon\/result\/content\/index/,
     raidStart: /rest\/raid\/start\.json/,
   };
 
