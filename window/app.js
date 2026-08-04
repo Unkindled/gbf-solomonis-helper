@@ -777,9 +777,23 @@ function weaponImg(w, wPx, hPx, cls) {
   const lv = w.level ? `<span class="deck-lv">${w.level}</span>` : '';
   const attrCls = w.attribute != null ? ` attr-${w.attribute}` : '';
   const name = w.name || '—';
-  const skills = (w.skills || []).map(sk => sk.name).filter(Boolean).join(' / ');
-  const title = `${name} Lv${w.level || ''}${skills ? ' — ' + skills : ''}`;
-  return `<div class="deck-cell ${cls}${sealed ? ' sealed' : ''}${attrCls}" title="${escapeHtml(title)}" style="width:${wPx}px;height:${hPx}px">
+  // Tooltip layout:
+  //   WeaponName Lv150
+  //   技能：
+  //   Skill1  Slv25
+  //   Skill2  Slv25
+  // (per-skill Slv isn't sent by the server; show the weapon's overall
+  //  skill_level next to each skill as an approximation)
+  const skillLines = (w.skills || []).filter(sk => sk.name).map(sk => {
+    const slv = w.skillLevel ? `  Slv${w.skillLevel}` : '';
+    return `${sk.name}${slv}`;
+  });
+  const titleParts = [`${name} Lv${w.level || ''}`];
+  if (skillLines.length > 0) {
+    titleParts.push('技能：', ...skillLines);
+  }
+  const tip = titleParts.join('\n');
+  return `<div class="deck-cell ${cls}${sealed ? ' sealed' : ''}${attrCls}" data-tip="${escapeHtml(tip)}" style="width:${wPx}px;height:${hPx}px">
     ${img ? `<img class="deck-icon" src="${img}" alt="" style="width:${wPx}px;height:${hPx}px" onerror="this.style.display='none';">` : '<div class="deck-empty" style="width:' + wPx + 'px;height:' + hPx + 'px"></div>'}
     ${sealed ? '<span class="deck-seal">🔒</span>' : ''}
     ${lv}
@@ -826,9 +840,11 @@ function summonImg(s, kind, wPx, hPx) {
   const lv = s.level ? `<span class="deck-lv">${s.level}</span>` : '';
   const attrCls = s.attribute != null ? ` attr-${s.attribute}` : '';
   const name = s.name || '—';
-  const skills = (s.skills || []).map(sk => sk.name).filter(Boolean).join(' / ');
-  const title = `${name} Lv${s.level || ''}${skills ? ' — ' + skills : ''}`;
-  return `<div class="deck-cell summon-cell ${sealed ? ' sealed' : ''}${attrCls}" title="${escapeHtml(title)}" style="width:${wPx}px;height:${hPx}px">
+  const skillLines = (s.skills || []).map(sk => sk.name).filter(Boolean);
+  const tipParts = [`${name} Lv${s.level || ''}`];
+  if (skillLines.length > 0) tipParts.push('技能：', ...skillLines);
+  const tip = tipParts.join('\n');
+  return `<div class="deck-cell summon-cell ${sealed ? ' sealed' : ''}${attrCls}" data-tip="${escapeHtml(tip)}" style="width:${wPx}px;height:${hPx}px">
     ${img ? `<img class="deck-icon" src="${img}" alt="" style="width:${wPx}px;height:${hPx}px" onerror="this.style.display='none';">` : `<div class="deck-empty" style="width:${wPx}px;height:${hPx}px"></div>`}
     ${sealed ? '<span class="deck-seal">🔒</span>' : ''}
     ${lv}

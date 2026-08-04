@@ -1445,3 +1445,30 @@ body::before {
 .summon-cell { flex-shrink: 0; }
 /* summon main portrait cells are taller than weapons; keep label aligned */
 .summon-row .deck-row-label { align-self: center; }
+
+/* Custom multi-line tooltip for deck cells (data-tip with \n) */
+.deck-cell[data-tip] { position: relative; }
+.deck-cell[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 0;
+  top: calc(100% + 6px);
+  z-index: 60;
+  white-space: pre-line;
+  min-width: 160px;
+  max-width: 320px;
+  padding: 6px 9px;
+  border: 1px solid var(--gold-2);
+  border-radius: 6px;
+  background: rgba(8, 11, 16, 0.96);
+  color: var(--parch-0);
+  font-size: 11.5px;
+  line-height: 1.45;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.6);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+}
+.deck-cell[data-tip]:hover::after { opacity: 1; }
+/* summon main cells are portrait; keep the tip readable below them */
+.deck-cell[data-tip]::after { top: calc(100% + 6px); }

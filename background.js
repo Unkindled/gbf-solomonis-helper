@@ -861,6 +861,9 @@ function normalizeWeaponSlots(weaponsObj) {
       kind: m.kind != null ? Number(m.kind) : null,
       rarity: m.rarity != null ? Number(m.rarity) : null,
       level: p.level != null ? String(p.level) : '',
+      // weapon-level skill level (e.g. "25"); per-skill Slv is NOT sent
+      // by the server, only the weapon's overall skill_level.
+      skillLevel: p.skill_level != null ? String(p.skill_level) : '',
       sealed: !!w.is_position_locked,
       skills,
     });
