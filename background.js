@@ -742,6 +742,7 @@ function extractEventDetail(data) {
     choices,
     db: entry ? {
       name: entry.name || {},
+      description: entry.description || {},
       tips: entry.tips || [],
       optionTexts: Object.fromEntries(
         Object.entries(entry.options || {}).map(([k, o]) => [k, { title: o.title || {}, text: o.text || {} }]),

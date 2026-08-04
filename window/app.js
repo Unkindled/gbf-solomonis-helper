@@ -616,6 +616,11 @@ function showEventDetail(detail) {
   const pickZh = (obj) => (obj && obj['zh-CN']) || '';
 
   const dbName = pickZh(detail.db?.name) || '';
+  // Prefer the DB's zh-CN description; fall back to the raw in-game text
+  // (the response language matches the client — EN/JA — but the DB has
+  // zh-CN translations for every seeded event).
+  const dbDesc = pickZh(detail.db?.description);
+  const desc = dbDesc || detail.description || '';
   const dbTips = (detail.db?.tips || []).map(t => `<li>${escapeHtml(t)}</li>`).join('');
   const rows = (detail.choices || []).map(c => {
     const dbOpt = detail.db?.optionTexts?.[String(c.choiceId)];
@@ -632,7 +637,7 @@ function showEventDetail(detail) {
       ${dbName ? `<span class="ev-name">${escapeEventText(dbName)}</span>` : '<span class="ev-name">事件</span>'}
       <button id="event-detail-close" class="btn-small">×</button>
     </div>
-    ${detail.description ? `<div class="ev-desc">${escapeEventText(detail.description).replace(/\{\{PLAYER\}\}/g, '主角')}</div>` : ''}
+    ${desc ? `<div class="ev-desc">${escapeEventText(desc).replace(/\{\{PLAYER\}\}/g, '主角')}</div>` : ''}
     ${dbTips ? `<ul class="ev-tips">${dbTips}</ul>` : ''}
     <div class="ev-choices">${rows}</div>`;
   el.classList.remove('hidden');
