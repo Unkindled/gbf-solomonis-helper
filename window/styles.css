@@ -1309,7 +1309,8 @@ body::before {
 
 
 
-/* ---------- Weapon deck: collapsed toggle + popup ---------- */
+/* ---------- Weapon/summon deck: buttons + shared drawer ---------- */
+#deck-buttons { display: flex; gap: 4px; align-items: flex-start; }
 .deck-toggle {
   display: flex;
   align-items: center;
@@ -1326,24 +1327,22 @@ body::before {
 .deck-toggle:hover { border-color: var(--gold-2, #d9b25a); }
 .deck-toggle.hidden { display: none; }
 
-.weapon-deck-popup {
-  position: absolute;
-  left: 10px;
-  top: 96px; /* below party bar */
-  z-index: 36;
-  min-width: 340px;
-  max-width: 480px;
-  border: 1px solid var(--gold-2);
-  border-radius: 10px;
+/* Drawer slides down from under the topbar. Normal flow child of #app
+   (between topbar and map-container), so it pushes the map down instead
+   of overlaying the HUD; weapons and summons are separate sections, so
+   opening both never overlap. */
+.deck-panel {
+  z-index: 40;
+  border-bottom: 1px solid var(--gold-2);
   background:
-    linear-gradient(180deg, rgba(217,178,90,0.10), transparent 30%),
+    linear-gradient(180deg, rgba(217,178,90,0.10), transparent 40%),
     var(--panel-bg);
-  box-shadow: 0 10px 34px rgba(0,0,0,0.65), 0 0 18px rgba(217,178,90,0.15);
-  animation: popup-in 0.25s cubic-bezier(.2,.9,.3,1.15);
-  padding: 8px 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  animation: popup-in 0.22s cubic-bezier(.2,.9,.3,1.15);
+  padding: 8px 12px;
 }
-.weapon-deck-popup.hidden { display: none; }
-.weapon-deck-popup-header {
+.deck-panel.hidden { display: none; }
+.deck-panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1352,6 +1351,20 @@ body::before {
   font-weight: 700;
   color: var(--gold-2);
   font-size: 14px;
+}
+.deck-panel-body {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.deck-section-title {
+  font-family: var(--display);
+  font-weight: 700;
+  color: var(--gold-2);
+  font-size: 12px;
+  margin-bottom: 6px;
+  letter-spacing: 1px;
 }
 .deck-main-row {
   display: flex;

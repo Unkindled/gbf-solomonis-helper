@@ -175,25 +175,20 @@ function init() {
     popup.classList.add('hidden');
   });
 
-  // Weapon deck: collapsed by default; click toggles the popup below the
-  // party bar (like 'My Guide Books').
-  const deckToggle = document.getElementById('weapon-deck');
-  const deckPopup = document.getElementById('weapon-deck-popup');
-  deckToggle.addEventListener('click', () => {
-    deckPopup.classList.toggle('hidden');
-  });
-  document.getElementById('weapon-deck-close').addEventListener('click', () => {
-    deckPopup.classList.add('hidden');
-  });
-
-  // Summon deck toggle (same pattern)
+  // Weapon/summon deck: collapsed by default. The two buttons sit side by
+  // side in #deck-buttons; clicking either opens the shared #deck-panel
+  // drawer (slides down from under the topbar — never overlaps the HUD or
+  // each other, since weapons and summons are separate sections inside).
+  const deckPanel = document.getElementById('deck-panel');
+  const weaponToggle = document.getElementById('weapon-deck');
   const summonToggle = document.getElementById('summon-deck');
-  const summonPopup = document.getElementById('summon-deck-popup');
-  summonToggle.addEventListener('click', () => {
-    summonPopup.classList.toggle('hidden');
-  });
-  document.getElementById('summon-deck-close').addEventListener('click', () => {
-    summonPopup.classList.add('hidden');
+  function openDeckPanel() {
+    deckPanel.classList.remove('hidden');
+  }
+  weaponToggle.addEventListener('click', openDeckPanel);
+  summonToggle.addEventListener('click', openDeckPanel);
+  document.getElementById('deck-panel-close').addEventListener('click', () => {
+    deckPanel.classList.add('hidden');
   });
 
   // Guide book codex: opens as a separate large modal ("opening a book")
@@ -746,16 +741,13 @@ function renderWeaponDeck(deck) {
   if (!toggle || !countEl) return;
   if (!deck || !Array.isArray(deck.slots) || deck.slots.length === 0) {
     toggle.classList.add('hidden');
-    if (!document.getElementById('weapon-deck-popup').classList.contains('hidden')) {
-      document.getElementById('weapon-deck-popup').classList.add('hidden');
-    }
     return;
   }
   // Toggle button shows unlocked weapon count.
   const unlocked = deck.slots.filter(w => !w.sealed).length;
   countEl.textContent = String(unlocked);
   toggle.classList.remove('hidden');
-  // Render popup body (kept fresh even while hidden).
+  // Render drawer body (kept fresh even while hidden).
   renderWeaponDeckPopup(deck);
 }
 
@@ -807,9 +799,6 @@ function renderSummonDeck(summon) {
   const sub = summon && Array.isArray(summon.sub) ? summon.sub : [];
   if (main.length === 0 && sub.length === 0) {
     toggle.classList.add('hidden');
-    if (!document.getElementById('summon-deck-popup').classList.contains('hidden')) {
-      document.getElementById('summon-deck-popup').classList.add('hidden');
-    }
     return;
   }
   const unlocked = main.filter(s => !s.sealed).length;

@@ -14,21 +14,9 @@
       <div id="topbar-left">
         <div id="dungeon-point" class="hud-chip coin-chip" title="Sephira Coins">0</div>
         <div id="party-bar"></div>
-        <button id="weapon-deck" class="deck-toggle hidden" title="Weapons">⚔ <span id="deck-count"></span></button>
-        <div id="weapon-deck-popup" class="weapon-deck-popup hidden">
-          <div class="weapon-deck-popup-header">
-            <span>武器编成</span>
-            <button id="weapon-deck-close" class="btn-small">×</button>
-          </div>
-          <div id="weapon-deck-body"></div>
-        </div>
-        <button id="summon-deck" class="deck-toggle hidden" title="Summons">✦ <span id="summon-count"></span></button>
-        <div id="summon-deck-popup" class="weapon-deck-popup hidden">
-          <div class="weapon-deck-popup-header">
-            <span>召唤编成</span>
-            <button id="summon-deck-close" class="btn-small">×</button>
-          </div>
-          <div id="summon-deck-body"></div>
+        <div id="deck-buttons">
+          <button id="weapon-deck" class="deck-toggle hidden" title="武器">武器 <span id="deck-count"></span></button>
+          <button id="summon-deck" class="deck-toggle hidden" title="召唤">召唤 <span id="summon-count"></span></button>
         </div>
       </div>
       <div id="topbar-mid">
@@ -62,6 +50,24 @@
           <span id="guidebook-stale" class="hud-btn-stale hidden" title="Guide books may be out of date — open the in-game guidebook page to refresh">!</span>
         </button>
         <div id="nav-menu" class="nav-menu hidden"></div>
+      </div>
+    </div>
+    <!-- Deck drawer: slides down from under the topbar (weapons + summons
+         side by side, so opening both never overlaps) -->
+    <div id="deck-panel" class="deck-panel hidden">
+      <div class="deck-panel-header">
+        <span>编成</span>
+        <button id="deck-panel-close" class="btn-small">×</button>
+      </div>
+      <div class="deck-panel-body">
+        <div class="deck-section" id="deck-weapon-section">
+          <div class="deck-section-title">武器</div>
+          <div id="weapon-deck-body"></div>
+        </div>
+        <div class="deck-section" id="deck-summon-section">
+          <div class="deck-section-title">召唤</div>
+          <div id="summon-deck-body"></div>
+        </div>
       </div>
     </div>
     <div id="map-container">
