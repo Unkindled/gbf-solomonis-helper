@@ -16,8 +16,10 @@ import {
   TYPE_GUIDEBOOK_REFRESH_FAILED, TYPE_GUIDEBOOK_NO_DUNGEON,
   TYPE_SHOP_STOCK, TYPE_SHOP_GUIDEBOOKS,
   TYPE_PICK_CANDIDATES, TYPE_PICK_DONE, TYPE_REPORT_BOOKS, TYPE_DUNGEON_POINT,
+  TYPE_EVENT_DETAIL,
 } from './shared/protocol.js';
 import { applyMove, applyFinish } from './shared/dungeon-mutations.js';
+import { EVENT_DB } from './shared/event-data.js';
 
 let helperWindowId = null;
 let gameState = {
@@ -670,12 +672,82 @@ function handleProceed(data) {
     broadcastToWindow(TYPE_PICK_CANDIDATES, candidates);
   }
 
+  // Collect EVENT choices (node_type 5/10): scenario_type=1 carries the
+  // event description, scenario_type=2 carries choice_ids[]. Look the
+  // event up in the static event DB by the choice_id family prefix
+  // (choice_id/100) or special:special_incident_id, and surface it in a
+  // bottom-center overlay. Handled separately from pick candidates so the
+  // two overlays never fight for the same space.
+  const eventDetail = extractEventDetail(data);
+  if (eventDetail) {
+    broadcastToWindow(TYPE_EVENT_DETAIL, eventDetail);
+  }
+
   broadcastToWindow(TYPE_PROCEED, {
     dungeonStatus: data.dungeon_status,
     miasmaInfo: data.miasma_info,
     totalTurn: data.total_turn,
   });
   persistGameState();
+}
+
+/**
+ * Extract event-choice detail from a proceed/incident response.
+ * Returns null when the response has no event choices (e.g. a plain
+ * battle/move proceed). The event DB lookup happens here (background has
+ * the static EVENT_DB); the helper window only renders what it receives.
+ */
+function extractEventDetail(data) {
+  const scenarios = Array.isArray(data.action_scenario_list) ? data.action_scenario_list : [];
+  let description = '';
+  let image = '';
+  const choices = [];
+  for (const s of scenarios) {
+    const st = s.scenario_type != null ? Number(s.scenario_type) : null;
+    if (st === 1) {
+      if (typeof s.text === 'string') description = s.text;
+      if (typeof s.image === 'string') image = s.image;
+    } else if (st === 2 && Array.isArray(s.choice_ids)) {
+      for (const c of s.choice_ids) {
+        if (c == null) continue;
+        choices.push({
+          choiceId: c.choice_id != null ? Number(c.choice_id) : null,
+          title: typeof c.title === 'string' ? c.title : '',
+          text: typeof c.text === 'string' ? c.text : '',
+          turn: c.turn != null ? Number(c.turn) : null,
+        });
+      }
+    }
+  }
+  if (choices.length === 0) return null;
+
+  // Special incident id (node_type 10) or infer from choice prefix.
+  const specialIncidentId = data.special_incident_id != null
+    ? Number(data.special_incident_id)
+    : null;
+  const eventIds = choices.map(c => c.choiceId).filter(id => id != null && id >= 10000);
+  const key = specialIncidentId != null && specialIncidentId > 0
+    ? 'special:' + specialIncidentId
+    : (() => {
+        const groups = [...new Set((eventIds.length ? eventIds : choices.map(c => c.choiceId).filter(id => id != null))
+          .map(id => Math.trunc(id / 100)))];
+        return groups.length === 1 ? String(groups[0]) : null;
+      })();
+
+  const entry = key != null ? (EVENT_DB[key] || null) : null;
+  return {
+    key,
+    description,
+    image,
+    choices,
+    db: entry ? {
+      name: entry.name || {},
+      tips: entry.tips || [],
+      optionTexts: Object.fromEntries(
+        Object.entries(entry.options || {}).map(([k, o]) => [k, { title: o.title || {}, text: o.text || {} }]),
+      ),
+    } : null,
+  };
 }
 
 // spacebook_status_add: the 3-way pick confirm. The response body is empty of

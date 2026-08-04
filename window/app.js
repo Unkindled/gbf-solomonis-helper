@@ -18,6 +18,7 @@ import {
   TYPE_GUIDEBOOK_REFRESH_FAILED, TYPE_GUIDEBOOK_NO_DUNGEON,
   TYPE_SHOP_STOCK, TYPE_SHOP_GUIDEBOOKS,
   TYPE_PICK_CANDIDATES, TYPE_PICK_DONE, TYPE_REPORT_BOOKS, TYPE_DUNGEON_POINT,
+  TYPE_EVENT_DETAIL,
 } from '../shared/protocol.js';
 import { applyMove, applyFinish } from '../shared/dungeon-mutations.js';
 import {
@@ -544,6 +545,10 @@ function handleWindowMessage(type, payload) {
     case TYPE_PICK_DONE:
       hidePickOverlay();
       break;
+
+    case TYPE_EVENT_DETAIL:
+      showEventDetail(payload);
+      break;
   }
 }
 
@@ -594,6 +599,48 @@ function hidePickOverlay() {
 }
 let pickOverlayTimer = null;
 let lastPickCandidates = [];
+
+// --- Event choice detail overlay (bottom-center) ---
+// Shown when a proceed response carries event choices. Positioned at the
+// bottom-center of the map so it never overlaps the top-right pick overlay
+// or the guidebook popup. Uses the event DB (background sends the matched
+// entry) for zh-CN names/tips; falls back to the raw choice text.
+let eventDetailTimer = null;
+function showEventDetail(detail) {
+  const el = document.getElementById('event-detail-overlay');
+  if (!el || !detail) return;
+  const pickZh = (obj) => (obj && obj['zh-CN']) || '';
+
+  const dbName = pickZh(detail.db?.name) || '';
+  const dbTips = (detail.db?.tips || []).map(t => `<li>${escapeHtml(t)}</li>`).join('');
+  const rows = (detail.choices || []).map(c => {
+    const dbOpt = detail.db?.optionTexts?.[String(c.choiceId)];
+    const title = pickZh(dbOpt?.title) || c.title || '';
+    const text = pickZh(dbOpt?.text) || c.text || '';
+    const turn = c.turn != null ? ` · <span class="ev-turn">${c.turn}回合</span>` : '';
+    return `<div class="ev-choice">
+      <div class="ev-choice-title">${escapeHtml(title)}${turn}</div>
+      ${text ? `<div class="ev-choice-text">${escapeHtml(text)}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `<div class="ev-header">
+      ${dbName ? `<span class="ev-name">${escapeHtml(dbName)}</span>` : '<span class="ev-name">事件</span>'}
+      <button id="event-detail-close" class="btn-small">×</button>
+    </div>
+    ${detail.description ? `<div class="ev-desc">${escapeHtml(detail.description).replace(/\{\{PLAYER\}\}/g, '主角')}</div>` : ''}
+    ${dbTips ? `<ul class="ev-tips">${dbTips}</ul>` : ''}
+    <div class="ev-choices">${rows}</div>`;
+  el.classList.remove('hidden');
+  document.getElementById('event-detail-close').addEventListener('click', hideEventDetail, { once: true });
+  clearTimeout(eventDetailTimer);
+  eventDetailTimer = setTimeout(hideEventDetail, 30000); // safety auto-hide
+}
+function hideEventDetail() {
+  const el = document.getElementById('event-detail-overlay');
+  if (el) el.classList.add('hidden');
+  clearTimeout(eventDetailTimer);
+}
 
 // --- HUD rendering: dungeon point / party / guide books ---
 
