@@ -1413,3 +1413,15 @@ body::before {
 .deck-cell.attr-5 { box-shadow: inset 0 0 0 1px rgba(165,214,167,0.5); }
 .deck-cell.attr-6 { box-shadow: inset 0 0 0 1px rgba(255,213,79,0.5); }
 .deck-cell.attr-7 { box-shadow: inset 0 0 0 1px rgba(171,71,188,0.5); }
+
+/* ---------- Summon deck rows ---------- */
+.summon-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.summon-row:last-child { margin-bottom: 0; }
+.summon-cell { flex-shrink: 0; }
+/* summon main portrait cells are taller than weapons; keep label aligned */
+.summon-row .deck-row-label { align-self: center; }

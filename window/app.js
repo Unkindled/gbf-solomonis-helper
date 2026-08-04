@@ -14,6 +14,7 @@ import {
   MSG_FETCH_BOOK_ICONS, MSG_WINDOW_DATA,
   TYPE_MAP_INIT, TYPE_MOVE_UPDATE, TYPE_FINISH_NODE, TYPE_PROCEED,
   TYPE_PARTY_STATUS, TYPE_GUIDE_BOOKS, TYPE_GUIDEBOOK_ICONS, TYPE_DECK_WEAPONS,
+  TYPE_DECK_SUMMONS,
   TYPE_GUIDEBOOKS_STALE, TYPE_GUIDEBOOK_REFRESH_STARTED,
   TYPE_GUIDEBOOK_REFRESH_FAILED, TYPE_GUIDEBOOK_NO_DUNGEON,
   TYPE_SHOP_STOCK, TYPE_SHOP_GUIDEBOOKS,
@@ -103,6 +104,7 @@ function init() {
     }
     if (state && state.partyStatus) renderPartyBar(state.partyStatus);
     if (state && state.weaponDeck) renderWeaponDeck(state.weaponDeck);
+    if (state && state.summonDeck) renderSummonDeck(state.summonDeck);
     if (state && state.guideBooks) renderGuideBooks(state.guideBooks);
     if (state && state.dungeonPoint != null) renderDungeonPoint(state.dungeonPoint);
     if (state && state.guideBooksStale) setGuideBooksStale(true);
@@ -182,6 +184,16 @@ function init() {
   });
   document.getElementById('weapon-deck-close').addEventListener('click', () => {
     deckPopup.classList.add('hidden');
+  });
+
+  // Summon deck toggle (same pattern)
+  const summonToggle = document.getElementById('summon-deck');
+  const summonPopup = document.getElementById('summon-deck-popup');
+  summonToggle.addEventListener('click', () => {
+    summonPopup.classList.toggle('hidden');
+  });
+  document.getElementById('summon-deck-close').addEventListener('click', () => {
+    summonPopup.classList.add('hidden');
   });
 
   // Guide book codex: opens as a separate large modal ("opening a book")
@@ -475,6 +487,10 @@ function handleWindowMessage(type, payload) {
 
     case TYPE_DECK_WEAPONS:
       renderWeaponDeck(payload);
+      break;
+
+    case TYPE_DECK_SUMMONS:
+      renderSummonDeck(payload);
       break;
 
     case TYPE_GUIDE_BOOKS:
@@ -779,6 +795,63 @@ function renderWeaponDeckPopup(deck) {
   body.innerHTML = html;
 }
 
+// --- Summon deck ---
+const SUMMON_CDN = 'https://prd-game-a-granbluefantasy.akamaized.net/assets_en/img/sp/assets/summon/';
+let latestSummon = null;
+function renderSummonDeck(summon) {
+  latestSummon = summon;
+  const toggle = document.getElementById('summon-deck');
+  const countEl = document.getElementById('summon-count');
+  if (!toggle || !countEl) return;
+  const main = summon && Array.isArray(summon.main) ? summon.main : [];
+  const sub = summon && Array.isArray(summon.sub) ? summon.sub : [];
+  if (main.length === 0 && sub.length === 0) {
+    toggle.classList.add('hidden');
+    if (!document.getElementById('summon-deck-popup').classList.contains('hidden')) {
+      document.getElementById('summon-deck-popup').classList.add('hidden');
+    }
+    return;
+  }
+  const unlocked = main.filter(s => !s.sealed).length;
+  countEl.textContent = String(unlocked);
+  toggle.classList.remove('hidden');
+  renderSummonDeckPopup(summon);
+}
+
+function summonImg(s, kind, wPx, hPx) {
+  const img = s.imageId
+    ? `${SUMMON_CDN}${kind}/${String(s.imageId).replace(/_\d+$/, '')}.jpg`
+    : '';
+  const sealed = !!s.sealed;
+  const lv = s.level ? `<span class="deck-lv">${s.level}</span>` : '';
+  const attrCls = s.attribute != null ? ` attr-${s.attribute}` : '';
+  const name = s.name || '—';
+  const skills = (s.skills || []).map(sk => sk.name).filter(Boolean).join(' / ');
+  const title = `${name} Lv${s.level || ''}${skills ? ' — ' + skills : ''}`;
+  return `<div class="deck-cell summon-cell ${sealed ? ' sealed' : ''}${attrCls}" title="${escapeHtml(title)}" style="width:${wPx}px;height:${hPx}px">
+    ${img ? `<img class="deck-icon" src="${img}" alt="" style="width:${wPx}px;height:${hPx}px" onerror="this.style.display='none';">` : `<div class="deck-empty" style="width:${wPx}px;height:${hPx}px"></div>`}
+    ${sealed ? '<span class="deck-seal">🔒</span>' : ''}
+    ${lv}
+  </div>`;
+}
+
+function renderSummonDeckPopup(summon) {
+  const body = document.getElementById('summon-deck-body');
+  if (!body) return;
+  const main = summon && Array.isArray(summon.main) ? summon.main : [];
+  const sub = summon && Array.isArray(summon.sub) ? summon.sub : [];
+  if (main.length === 0 && sub.length === 0) { body.innerHTML = ''; return; }
+  let html = '';
+  if (main.length > 0) {
+    // main summons: portrait 196×340 → 32×56 (0.576 ratio), one row
+    html += `<div class="summon-row summon-main-row"><span class="deck-row-label">主召唤</span>${main.map(s => summonImg(s, 'party_main', 32, 56)).join('')}</div>`;
+  }
+  if (sub.length > 0) {
+    // sub summons: landscape 184×138 → 48×36 (1.333 ratio)
+    html += `<div class="summon-row summon-sub-row"><span class="deck-row-label">副召唤</span>${sub.map(s => summonImg(s, 'party_sub', 48, 36)).join('')}</div>`;
+  }
+  body.innerHTML = html;
+}
 function getBookIconUrl(iconType) {
   if (iconType == null) return '';
   // 1) bundled asset

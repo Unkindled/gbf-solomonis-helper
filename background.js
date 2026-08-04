@@ -9,9 +9,11 @@ import {
   DATA_MAP_INIT, DATA_MOVE_NODE, DATA_FINISH_NODE, DATA_PROCEED,
   DATA_SPACEBOOK_ADD, DATA_SPACEBOOK_LIST, DATA_REPORT_BOOK, DATA_INCIDENT,
   DATA_PARTY_STATUS, DATA_SHOP_LINEUP, DATA_SHOP_PURCHASE, DATA_BATTLE_RESULT,
-  DATA_UNLOCK_WEAPON, DATA_PARTY_DECK, DATA_DUNGEON_RESULT, DATA_RAID_START,
+  DATA_UNLOCK_WEAPON, DATA_UNLOCK_SUMMON, DATA_PARTY_DECK, DATA_DUNGEON_RESULT,
+  DATA_RAID_START,
   TYPE_MAP_INIT, TYPE_MOVE_UPDATE, TYPE_FINISH_NODE, TYPE_PROCEED,
   TYPE_PARTY_STATUS, TYPE_GUIDE_BOOKS, TYPE_GUIDEBOOK_ICONS, TYPE_DECK_WEAPONS,
+  TYPE_DECK_SUMMONS,
   TYPE_GUIDEBOOKS_STALE, TYPE_GUIDEBOOK_REFRESH_STARTED,
   TYPE_GUIDEBOOK_REFRESH_FAILED, TYPE_GUIDEBOOK_NO_DUNGEON,
   TYPE_SHOP_STOCK, TYPE_SHOP_GUIDEBOOKS,
@@ -36,6 +38,7 @@ let gameState = {
   shopStock: new Map(),   // node_id → {coinAfter, items:[{lineup_id,name,price,stock,canBuy}]}
   shopGuidebooks: {},     // status_id → {status_id,name,icon_type,rarity} from shop lineups
   weaponDeck: null,       // normalized weapon slots from deck_weapon / party deck
+  summonDeck: null,       // normalized summon slots (main + sub) from deck_summon / party deck
 };
 
 // Miasma data recorder — stores every miasma snapshot for formula analysis
@@ -54,12 +57,12 @@ let persistTimer = null;
 function snapshotGameState() {
   const { map, currentNodeId, totalTurn, dungeonStatus, miasmaInfo,
     partyStatus, dungeonPoint, guideBooks, guideBooksStale, shopGuidebooks,
-    weaponDeck } = gameState;
+    weaponDeck, summonDeck } = gameState;
   const shopStock = {};
   for (const [k, v] of gameState.shopStock) shopStock[k] = v;
   return { map, currentNodeId, totalTurn, dungeonStatus, miasmaInfo,
     partyStatus, dungeonPoint, guideBooks, guideBooksStale, shopGuidebooks,
-    weaponDeck, shopStock };
+    weaponDeck, summonDeck, shopStock };
 }
 
 function persistGameState() {
@@ -85,6 +88,7 @@ async function restoreGameState() {
     gameState.guideBooksStale = !!saved.guideBooksStale;
     gameState.shopGuidebooks = saved.shopGuidebooks ?? {};
     gameState.weaponDeck = saved.weaponDeck ?? null;
+    gameState.summonDeck = saved.summonDeck ?? null;
     gameState.map = saved.map ?? null;
     if (saved.shopStock) {
       // Object.entries yields STRING keys, but the handlers index with the
@@ -273,6 +277,9 @@ function handleGameData(type, data) {
       break;
     case DATA_UNLOCK_WEAPON:
       handleUnlockWeapon(data);
+      break;
+    case DATA_UNLOCK_SUMMON:
+      handleUnlockSummon(data);
       break;
     case DATA_PARTY_DECK:
       handlePartyDeck(data);
@@ -663,6 +670,8 @@ function handleProceed(data) {
   extractPartyStatus(data);
   // Weapon deck (action_type=200) may arrive on the same responses.
   extractWeaponDeck(data);
+  // Summon deck (action_type=201) may arrive on the same responses.
+  extractSummonDeck(data);
 
   // Collect guide book candidates from scenario status lists (3-way pick UI:
   // action_scenario_list[] with scenario_type CHOICE + status_list candidates)
@@ -910,6 +919,92 @@ function handlePartyDeck(data) {
     slots,
     isOpenAdditional: !!pc.is_open_additional_weapon,
     isUseAdditional: !!pc.is_use_additional_weapon,
+  });
+  syncSummonFromPartyDeck(pc);
+}
+
+// --- Summon deck (parallel to weapons) ---
+// deck_summon.summons = main 5 slots, .sub_summons = support 2 slots.
+// is_position_locked sits on the SLOT object (like weapons).
+function normalizeSummonSlots(summonsObj) {
+  const slots = [];
+  if (!summonsObj || typeof summonsObj !== 'object') return slots;
+  for (const [pos, s] of Object.entries(summonsObj)) {
+    if (!s) continue;
+    const p = s.param || {};
+    const m = s.master || {};
+    const skills = [s.skill, s.sub_skill]
+      .filter(Boolean)
+      .map(sk => ({ id: sk.id, name: sk.name || '', description: sk.description || '' }));
+    slots.push({
+      position: Number(pos),
+      imageId: p.image_id || m.id || '',
+      name: m.name || '',
+      attribute: m.attribute != null ? Number(m.attribute) : null,
+      rarity: m.rarity != null ? Number(m.rarity) : null,
+      level: p.level != null ? String(p.level) : '',
+      sealed: !!s.is_position_locked,
+      skills,
+    });
+  }
+  slots.sort((a, b) => a.position - b.position);
+  return slots;
+}
+
+function setSummonDeck(payload) {
+  gameState.summonDeck = payload;
+  broadcastToWindow(TYPE_DECK_SUMMONS, payload);
+  persistGameState();
+}
+
+function extractSummonDeck(data) {
+  if (!data || !Array.isArray(data.action_scenario_list)) return;
+  for (const s of data.action_scenario_list) {
+    const ds = s.deck_summon;
+    if (!ds) continue;
+    const main = normalizeSummonSlots(ds.summons);
+    const sub = normalizeSummonSlots(ds.sub_summons);
+    if (main.length === 0 && sub.length === 0) continue;
+    setSummonDeck({
+      main,
+      sub,
+      isOpenSub: !!ds.is_open_sub_summon,
+      quickUserSummonId: ds.quick_user_summon_id != null ? Number(ds.quick_user_summon_id) : null,
+    });
+    return;
+  }
+}
+
+// unlock_summon request body: {summon_positions:[], sub_summon_positions:[]}
+function handleUnlockSummon(data) {
+  if (!data || !data._requestBody) return;
+  const body = data._requestBody;
+  const cur = gameState.summonDeck;
+  if (!cur) return;
+  let changed = false;
+  const unlock = (slots, positions) => {
+    if (!Array.isArray(positions)) return;
+    const set = new Set(positions.map(Number));
+    for (const slot of slots) {
+      if (set.has(slot.position) && slot.sealed) { slot.sealed = false; changed = true; }
+    }
+  };
+  unlock(cur.main, body.summon_positions);
+  unlock(cur.sub, body.sub_summon_positions);
+  if (changed) setSummonDeck(cur);
+}
+
+// party page deck.pc also carries summons/sub_summons.
+function syncSummonFromPartyDeck(pc) {
+  if (!pc || (!pc.summons && !pc.sub_summons)) return;
+  const main = normalizeSummonSlots(pc.summons);
+  const sub = normalizeSummonSlots(pc.sub_summons);
+  if (main.length === 0 && sub.length === 0) return;
+  setSummonDeck({
+    main,
+    sub,
+    isOpenSub: !!pc.is_open_sub_summon,
+    quickUserSummonId: pc.quick_user_summon_id != null ? Number(pc.quick_user_summon_id) : null,
   });
 }
 
