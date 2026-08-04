@@ -634,6 +634,12 @@ function handleFinishNode(data) {
     nodeId: gameState.currentNodeId,
     beforeNodeId: data.before_current_node_id != null ? data.before_current_node_id : gameState.currentNodeId,
   });
+
+  // The event node completed → the player is back on the map. Close the
+  // event detail overlay NOW (multi-step events may have shown several
+  // choice rounds; closing on the first incident_choose was too early).
+  // Harmless for battle nodes (no event overlay is open then).
+  broadcastToWindow(TYPE_EVENT_DONE, true);
   persistGameState();
 }
 
@@ -787,10 +793,10 @@ function handleIncident(data) {
   // updates + guide book candidates) WITHOUT touching the position, which
   // was previously wiped to undefined here (player "disappeared" until the
   // next real move_node).
+  // NOTE: do NOT close the event overlay here — a choice may be one of
+  // several in a multi-step event; the overlay closes on finish_node_event
+  // (the event node completed → back on the map).
   handleProceed(data);
-  // The player made their event choice → the event is over. Close the
-  // event detail overlay immediately.
-  broadcastToWindow(TYPE_EVENT_DONE, true);
 }
 
 // Extract a party HP snapshot from any response that carries
