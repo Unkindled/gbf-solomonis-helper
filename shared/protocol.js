@@ -30,6 +30,7 @@ export const TYPE_MOVE_UPDATE = 'move-update';           // move_node response
 export const TYPE_FINISH_NODE = 'finish-node';           // finish_node_event response
 export const TYPE_PROCEED = 'proceed';                   // proceed_node_event response
 export const TYPE_PARTY_STATUS = 'party-status';         // party_status response
+export const TYPE_DECK_WEAPONS = 'deck-weapons';         // deck_weapon from proceed/incident
 export const TYPE_GUIDE_BOOKS = 'guide-books';           // spacebook_status_list
 export const TYPE_GUIDEBOOK_ICONS = 'guidebook-icons';   // fetched icon data URLs
 export const TYPE_GUIDEBOOKS_STALE = 'guidebooks-stale';

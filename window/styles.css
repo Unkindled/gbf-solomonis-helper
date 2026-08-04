@@ -1307,3 +1307,61 @@ body::before {
 .ev-choice-text { color: var(--parch-1); font-size: 12px; margin-top: 2px; }
 .ev-turn { color: #ffd54a; font-weight: 700; }
 
+
+/* ---------- Weapon deck bar (below party bar) ---------- */
+#weapon-deck { display: flex; align-items: flex-start; }
+.weapon-deck-bar {
+  display: flex;
+  gap: 3px;
+  padding: 4px 6px;
+  background: rgba(10,14,20,0.55);
+  border: 1px solid rgba(217,178,90,0.25);
+  border-radius: 8px;
+}
+.deck-weapon {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(0,0,0,0.35);
+}
+.deck-weapon .deck-icon {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.deck-weapon.sealed {
+  opacity: 0.35;
+  border-style: dashed;
+  border-color: rgba(255,255,255,0.35);
+}
+.deck-seal {
+  position: absolute;
+  top: 1px;
+  right: 2px;
+  font-size: 10px;
+  text-shadow: 0 1px 2px #000;
+}
+.deck-lv {
+  position: absolute;
+  bottom: 0;
+  left: 2px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 2px #000;
+}
+.deck-empty {
+  width: 100%;
+  height: 100%;
+  background: rgba(255,255,255,0.05);
+}
+/* element attribute tint (2=water,3=fire,4=earth,5=wind,6=light,7=dark) */
+.deck-weapon.attr-2 { box-shadow: inset 0 0 0 1px rgba(66,165,245,0.5); }
+.deck-weapon.attr-3 { box-shadow: inset 0 0 0 1px rgba(239,83,80,0.5); }
+.deck-weapon.attr-4 { box-shadow: inset 0 0 0 1px rgba(102,187,106,0.5); }
+.deck-weapon.attr-5 { box-shadow: inset 0 0 0 1px rgba(165,214,167,0.5); }
+.deck-weapon.attr-6 { box-shadow: inset 0 0 0 1px rgba(255,213,79,0.5); }
+.deck-weapon.attr-7 { box-shadow: inset 0 0 0 1px rgba(171,71,188,0.5); }

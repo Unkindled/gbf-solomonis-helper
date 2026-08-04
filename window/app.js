@@ -13,7 +13,7 @@ import {
   MSG_GET_STATE, MSG_OPEN_GUIDEBOOK_TAB,
   MSG_FETCH_BOOK_ICONS, MSG_WINDOW_DATA,
   TYPE_MAP_INIT, TYPE_MOVE_UPDATE, TYPE_FINISH_NODE, TYPE_PROCEED,
-  TYPE_PARTY_STATUS, TYPE_GUIDE_BOOKS, TYPE_GUIDEBOOK_ICONS,
+  TYPE_PARTY_STATUS, TYPE_GUIDE_BOOKS, TYPE_GUIDEBOOK_ICONS, TYPE_DECK_WEAPONS,
   TYPE_GUIDEBOOKS_STALE, TYPE_GUIDEBOOK_REFRESH_STARTED,
   TYPE_GUIDEBOOK_REFRESH_FAILED, TYPE_GUIDEBOOK_NO_DUNGEON,
   TYPE_SHOP_STOCK, TYPE_SHOP_GUIDEBOOKS,
@@ -461,6 +461,10 @@ function handleWindowMessage(type, payload) {
       renderPartyBar(payload);
       break;
 
+    case TYPE_DECK_WEAPONS:
+      renderWeaponDeck(payload);
+      break;
+
     case TYPE_GUIDE_BOOKS:
       renderGuideBooks(payload);
       updateStatusBar(); // clear the 'refreshing…' override once data arrives
@@ -702,6 +706,37 @@ function renderPartyBar(party) {
 const bookIconCache = {};
 let latestGuideBooks = [];
 let latestParty = null;
+let latestDeck = null;
+
+// Weapon deck bar (below the party bar): 13 slots from deck_weapon on
+// proceed/incident responses. Sealed slots render dimmed with 🔒.
+const ASSET_CDN = 'https://prd-game-a-granbluefantasy.akamaized.net/assets_en/img/sp/assets/weapon/';
+function renderWeaponDeck(deck) {
+  latestDeck = deck;
+  const el = document.getElementById('weapon-deck');
+  if (!el) return;
+  if (!deck || !Array.isArray(deck.slots) || deck.slots.length === 0) {
+    el.innerHTML = '';
+    return;
+  }
+  const html = deck.slots.map((w) => {
+    const img = w.imageId
+      ? `${ASSET_CDN}m/${String(w.imageId).replace(/_\d+$/, '')}.jpg`
+      : '';
+    const sealed = !!w.sealed;
+    const lv = w.level ? `<span class="deck-lv">${w.level}</span>` : '';
+    const attrCls = w.attribute != null ? ` attr-${w.attribute}` : '';
+    const name = w.name || '—';
+    const skills = (w.skills || []).map(sk => sk.name).filter(Boolean).join(' / ');
+    const title = `${name} Lv${w.level || ''}${skills ? ' — ' + skills : ''}`;
+    return `<div class="deck-weapon${sealed ? ' sealed' : ''}${attrCls}" title="${escapeHtml(title)}">
+      ${img ? `<img class="deck-icon" src="${img}" alt="" onerror="this.style.display='none';">` : '<div class="deck-empty"></div>'}
+      ${sealed ? '<span class="deck-seal">🔒</span>' : ''}
+      ${lv}
+    </div>`;
+  }).join('');
+  el.innerHTML = `<div class="weapon-deck-bar">${html}</div>`;
+}
 
 function getBookIconUrl(iconType) {
   if (iconType == null) return '';

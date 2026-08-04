@@ -11,7 +11,7 @@ import {
   DATA_PARTY_STATUS, DATA_SHOP_LINEUP, DATA_SHOP_PURCHASE, DATA_BATTLE_RESULT,
   DATA_DUNGEON_RESULT, DATA_RAID_START,
   TYPE_MAP_INIT, TYPE_MOVE_UPDATE, TYPE_FINISH_NODE, TYPE_PROCEED,
-  TYPE_PARTY_STATUS, TYPE_GUIDE_BOOKS, TYPE_GUIDEBOOK_ICONS,
+  TYPE_PARTY_STATUS, TYPE_GUIDE_BOOKS, TYPE_GUIDEBOOK_ICONS, TYPE_DECK_WEAPONS,
   TYPE_GUIDEBOOKS_STALE, TYPE_GUIDEBOOK_REFRESH_STARTED,
   TYPE_GUIDEBOOK_REFRESH_FAILED, TYPE_GUIDEBOOK_NO_DUNGEON,
   TYPE_SHOP_STOCK, TYPE_SHOP_GUIDEBOOKS,
@@ -651,6 +651,8 @@ function handleProceed(data) {
 
   // Stationary miasma damage / event HP changes ride on proceed responses
   extractPartyStatus(data);
+  // Weapon deck (action_type=200) may arrive on the same responses.
+  extractWeaponDeck(data);
 
   // Collect guide book candidates from scenario status lists (3-way pick UI:
   // action_scenario_list[] with scenario_type CHOICE + status_list candidates)
@@ -816,6 +818,45 @@ function extractPartyStatus(data) {
       broadcastToWindow(TYPE_PARTY_STATUS, snap);
       return;
     }
+  }
+}
+
+// Weapon deck rides on proceed/incident responses (action_type=200,
+// scenario_type=3). Normalize the 13 slots for display; sealed slots are
+// flagged by is_position_locked (from the deck_weapon slot param).
+function extractWeaponDeck(data) {
+  if (!data || !Array.isArray(data.action_scenario_list)) return;
+  for (const s of data.action_scenario_list) {
+    const dw = s.deck_weapon;
+    if (!dw || !dw.weapons || typeof dw.weapons !== 'object') continue;
+    const slots = [];
+    for (const [pos, w] of Object.entries(dw.weapons)) {
+      if (!w) continue;
+      const p = w.param || {};
+      const m = w.master || {};
+      const skills = [w.skill1, w.skill2, w.skill3, w.skill4]
+        .filter(Boolean)
+        .map(sk => ({ id: sk.id, name: sk.name || '', description: sk.description || '', image: sk.image || '' }));
+      slots.push({
+        position: Number(pos),
+        imageId: p.image_id || m.id || '',
+        name: m.name || '',
+        attribute: m.attribute != null ? Number(m.attribute) : null,
+        kind: m.kind != null ? Number(m.kind) : null,
+        rarity: m.rarity != null ? Number(m.rarity) : null,
+        level: p.level != null ? String(p.level) : '',
+        sealed: !!p.is_position_locked,
+        skills,
+      });
+    }
+    if (slots.length === 0) continue;
+    slots.sort((a, b) => a.position - b.position);
+    broadcastToWindow(TYPE_DECK_WEAPONS, {
+      slots,
+      isOpenAdditional: !!dw.is_open_additional_weapon,
+      isUseAdditional: !!dw.is_use_additional_weapon,
+    });
+    return;
   }
 }
 
