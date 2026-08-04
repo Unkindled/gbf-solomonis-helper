@@ -917,12 +917,16 @@ export class MapRenderer {
     const spNames = SPECIAL_NODE_LABELS; // from the node registry
 
     let label;
+    // Node-type name follows the UI language (same keys as the filter
+    // chips: I18N.t('nodeType.N'), EN/JA/… per btn-lang).
+    const typeName = (typeof I18N !== 'undefined' && I18N.t('nodeType.' + node.node_type))
+      || typeNames[node.node_type] || node.node_type;
     if (node.node_type === 10 && node.special_incident_id != null) {
       // Special event: show name instead of generic "Special [sp:N]"
       const spName = spNames[node.special_incident_id] || `Special ${node.special_incident_id}`;
       label = `#${node.node_id} ${spName}`;
     } else {
-      label = `#${node.node_id} ${typeNames[node.node_type] || node.node_type}`;
+      label = `#${node.node_id} ${typeName}`;
     }
     if (node.is_visited) label += ' ✓';
 
