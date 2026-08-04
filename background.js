@@ -21,6 +21,7 @@ import {
 } from './shared/protocol.js';
 import { applyMove, applyFinish } from './shared/dungeon-mutations.js';
 import { EVENT_DB } from './shared/event-data.js';
+import { absorbEventDetail } from './shared/event-store.js';
 
 let helperWindowId = null;
 let gameState = {
@@ -692,6 +693,8 @@ function handleProceed(data) {
   // two overlays never fight for the same space.
   const eventDetail = extractEventDetail(data);
   if (eventDetail) {
+    // Record this event into the event codex (seen / unknown pools).
+    absorbEventDetail(eventDetail);
     broadcastToWindow(TYPE_EVENT_DETAIL, eventDetail);
   }
 

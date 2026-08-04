@@ -29,6 +29,12 @@ import {
   loadLearnedJaText, loadLearnedStatusId, loadSeenBookIcons, loadUnknownBooks,
   exportGuidebookData, importGuidebookData,
 } from './guidebook-store.js';
+import {
+  seenEvents, unknownEvents,
+  absorbEventDetail, loadSeenEvents, loadUnknownEvents,
+  exportEventData, importEventData,
+} from '../shared/event-store.js';
+import { EVENT_DB } from '../shared/event-data.js';
 
 /** onChange for the store's absorb/import paths — re-render guidebook UI. */
 function guidebookOnChange() {
@@ -249,6 +255,37 @@ function init() {
   document.getElementById('gb-codex-close').addEventListener('click', () => {
     codex.classList.add('hidden');
   });
+
+  // Event codex: same pattern.
+  const evCodex = document.getElementById('event-codex');
+  let evCodexLang = 'en';
+  document.getElementById('btn-event-codex').addEventListener('click', () => {
+    evCodex.classList.remove('hidden');
+    renderEventCodex();
+  });
+  document.getElementById('ev-codex-close').addEventListener('click', () => {
+    evCodex.classList.add('hidden');
+  });
+  document.getElementById('ev-export-data').addEventListener('click', exportEventData);
+  document.getElementById('ev-import-data').addEventListener('click', () => {
+    document.getElementById('ev-import-file').click();
+  });
+  document.getElementById('ev-import-file').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) importEventData(file, (changed, err) => {
+      if (err) { showTransientToast('Import error: ' + err); return; }
+      if (changed) renderEventCodex();
+    });
+    e.target.value = '';
+  });
+  const evCodexInputs = ['ev-codex-search', 'ev-codex-kind', 'ev-codex-seen', 'ev-codex-lang'];
+  for (const id of evCodexInputs) {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', () => {
+      if (id === 'ev-codex-lang') evCodexLang = el.value;
+      if (!evCodex.classList.contains('hidden')) renderEventCodex();
+    });
+  }
   document.getElementById('pick-overlay-close').addEventListener('click', hidePickOverlay);
   document.getElementById('custom-path-confirm').addEventListener('click', confirmCustomPath);
   document.getElementById('custom-path-cancel').addEventListener('click', exitCustomMode);
@@ -284,6 +321,8 @@ function init() {
   loadLearnedStatusId();
   loadLearnedJaText();
   loadSeenBookIcons();
+  loadSeenEvents();
+  loadUnknownEvents();
 
   // Export / import learned guidebook data (JA text, id maps, unknowns)
   document.getElementById('gb-export-data').addEventListener('click', exportGuidebookData);
@@ -1185,6 +1224,92 @@ function renderCodex() {
       toggleFavorite(parseInt(btn.dataset.id, 10));
     });
   });
+}
+
+function renderEventCodex() {
+  const body = document.getElementById('event-codex-body');
+  if (!body) return;
+  const q = normText(document.getElementById('ev-codex-search')?.value || '');
+  const kindF = document.getElementById('ev-codex-kind')?.value;
+  const seenF = document.getElementById('ev-codex-seen')?.value;
+
+  const entries = Object.values(EVENT_DB);
+  const rows = [];
+  for (const entry of entries) {
+    const isSpecial = entry.eventKind === 'special' || entry.key?.startsWith('special:');
+    const seen = !!seenEvents[entry.key];
+
+    if (kindF === 'normal' && isSpecial) continue;
+    if (kindF === 'special' && !isSpecial) continue;
+    if (seenF === 'seen' && !seen) continue;
+    if (seenF === 'unseen' && seen) continue;
+
+    if (q) {
+      const name = entry.name?.['en'] || entry.name?.['ja'] || entry.name?.['zh-CN'] || entry.key;
+      const desc = entry.description?.['en'] || entry.description?.['ja'] || entry.description?.['zh-CN'] || '';
+      const optTexts = Object.values(entry.options || {}).map(o =>
+        [o.title?.['en'], o.title?.['ja'], o.text?.['en'], o.text?.['ja']].filter(Boolean).join(' '),
+      ).join(' ');
+      const hay = [name, desc, optTexts, entry.key].filter(Boolean).map(normText).join(' ');
+      if (!hay.includes(q)) continue;
+    }
+    rows.push({ entry, seen, isSpecial });
+  }
+
+  // Sort: seen first, then by key.
+  rows.sort((a, b) => {
+    if (a.seen !== b.seen) return a.seen ? -1 : 1;
+    return String(a.entry.key).localeCompare(String(b.entry.key));
+  });
+
+  const langKey = evCodexLang === 'zh' ? 'zh-CN' : evCodexLang;
+
+  let html = '<div class="guidebook-codex-grid">';
+  if (rows.length === 0) {
+    body.innerHTML = '<div class="guidebook-popup-empty">No events match the filters</div>';
+    return;
+  }
+  html += rows.map(({ entry, seen, isSpecial }) => {
+    const name = entry.name?.[langKey] || entry.name?.['en'] || entry.name?.['ja'] || entry.key;
+    const desc = entry.description?.[langKey] || entry.description?.['en'] || entry.description?.['ja'] || '';
+    const opts = Object.entries(entry.options || {}).map(([k, o]) => {
+      const t = o.title?.[langKey] || o.title?.['en'] || o.title?.['ja'] || '';
+      const tx = o.text?.[langKey] || o.text?.['en'] || o.text?.['ja'] || '';
+      return `<div class="ev-opt"><span class="ev-opt-title">${escapeHtml(t)}</span><span class="ev-opt-text">${escapeHtml(tx)}</span></div>`;
+    }).join('');
+    const seenTag = seen ? '<span class="gb-map gb-map-ok" title="Seen in-game">✓</span>'
+      : '<span class="gb-map gb-map-warn" title="Not yet encountered">△</span>';
+    const kindTag = isSpecial ? '<span class="ev-kind">SP</span>' : '<span class="ev-kind">N</span>';
+    return `<div class="guidebook-codex-row${seen ? ' owned' : ''}">
+      <span class="gb-name">${escapeHtml(name)} <span class="gb-count">${seen ? '✓' : ''}</span></span>
+      ${kindTag} ${seenTag}
+      <div class="ev-desc">${escapeEventText(desc)}</div>
+      ${opts ? '<div class="ev-opts">' + opts + '</div>' : ''}
+      <div class="ev-key">key: ${escapeHtml(entry.key)}</div>
+    </div>`;
+  }).join('');
+  html += '</div>';
+
+  // Unknown / uncatalogued events section.
+  const unknownList = [...unknownEvents.values()];
+  if (unknownList.length > 0 && seenF !== 'seen') {
+    html += `<div class="gb-unknown-header">Uncatalogued (${unknownList.length}) — seen in your runs, not yet in the static DB</div>`;
+    html += '<div class="guidebook-codex-grid">';
+    html += unknownList.map(e => {
+      const opts = (e.gameChoices || []).map(c =>
+        `<div class="ev-opt"><span class="ev-opt-title">${escapeHtml(c.title || '')}</span><span class="ev-opt-text">${escapeHtml(c.text || '')}</span></div>`,
+      ).join('');
+      return `<div class="guidebook-codex-row unknown">
+        <span class="gb-name">${escapeHtml(e.gameText?.replace(/<br\s*\/?>/gi, '') || '(no text)')}</span>
+        <div class="ev-desc">${escapeEventText(e.gameText || '')}</div>
+        ${opts ? '<div class="ev-opts">' + opts + '</div>' : ''}
+        <div class="ev-key">key: ${escapeHtml(e.key)}${e.specialIncidentId != null ? ' (sp:' + e.specialIncidentId + ')' : ''}</div>
+      </div>`;
+    }).join('');
+    html += '</div>';
+  }
+
+  body.innerHTML = html;
 }
 
 function escapeHtml(s) {

@@ -48,6 +48,9 @@
           <span id="guidebook-badge-cursed" class="hud-btn-badge hud-badge-cursed hidden">☠0</span>
           <span id="guidebook-stale" class="hud-btn-stale hidden" title="Guide books may be out of date — open the in-game guidebook page to refresh">!</span>
         </button>
+        <button id="btn-event-codex" class="hud-iconbtn" title="Event Codex" aria-label="Event Codex">
+          <span style="font-size:18px;">📜</span>
+        </button>
         <div id="nav-menu" class="nav-menu hidden"></div>
       </div>
     </div>
@@ -159,6 +162,37 @@
           </span>
         </div>
         <div id="guidebook-codex-body"></div>
+      </div>
+      <!-- Event codex: separate large modal, same pattern as guidebook codex -->
+      <div id="event-codex" class="guidebook-codex hidden">
+        <div class="guidebook-codex-header">
+          <span class="guidebook-codex-title" data-i18n="event.codex">Event Codex</span>
+          <button id="ev-codex-close" class="btn-small">×</button>
+        </div>
+        <div class="guidebook-codex-controls">
+          <input id="ev-codex-search" type="text" data-i18n-placeholder="event.search" class="gb-codex-search" placeholder="Search events...">
+          <select id="ev-codex-kind" class="gb-codex-select">
+            <option value="" data-i18n="event.kindAll">Kind: All</option>
+            <option value="normal" data-i18n="event.kindNormal">Normal</option>
+            <option value="special" data-i18n="event.kindSpecial">Special</option>
+          </select>
+          <select id="ev-codex-seen" class="gb-codex-select">
+            <option value="" data-i18n="event.seenAll">Status: All</option>
+            <option value="seen" data-i18n="event.seenSeen">Seen</option>
+            <option value="unseen" data-i18n="event.seenUnseen">Not seen</option>
+          </select>
+          <select id="ev-codex-lang" class="gb-codex-select" data-i18n-title="gb.lang">
+            <option value="en">EN</option>
+            <option value="ja">日本語</option>
+            <option value="zh">中文</option>
+          </select>
+          <span class="gb-data-actions">
+            <button id="ev-export-data" class="btn-small" data-i18n="gb.export">⬇ Export</button>
+            <button id="ev-import-data" class="btn-small" data-i18n="gb.import">⬆ Import</button>
+            <input type="file" id="ev-import-file" accept=".json,application/json" class="hidden">
+          </span>
+        </div>
+        <div id="event-codex-body"></div>
       </div>
     </div>
   </div>
