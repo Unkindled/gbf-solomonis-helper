@@ -1349,6 +1349,14 @@ body::before {
   padding: 8px 12px;
 }
 .deck-panel.hidden { display: none; }
+/* Topbar at the bottom: drawer opens UPWARD (bottom-anchored). Swap the
+   rounded corners/border so it hangs from the topbar's top edge. */
+.deck-panel.deck-panel-up {
+  border-radius: 10px 10px 0 0;
+  border-bottom: none;
+  border-top: 1px solid var(--gold-2);
+  box-shadow: 0 -8px 24px rgba(0,0,0,0.5);
+}
 .deck-panel-header {
   display: flex;
   align-items: center;

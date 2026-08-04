@@ -186,8 +186,20 @@ function init() {
     const br = bar.getBoundingClientRect();
     const ar = app.getBoundingClientRect();
     deckPanel.style.left = Math.round(br.left - ar.left) + 'px';
-    deckPanel.style.top = Math.round(br.bottom - ar.top + 4) + 'px';
     deckPanel.style.width = Math.round(br.width) + 'px';
+    const bottomBar = document.getElementById('app').classList.contains('topbar-bottom');
+    if (bottomBar) {
+      // Topbar at the BOTTOM → the drawer must open UPWARD (below the
+      // topbar visually = above it in the flex column, i.e. bottom edge
+      // aligned to the party bar's top, minus a small gap).
+      deckPanel.style.top = 'auto';
+      deckPanel.style.bottom = Math.round((ar.bottom - br.top) + 4) + 'px';
+      deckPanel.classList.add('deck-panel-up');
+    } else {
+      deckPanel.style.bottom = 'auto';
+      deckPanel.style.top = Math.round(br.bottom - ar.top + 4) + 'px';
+      deckPanel.classList.remove('deck-panel-up');
+    }
   }
   deckToggle.addEventListener('click', () => {
     alignDeckPanelToPartyBar();
