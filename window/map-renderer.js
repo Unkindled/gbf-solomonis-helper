@@ -922,8 +922,10 @@ export class MapRenderer {
     const typeName = (typeof I18N !== 'undefined' && I18N.t('nodeType.' + node.node_type))
       || typeNames[node.node_type] || node.node_type;
     if (node.node_type === 10 && node.special_incident_id != null) {
-      // Special event: show name instead of generic "Special [sp:N]"
-      const spName = spNames[node.special_incident_id] || `Special ${node.special_incident_id}`;
+      // Special event: show localized name (I18N.t('sp.N'), same keys as
+      // the filter's special-event rows) instead of "Special [sp:N]".
+      const spName = (typeof I18N !== 'undefined' && I18N.t('sp.' + node.special_incident_id))
+        || spNames[node.special_incident_id] || `Special ${node.special_incident_id}`;
       label = `#${node.node_id} ${spName}`;
     } else {
       label = `#${node.node_id} ${typeName}`;
