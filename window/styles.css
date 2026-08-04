@@ -617,7 +617,8 @@ body::before {
 /* --- Guide book codex (separate large modal) --- */
 
 /* The codex opens like a book: a big centered panel with a title spine. */
-#guidebook-codex {
+#guidebook-codex,
+#event-codex {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -640,7 +641,8 @@ body::before {
   from { opacity: 0; transform: translate(-50%, -50%) scale(0.86) rotateX(6deg); }
   to   { opacity: 1; transform: translate(-50%, -50%) scale(1) rotateX(0); }
 }
-#guidebook-codex.hidden { display: none; }
+#guidebook-codex.hidden,
+#event-codex.hidden { display: none; }
 
 .guidebook-codex-header {
   display: flex;
@@ -687,7 +689,8 @@ body::before {
   outline: none;
 }
 
-#guidebook-codex-body {
+#guidebook-codex-body,
+#event-codex-body {
   flex: 1;
   overflow-y: auto;
   padding: 12px 14px;
