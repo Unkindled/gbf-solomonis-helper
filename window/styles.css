@@ -1309,31 +1309,38 @@ body::before {
 
 
 
-/* ---------- Weapon/summon deck: buttons + shared drawer ---------- */
-#deck-buttons { display: flex; gap: 4px; align-items: flex-start; }
+/* ---------- Weapon/summon deck: 编成详情 toggle + drawer ---------- */
+#deck-buttons { display: flex; align-items: flex-start; }
 .deck-toggle {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
+  justify-content: center;
+  writing-mode: vertical-rl; /* 编成详情 — one char per line */
+  padding: 6px 5px;
   background: rgba(10,14,20,0.55);
   border: 1px solid rgba(217,178,90,0.35);
   border-radius: 8px;
   color: var(--gold-2, #c9a24b);
   font-family: var(--display);
   font-size: 13px;
+  letter-spacing: 2px;
   cursor: pointer;
 }
 .deck-toggle:hover { border-color: var(--gold-2, #d9b25a); }
 .deck-toggle.hidden { display: none; }
 
-/* Drawer slides down from under the topbar. Normal flow child of #app
-   (between topbar and map-container), so it pushes the map down instead
-   of overlaying the HUD; weapons and summons are separate sections, so
-   opening both never overlap. */
+/* Drawer: absolute inside #app, aligned to the party bar's rect by JS
+   (left/top/width from #party-bar), so it lines up with the party bar
+   rather than the whole topbar. Weapons & summons stack vertically. */
 .deck-panel {
+  position: absolute;
   z-index: 40;
-  border-bottom: 1px solid var(--gold-2);
+  min-width: 320px;
+  max-height: 60%;
+  overflow-y: auto;
+  border: 1px solid var(--gold-2);
+  border-radius: 0 0 10px 10px;
+  border-top: none;
   background:
     linear-gradient(180deg, rgba(217,178,90,0.10), transparent 40%),
     var(--panel-bg);
@@ -1354,8 +1361,8 @@ body::before {
 }
 .deck-panel-body {
   display: flex;
-  gap: 24px;
-  flex-wrap: wrap;
+  flex-direction: column; /* weapons above, summons below */
+  gap: 16px;
   align-items: flex-start;
 }
 .deck-section-title {

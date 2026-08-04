@@ -175,18 +175,24 @@ function init() {
     popup.classList.add('hidden');
   });
 
-  // Weapon/summon deck: collapsed by default. The two buttons sit side by
-  // side in #deck-buttons; clicking either opens the shared #deck-panel
-  // drawer (slides down from under the topbar — never overlaps the HUD or
-  // each other, since weapons and summons are separate sections inside).
+  // Weapon/summon deck: single 编成详情 toggle. The drawer is positioned
+  // (absolute, inside #app) to match the party bar's rect on open, so it
+  // aligns with the party bar rather than the whole topbar.
   const deckPanel = document.getElementById('deck-panel');
-  const weaponToggle = document.getElementById('weapon-deck');
-  const summonToggle = document.getElementById('summon-deck');
-  function openDeckPanel() {
-    deckPanel.classList.remove('hidden');
+  const deckToggle = document.getElementById('deck-toggle');
+  function alignDeckPanelToPartyBar() {
+    const bar = document.getElementById('party-bar');
+    const app = document.getElementById('app');
+    const br = bar.getBoundingClientRect();
+    const ar = app.getBoundingClientRect();
+    deckPanel.style.left = Math.round(br.left - ar.left) + 'px';
+    deckPanel.style.top = Math.round(br.bottom - ar.top + 4) + 'px';
+    deckPanel.style.width = Math.round(br.width) + 'px';
   }
-  weaponToggle.addEventListener('click', openDeckPanel);
-  summonToggle.addEventListener('click', openDeckPanel);
+  deckToggle.addEventListener('click', () => {
+    alignDeckPanelToPartyBar();
+    deckPanel.classList.toggle('hidden');
+  });
   document.getElementById('deck-panel-close').addEventListener('click', () => {
     deckPanel.classList.add('hidden');
   });
@@ -736,19 +742,29 @@ let latestDeck = null;
 const ASSET_CDN = 'https://prd-game-a-granbluefantasy.akamaized.net/assets_en/img/sp/assets/weapon/';
 function renderWeaponDeck(deck) {
   latestDeck = deck;
-  const toggle = document.getElementById('weapon-deck');
-  const countEl = document.getElementById('deck-count');
-  if (!toggle || !countEl) return;
   if (!deck || !Array.isArray(deck.slots) || deck.slots.length === 0) {
-    toggle.classList.add('hidden');
+    maybeHideDeckToggle();
     return;
   }
-  // Toggle button shows unlocked weapon count.
-  const unlocked = deck.slots.filter(w => !w.sealed).length;
-  countEl.textContent = String(unlocked);
-  toggle.classList.remove('hidden');
   // Render drawer body (kept fresh even while hidden).
   renderWeaponDeckPopup(deck);
+  maybeShowDeckToggle();
+}
+
+// The single 编成详情 toggle is visible whenever we have weapon OR summon
+// data (no per-category counts anymore).
+function maybeShowDeckToggle() {
+  const toggle = document.getElementById('deck-toggle');
+  if (toggle) toggle.classList.remove('hidden');
+}
+function maybeHideDeckToggle() {
+  const hasWeapon = latestDeck && Array.isArray(latestDeck.slots) && latestDeck.slots.length > 0;
+  const hasSummon = latestSummon && (Array.isArray(latestSummon.main) && latestSummon.main.length > 0
+    || Array.isArray(latestSummon.sub) && latestSummon.sub.length > 0);
+  if (!hasWeapon && !hasSummon) {
+    const toggle = document.getElementById('deck-toggle');
+    if (toggle) toggle.classList.add('hidden');
+  }
 }
 
 // Popup: main weapon (slot 1) on its own row; remaining 12 in a 4×3 grid.
@@ -792,19 +808,14 @@ const SUMMON_CDN = 'https://prd-game-a-granbluefantasy.akamaized.net/assets_en/i
 let latestSummon = null;
 function renderSummonDeck(summon) {
   latestSummon = summon;
-  const toggle = document.getElementById('summon-deck');
-  const countEl = document.getElementById('summon-count');
-  if (!toggle || !countEl) return;
   const main = summon && Array.isArray(summon.main) ? summon.main : [];
   const sub = summon && Array.isArray(summon.sub) ? summon.sub : [];
   if (main.length === 0 && sub.length === 0) {
-    toggle.classList.add('hidden');
+    maybeHideDeckToggle();
     return;
   }
-  const unlocked = main.filter(s => !s.sealed).length;
-  countEl.textContent = String(unlocked);
-  toggle.classList.remove('hidden');
   renderSummonDeckPopup(summon);
+  maybeShowDeckToggle();
 }
 
 function summonImg(s, kind, wPx, hPx) {
@@ -833,11 +844,11 @@ function renderSummonDeckPopup(summon) {
   let html = '';
   if (main.length > 0) {
     // main summons: portrait 196×340 → 32×56 (0.576 ratio), one row
-    html += `<div class="summon-row summon-main-row"><span class="deck-row-label">主召唤</span>${main.map(s => summonImg(s, 'party_main', 32, 56)).join('')}</div>`;
+    html += `<div class="summon-row summon-main-row"><span class="deck-row-label">召唤石</span>${main.map(s => summonImg(s, 'party_main', 32, 56)).join('')}</div>`;
   }
   if (sub.length > 0) {
     // sub summons: landscape 184×138 → 48×36 (1.333 ratio)
-    html += `<div class="summon-row summon-sub-row"><span class="deck-row-label">副召唤</span>${sub.map(s => summonImg(s, 'party_sub', 48, 36)).join('')}</div>`;
+    html += `<div class="summon-row summon-sub-row"><span class="deck-row-label">加护石</span>${sub.map(s => summonImg(s, 'party_sub', 48, 36)).join('')}</div>`;
   }
   body.innerHTML = html;
 }

@@ -15,8 +15,7 @@
         <div id="dungeon-point" class="hud-chip coin-chip" title="Sephira Coins">0</div>
         <div id="party-bar"></div>
         <div id="deck-buttons">
-          <button id="weapon-deck" class="deck-toggle hidden" title="武器">武器 <span id="deck-count"></span></button>
-          <button id="summon-deck" class="deck-toggle hidden" title="召唤">召唤 <span id="summon-count"></span></button>
+          <button id="deck-toggle" class="deck-toggle hidden" title="编成详情">编成详情</button>
         </div>
       </div>
       <div id="topbar-mid">
@@ -52,8 +51,8 @@
         <div id="nav-menu" class="nav-menu hidden"></div>
       </div>
     </div>
-    <!-- Deck drawer: slides down from under the topbar (weapons + summons
-         side by side, so opening both never overlaps) -->
+    <!-- Deck drawer: absolute, aligned to the party bar by JS (left/top/width
+         measured from #party-bar) — pushes nothing, sits under the topbar -->
     <div id="deck-panel" class="deck-panel hidden">
       <div class="deck-panel-header">
         <span>编成</span>
