@@ -258,7 +258,6 @@ function init() {
 
   // Event codex: same pattern.
   const evCodex = document.getElementById('event-codex');
-  let evCodexLang = 'en';
   document.getElementById('btn-event-codex').addEventListener('click', () => {
     evCodex.classList.remove('hidden');
     renderEventCodex();
@@ -1072,6 +1071,7 @@ function cacheBookIcons(icons) {
 let favoriteBookIds = new Set();
 // Display language for the codex: 'text' (EN) | 'ja' | 'zh'
 let codexLang = 'text';
+let evCodexLang = 'en';
 // Display language for 'My Guide Books': 'original' (game text) | 'zh'
 let ownedLang = 'original';
 
