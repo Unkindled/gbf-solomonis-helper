@@ -112,6 +112,10 @@ function init() {
       for (const [k, v] of Object.entries(state.shopStock)) renderer.shopStock[k] = v;
       renderer.render();
     }
+    // Show the deck toggle even with no data (it becomes the blinking
+    // 开编成 hint then). Renders must have run first so maybeShowDeckToggle
+    // sees the latest latestDeck/latestSummon.
+    maybeShowDeckToggle();
     updateStatusBar();
   });
 
