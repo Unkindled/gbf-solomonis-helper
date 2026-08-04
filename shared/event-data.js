@@ -447,11 +447,11 @@ export const EVENT_DB = {
     "choiceId": 10100102,
     "title": {
      "ja": "チャンピオン<br>に挑戦",
-     "zh-CN": "??<br>??"
+     "zh-CN": "向冠军<br>发起挑战"
     },
     "text": {
      "ja": "<span style=\"color:#ff4d00;\">チャンピオン</span>に勝利すると<br>セフィラコイン+300",
-     "zh-CN": "??<span style=\"color:#ff4d00;\">??</span>?<br>????+300"
+     "zh-CN": "<span style=\"color:#ff4d00;\">击败冠军</span>后<br>获得塞菲拉金币+300"
     },
     "turn": null,
     "disabled": false,
@@ -461,11 +461,11 @@ export const EVENT_DB = {
     "choiceId": 10100103,
     "title": {
      "ja": "逃げる",
-     "zh-CN": "??"
+     "zh-CN": "逃跑"
     },
     "text": {
      "ja": "隙を見て逃走する",
-     "zh-CN": "????"
+     "zh-CN": "趁隙逃走"
     },
     "turn": null,
     "disabled": false,
@@ -2268,11 +2268,11 @@ export const EVENT_DB = {
     "choiceId": 10500701,
     "title": {
      "ja": "塔を上る",
-     "zh-CN": "??"
+     "zh-CN": "登上塔顶"
     },
     "text": {
      "ja": "時の止まった空間で敵と戦闘",
-     "zh-CN": "??????????????"
+     "zh-CN": "在时间静止的空间中与敌人战斗"
     },
     "turn": null,
     "disabled": false,
@@ -2282,11 +2282,11 @@ export const EVENT_DB = {
     "choiceId": 10500702,
     "title": {
      "ja": "引き返す",
-     "zh-CN": "??"
+     "zh-CN": "折返"
     },
     "text": {
      "ja": "塔を離れる",
-     "zh-CN": "???"
+     "zh-CN": "离开塔"
     },
     "turn": null,
     "disabled": false,
@@ -2296,11 +2296,11 @@ export const EVENT_DB = {
     "choiceId": 10500703,
     "title": {
      "ja": "塔を上る",
-     "zh-CN": "??"
+     "zh-CN": "登上塔顶"
     },
     "text": {
      "ja": "時の止まった空間で<span style=\"color:#ff4d00;\">強敵</span>と戦闘",
-     "zh-CN": "??????????<span style=\"color:#ff4d00;\">??</span>??"
+     "zh-CN": "在时间静止的空间中与<span style=\"color:#ff4d00;\">强敌</span>战斗"
     },
     "turn": null,
     "disabled": false,
@@ -2310,11 +2310,11 @@ export const EVENT_DB = {
     "choiceId": 10500704,
     "title": {
      "ja": "諦める",
-     "zh-CN": "??"
+     "zh-CN": "放弃"
     },
     "text": {
      "ja": "塔を上らずに探索へ戻る<br>※次に訪れたときに再挑戦が可能",
-     "zh-CN": "????????<br>????????????"
+     "zh-CN": "不登上塔顶，返回探索<br>※下次到访时可再次挑战"
     },
     "turn": null,
     "disabled": false,
@@ -2425,11 +2425,11 @@ export const EVENT_DB = {
     "choiceId": 10501201,
     "title": {
      "ja": "砦の門番に<br>挑む",
-     "zh-CN": "??<br>????"
+     "zh-CN": "挑战堡垒<br>的守门人"
     },
     "text": {
      "ja": "<span style=\"color:#ff4d00;\">強敵</span>に勝利すると強力な導本効果を獲得<br>仲間キャラか装備を解放",
-     "zh-CN": "??<span style=\"color:#ff4d00;\">??</span>?????????<br>?????????"
+     "zh-CN": "击败<span style=\"color:#ff4d00;\">强敌</span>后获得强力导本效果<br>解锁同伴角色或装备"
     },
     "turn": null,
     "disabled": false,
@@ -2439,11 +2439,11 @@ export const EVENT_DB = {
     "choiceId": 10501202,
     "title": {
      "ja": "撤退する",
-     "zh-CN": "??"
+     "zh-CN": "撤退"
     },
     "text": {
      "ja": "戦力を整える<br>※次に訪れたときに再挑戦が可能",
-     "zh-CN": "????<br>????????????"
+     "zh-CN": "重整战力<br>※下次到访时可再次挑战"
     },
     "turn": null,
     "disabled": false,
@@ -2495,11 +2495,11 @@ export const EVENT_DB = {
     "choiceId": 10501601,
     "title": {
      "ja": "洞窟に入る",
-     "zh-CN": "????"
+     "zh-CN": "进入洞窟"
     },
     "text": {
      "ja": "危険を顧みず洞窟を探索する<br>10%：味方全体のHP-10％",
-     "zh-CN": "????????<br>10%???HP-10?"
+     "zh-CN": "不顾危险探索洞窟<br>10%：全体HP-10%"
     },
     "turn": 1,
     "disabled": false,
@@ -2509,11 +2509,11 @@ export const EVENT_DB = {
     "choiceId": 10501602,
     "title": {
      "ja": "アイテムを<br>使用する",
-     "zh-CN": "??<br>??"
+     "zh-CN": "使用<br>道具"
     },
     "text": {
      "ja": "一部の魔物が嫌う「異臭漂う生血」を<br>使いながら探索する",
-     "zh-CN": "????????????????????<br>????"
+     "zh-CN": "使用部分魔物厌恶的「散发异味的生血」<br>进行探索"
     },
     "turn": 1,
     "disabled": true,
@@ -2523,11 +2523,11 @@ export const EVENT_DB = {
     "choiceId": 10501603,
     "title": {
      "ja": "引き返す",
-     "zh-CN": "??"
+     "zh-CN": "折返"
     },
     "text": {
      "ja": "洞窟を出る",
-     "zh-CN": "????"
+     "zh-CN": "离开洞窟"
     },
     "turn": null,
     "disabled": false,
@@ -2537,11 +2537,11 @@ export const EVENT_DB = {
     "choiceId": 10501604,
     "title": {
      "ja": "洞窟を<br>進み続ける",
-     "zh-CN": "??<br>????"
+     "zh-CN": "继续深入<br>洞窟"
     },
     "text": {
      "ja": "危険を顧みず洞窟内を探索する<br>30%：魔物と遭遇",
-     "zh-CN": "????????????<br>30%?????"
+     "zh-CN": "不顾危险探索洞窟内部<br>30%：遭遇魔物"
     },
     "turn": null,
     "disabled": false,
@@ -2551,11 +2551,11 @@ export const EVENT_DB = {
     "choiceId": 10501605,
     "title": {
      "ja": "洞窟を<br>進み続ける",
-     "zh-CN": "??<br>????"
+     "zh-CN": "继续深入<br>洞窟"
     },
     "text": {
      "ja": "危険を顧みず洞窟内を探索する<br>40%：味方全体のHP-20％",
-     "zh-CN": "????????????<br>40%???HP-20?"
+     "zh-CN": "不顾危险探索洞窟内部<br>40%：全体HP-20%"
     },
     "turn": null,
     "disabled": false,
@@ -2586,11 +2586,11 @@ export const EVENT_DB = {
     "choiceId": 10501501,
     "title": {
      "ja": "試練に<br>挑戦する",
-     "zh-CN": "??<br>??"
+     "zh-CN": "挑战<br>试炼"
     },
     "text": {
      "ja": "<span style=\"color:#ff4d00;\">強敵</span>との3連戦を制することで<br>特別な導本効果を獲得",
-     "zh-CN": "???<span style=\"color:#ff4d00;\">??</span>?3???<br>????????"
+     "zh-CN": "连续战胜<span style=\"color:#ff4d00;\">强敌</span>3场后<br>获得特殊导本效果"
     },
     "turn": null,
     "disabled": false,
@@ -2600,11 +2600,11 @@ export const EVENT_DB = {
     "choiceId": 10501502,
     "title": {
      "ja": "撤退する",
-     "zh-CN": "??"
+     "zh-CN": "撤退"
     },
     "text": {
      "ja": "戦力を整える<br>※次に訪れたときに再挑戦が可能",
-     "zh-CN": "????<br>????????????"
+     "zh-CN": "重整战力<br>※下次到访时可再次挑战"
     },
     "turn": null,
     "disabled": false,
