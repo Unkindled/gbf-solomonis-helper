@@ -973,13 +973,33 @@ function escapeHtml(s) {
  * tags entirely (no line-break rendering — the user prefers them gone).
  * Any OTHER HTML tag is still escaped.
  */
+/**
+ * Escape for event text: strips <br>, escapes all HTML EXCEPT color spans
+ * (e.g. <span style="color:#9DFF67;">…</span>) which are whitelisted so
+ * the game's colored emphasis renders. Any other tag (script etc.) stays
+ * escaped. Uses placeholder tokens so the whitelist survives escaping.
+ */
 function escapeEventText(s) {
-  return String(s)
+  const spans = [];
+  const protected_ = String(s)
     .replace(/<br\s*\/?>/gi, '')
+    // preserve whitelisted color spans
+    .replace(/<span\s+style=["']color:\s*#[0-9a-fA-F]{3,8};?["']\s*>/gi, (m) => {
+      spans.push(m);
+      return '\u0000SPAN' + (spans.length - 1) + '\u0000';
+    })
+    .replace(/<\/span>/gi, () => {
+      spans.push('</span>');
+      return '\u0000SPAN' + (spans.length - 1) + '\u0000';
+    });
+  let escaped = protected_
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+  // restore whitelisted spans
+  escaped = escaped.replace(/\u0000SPAN(\d+)\u0000/g, (_, i) => spans[Number(i)] ?? '');
+  return escaped;
 }
 
 /** Short-lived toast notification (auto-hides after 2.5s). */
