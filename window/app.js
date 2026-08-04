@@ -197,6 +197,33 @@ function init() {
     deckPanel.classList.add('hidden');
   });
 
+  // Deck cell tooltips: data-tip with \n, rendered as a fixed <body>
+  // element so the drawer's overflow never clips it.
+  const deckTip = document.createElement('div');
+  deckTip.id = 'deck-tooltip';
+  deckTip.className = 'hidden';
+  document.body.appendChild(deckTip);
+  deckPanel.addEventListener('mouseover', (e) => {
+    const el = e.target instanceof Element ? e.target : null;
+    const cell = el && el.closest('.deck-cell[data-tip]');
+    if (cell) { deckTip.textContent = cell.getAttribute('data-tip'); deckTip.classList.remove('hidden'); }
+  });
+  deckPanel.addEventListener('mousemove', (e) => {
+    if (deckTip.classList.contains('hidden')) return;
+    const pad = 14;
+    const tw = deckTip.offsetWidth, th = deckTip.offsetHeight;
+    let x = e.clientX + pad;
+    let y = e.clientY + pad;
+    if (x + tw > window.innerWidth - 4) x = e.clientX - tw - pad;
+    if (y + th > window.innerHeight - 4) y = e.clientY - th - pad;
+    deckTip.style.left = Math.max(4, x) + 'px';
+    deckTip.style.top = Math.max(4, y) + 'px';
+  });
+  deckPanel.addEventListener('mouseout', (e) => {
+    const el = e.target instanceof Element ? e.target : null;
+    if (el && el.closest('.deck-cell[data-tip]')) deckTip.classList.add('hidden');
+  });
+
   // Guide book codex: opens as a separate large modal ("opening a book")
   const codex = document.getElementById('guidebook-codex');
   document.getElementById('gb-open-codex').addEventListener('click', () => {

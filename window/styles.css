@@ -1395,12 +1395,18 @@ body::before {
 .deck-cell {
   position: relative;
   border-radius: 5px;
-  overflow: hidden;
+  /* NO overflow:hidden here — the data-tip tooltip (::after) sits OUTSIDE
+     the cell (top:100%+6px) and would be clipped. Rounding is applied to
+     the inner icon/empty instead. */
   border: 1px solid rgba(255,255,255,0.18);
   background: rgba(0,0,0,0.35);
   cursor: help;
 }
-.deck-cell .deck-icon { display: block; object-fit: cover; }
+.deck-cell .deck-icon {
+  display: block;
+  object-fit: cover;
+  border-radius: 5px; /* clip to the cell's rounded corners */
+}
 .deck-cell.sealed {
   opacity: 0.35;
   border-style: dashed;
@@ -1425,6 +1431,7 @@ body::before {
 .deck-empty {
   background: rgba(255,255,255,0.05);
   display: block;
+  border-radius: 5px;
 }
 /* element attribute tint (2=water,3=fire,4=earth,5=wind,6=light,7=dark) */
 .deck-cell.attr-2 { box-shadow: inset 0 0 0 1px rgba(66,165,245,0.5); }
@@ -1446,17 +1453,14 @@ body::before {
 /* summon main portrait cells are taller than weapons; keep label aligned */
 .summon-row .deck-row-label { align-self: center; }
 
-/* Custom multi-line tooltip for deck cells (data-tip with \n) */
-.deck-cell[data-tip] { position: relative; }
-.deck-cell[data-tip]::after {
-  content: attr(data-tip);
-  position: absolute;
-  left: 0;
-  top: calc(100% + 6px);
-  z-index: 60;
+/* Custom multi-line tooltip for deck cells — rendered by JS as a
+   #deck-tooltip element appended to <body> (position: fixed), so it is
+   never clipped by the drawer's overflow or cell overflow. */
+#deck-tooltip {
+  position: fixed;
+  z-index: 1000;
   white-space: pre-line;
-  min-width: 160px;
-  max-width: 320px;
+  max-width: 340px;
   padding: 6px 9px;
   border: 1px solid var(--gold-2);
   border-radius: 6px;
@@ -1465,10 +1469,6 @@ body::before {
   font-size: 11.5px;
   line-height: 1.45;
   box-shadow: 0 4px 14px rgba(0,0,0,0.6);
-  opacity: 0;
   pointer-events: none;
-  transition: opacity 0.12s ease;
 }
-.deck-cell[data-tip]:hover::after { opacity: 1; }
-/* summon main cells are portrait; keep the tip readable below them */
-.deck-cell[data-tip]::after { top: calc(100% + 6px); }
+#deck-tooltip.hidden { display: none; }
