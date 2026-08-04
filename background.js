@@ -16,7 +16,7 @@ import {
   TYPE_GUIDEBOOK_REFRESH_FAILED, TYPE_GUIDEBOOK_NO_DUNGEON,
   TYPE_SHOP_STOCK, TYPE_SHOP_GUIDEBOOKS,
   TYPE_PICK_CANDIDATES, TYPE_PICK_DONE, TYPE_REPORT_BOOKS, TYPE_DUNGEON_POINT,
-  TYPE_EVENT_DETAIL,
+  TYPE_EVENT_DETAIL, TYPE_EVENT_DONE,
 } from './shared/protocol.js';
 import { applyMove, applyFinish } from './shared/dungeon-mutations.js';
 import { EVENT_DB } from './shared/event-data.js';
@@ -787,6 +787,9 @@ function handleIncident(data) {
   // was previously wiped to undefined here (player "disappeared" until the
   // next real move_node).
   handleProceed(data);
+  // The player made their event choice → the event is over. Close the
+  // event detail overlay immediately.
+  broadcastToWindow(TYPE_EVENT_DONE, true);
 }
 
 // Extract a party HP snapshot from any response that carries

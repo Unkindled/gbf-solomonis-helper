@@ -1307,10 +1307,3 @@ body::before {
 .ev-choice-text { color: var(--parch-1); font-size: 12px; margin-top: 2px; }
 .ev-turn { color: #ffd54a; font-weight: 700; }
 
-/* Event text keeps the game's <br> as real line breaks (escapeEventText) */
-#event-detail-overlay .ev-desc,
-#event-detail-overlay .ev-choice-text,
-#event-detail-overlay .ev-choice-title,
-#event-detail-overlay .ev-name {
-  white-space: pre-line;
-}

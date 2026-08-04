@@ -18,7 +18,7 @@ import {
   TYPE_GUIDEBOOK_REFRESH_FAILED, TYPE_GUIDEBOOK_NO_DUNGEON,
   TYPE_SHOP_STOCK, TYPE_SHOP_GUIDEBOOKS,
   TYPE_PICK_CANDIDATES, TYPE_PICK_DONE, TYPE_REPORT_BOOKS, TYPE_DUNGEON_POINT,
-  TYPE_EVENT_DETAIL,
+  TYPE_EVENT_DETAIL, TYPE_EVENT_DONE,
 } from '../shared/protocol.js';
 import { applyMove, applyFinish } from '../shared/dungeon-mutations.js';
 import {
@@ -549,6 +549,10 @@ function handleWindowMessage(type, payload) {
     case TYPE_EVENT_DETAIL:
       showEventDetail(payload);
       break;
+
+    case TYPE_EVENT_DONE:
+      hideEventDetail();
+      break;
   }
 }
 
@@ -634,7 +638,7 @@ function showEventDetail(detail) {
   el.classList.remove('hidden');
   document.getElementById('event-detail-close').addEventListener('click', hideEventDetail, { once: true });
   clearTimeout(eventDetailTimer);
-  eventDetailTimer = setTimeout(hideEventDetail, 30000); // safety auto-hide
+  eventDetailTimer = setTimeout(hideEventDetail, 90000); // safety auto-hide (long: players may read event text slowly)
 }
 function hideEventDetail() {
   const el = document.getElementById('event-detail-overlay');
@@ -960,12 +964,13 @@ function escapeHtml(s) {
 }
 
 /**
- * Escape for event text: like escapeHtml, but preserves the game's <br>
- * line breaks as real line breaks. Any OTHER HTML tag is still escaped.
+ * Escape for event text: like escapeHtml, but strips the game's <br>
+ * tags entirely (no line-break rendering — the user prefers them gone).
+ * Any OTHER HTML tag is still escaped.
  */
 function escapeEventText(s) {
   return String(s)
-    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<br\s*\/?>/gi, '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')

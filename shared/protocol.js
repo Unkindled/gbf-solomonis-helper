@@ -41,6 +41,7 @@ export const TYPE_SHOP_GUIDEBOOKS = 'shop-guidebooks';   // status_id → rec
 export const TYPE_PICK_CANDIDATES = 'pick-candidates';   // 3-way pick options
 export const TYPE_PICK_DONE = 'pick-done';
 export const TYPE_EVENT_DETAIL = 'event-detail';          // event choice overlay
+export const TYPE_EVENT_DONE = 'event-done';              // event choice resolved
 export const TYPE_REPORT_BOOKS = 'report-books';         // battle-report books
 export const TYPE_DUNGEON_POINT = 'dungeon-point';       // Sephira coins
 
