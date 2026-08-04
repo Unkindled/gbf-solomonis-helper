@@ -15,11 +15,6 @@ export const MSG_FETCH_BOOK_ICONS = 'gbf-helper:fetch-book-icons';
 
 // --- content → background (via window.postMessage → relay) ---
 export const MSG_GAME_DATA = 'gbf-helper:game-data';
-// relay.js (ISOLATED) → background: page-level dungeon presence report
-// (hashchange-driven, tab-scoped). Lets the background know whether a
-// game tab is inside the dungeon WITHOUT reading tab.url (whose fragment
-// is unreliable across browsers).
-export const MSG_DUNGEON_STATE = 'gbf-helper:dungeon-state';
 
 // --- background → window (broadcastToWindow, via chrome.runtime.sendMessage) ---
 export const MSG_WINDOW_DATA = 'gbf-helper:window-data';

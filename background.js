@@ -4,7 +4,6 @@
 import {
   MSG_OPEN_WINDOW, MSG_GET_STATE, MSG_GET_MIASMA_LOG,
   MSG_OPEN_GUIDEBOOK_TAB, MSG_FETCH_BOOK_ICONS, MSG_GAME_DATA,
-  MSG_DUNGEON_STATE,
   MSG_WINDOW_DATA,
   DATA_MAP_INIT, DATA_MOVE_NODE, DATA_FINISH_NODE, DATA_PROCEED,
   DATA_SPACEBOOK_ADD, DATA_SPACEBOOK_LIST, DATA_REPORT_BOOK, DATA_INCIDENT,
@@ -35,6 +34,7 @@ let gameState = {
   guideBooks: [],         // collected guide book effects [{status_id,name,rarity,...}]
   guideBookCandidates: [], // recent pick candidates [{status_id,name,rarity,icon_type}]
   guideBooksStale: false, // set true after battle end (drops may be missed)
+  guidebookBlocked: false, // true after the expedition ends — don't auto-open the refresh window even if stale
   shopStock: new Map(),   // node_id → {coinAfter, items:[{lineup_id,name,price,stock,canBuy}]}
   shopGuidebooks: {},     // status_id → {status_id,name,icon_type,rarity} from shop lineups
   weaponDeck: null,       // normalized weapon slots from deck_weapon / party deck
@@ -57,12 +57,12 @@ let persistTimer = null;
 function snapshotGameState() {
   const { map, currentNodeId, totalTurn, dungeonStatus, miasmaInfo,
     partyStatus, dungeonPoint, guideBooks, guideBooksStale, shopGuidebooks,
-    weaponDeck, summonDeck } = gameState;
+    weaponDeck, summonDeck, guidebookBlocked } = gameState;
   const shopStock = {};
   for (const [k, v] of gameState.shopStock) shopStock[k] = v;
   return { map, currentNodeId, totalTurn, dungeonStatus, miasmaInfo,
     partyStatus, dungeonPoint, guideBooks, guideBooksStale, shopGuidebooks,
-    weaponDeck, summonDeck, shopStock };
+    weaponDeck, summonDeck, guidebookBlocked, shopStock };
 }
 
 function persistGameState() {
@@ -86,6 +86,7 @@ async function restoreGameState() {
     gameState.dungeonPoint = saved.dungeonPoint ?? 0;
     gameState.guideBooks = saved.guideBooks ?? [];
     gameState.guideBooksStale = !!saved.guideBooksStale;
+    gameState.guidebookBlocked = !!saved.guidebookBlocked;
     gameState.shopGuidebooks = saved.shopGuidebooks ?? {};
     gameState.weaponDeck = saved.weaponDeck ?? null;
     gameState.summonDeck = saved.summonDeck ?? null;
@@ -202,22 +203,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     handleGameData(msg.type, msg.data);
     return;
   }
-
-  if (msg.channel === MSG_DUNGEON_STATE) {
-    // relay.js reports this tab's dungeon presence (hash-driven). Key by
-    // sender.tab.id so multiple game tabs are tracked independently.
-    const tabId = sender.tab && sender.tab.id;
-    if (tabId != null) {
-      if (msg.inDungeon) dungeonTabIds.add(tabId);
-      else dungeonTabIds.delete(tabId);
-    }
-    return;
-  }
-});
-
-// Drop dungeon-presence entries for closed tabs.
-chrome.tabs.onRemoved.addListener((tabId) => {
-  dungeonTabIds.delete(tabId);
 });
 
 // --- Game data processing ---
@@ -300,9 +285,17 @@ function handleGameData(type, data) {
       gameState.guideBooks = [];
       gameState.guideBooksStale = false;
       gameState.shopStock = new Map();
+      // Weapons/summons belong to the finished run — clear the deck too.
+      gameState.weaponDeck = null;
+      gameState.summonDeck = null;
+      // The run ended: even if stale, don't open the auto-refresh window
+      // until a NEW run starts (mapInit clears this).
+      gameState.guidebookBlocked = true;
       broadcastToWindow(TYPE_PARTY_STATUS, []);
       broadcastToWindow(TYPE_GUIDE_BOOKS, []);
       broadcastToWindow(TYPE_GUIDEBOOKS_STALE, false);
+      broadcastToWindow(TYPE_DECK_WEAPONS, { slots: [] });
+      broadcastToWindow(TYPE_DECK_SUMMONS, { main: [], sub: [] });
       persistGameState();
       break;
   }
@@ -358,16 +351,6 @@ const GUIDEBOOK_WIN_W = 340;
 const GUIDEBOOK_WIN_H = 220;
 const GUIDEBOOK_TAB_TIMEOUT_MS = 12000;
 
-// Tabs whose relay script reports being inside the dungeon
-// (#arcarum3/dungeon...). Maintained via MSG_DUNGEON_STATE; tab.url's
-// fragment is unreliable (Chrome strips it), so we rely on page-side
-// location.hash reports instead.
-const dungeonTabIds = new Set();
-
-function hasDungeonTab() {
-  return dungeonTabIds.size > 0;
-}
-
 async function getCornerPosition() {
   try {
     const displays = await chrome.system.display.getInfo();
@@ -386,10 +369,10 @@ async function getCornerPosition() {
 async function openGuidebookTab() {
   // If a refresh is already pending, keep it.
   if (guidebookWinId != null) return;
-  // Don't open the refresh window when the player isn't in the dungeon
-  // (e.g. they finished the run and are playing other content) — the game
-  // SPA wouldn't fire spacebook_status_list anyway. Tell the helper window.
-  if (!hasDungeonTab()) {
+  // Don't open the refresh window after the expedition has ended (the run's
+  // guidebooks are gone; opening it would just sit until the timeout). The
+  // blocked flag is set on dungeon-result and cleared on the next mapInit.
+  if (gameState.guidebookBlocked) {
     broadcastToWindow(TYPE_GUIDEBOOK_NO_DUNGEON, true);
     return;
   }
@@ -569,6 +552,8 @@ function handleMapInit(data) {
   gameState.totalTurn = dungeon.total_turn;
   gameState.dungeonStatus = dungeon.dungeon_status;
   gameState.miasmaInfo = dungeon.miasma_info;
+  // A NEW run started → the refresh window may be opened again.
+  gameState.guidebookBlocked = false;
   if (dungeon.possession_arcarum3_dungeon_point != null) {
     gameState.dungeonPoint = Number(dungeon.possession_arcarum3_dungeon_point);
   }

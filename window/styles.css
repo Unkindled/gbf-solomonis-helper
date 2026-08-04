@@ -1472,3 +1472,20 @@ body::before {
   pointer-events: none;
 }
 #deck-tooltip.hidden { display: none; }
+
+/* Blinking hint when the deck has no data yet (开编成, vertical) */
+.deck-toggle-empty {
+  animation: deck-blink 1.2s ease-in-out infinite;
+  border-color: rgba(255, 200, 80, 0.7);
+  color: #ffd54a;
+}
+@keyframes deck-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+.deck-empty-hint {
+  color: var(--parch-1);
+  font-size: 12px;
+  padding: 4px 2px;
+  opacity: 0.85;
+}

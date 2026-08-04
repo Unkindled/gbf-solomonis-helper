@@ -778,20 +778,29 @@ function renderWeaponDeck(deck) {
   maybeShowDeckToggle();
 }
 
-// The single 编成详情 toggle is visible whenever we have weapon OR summon
-// data (no per-category counts anymore).
-function maybeShowDeckToggle() {
-  const toggle = document.getElementById('deck-toggle');
-  if (toggle) toggle.classList.remove('hidden');
-}
-function maybeHideDeckToggle() {
+// The single 编成详情 toggle: with data it's the normal button; without
+// data it becomes a blinking 开编成 hint (vertical, ≤6 chars) telling the
+// player to open the in-game party page to populate the deck.
+function deckToggleText() {
   const hasWeapon = latestDeck && Array.isArray(latestDeck.slots) && latestDeck.slots.length > 0;
   const hasSummon = latestSummon && (Array.isArray(latestSummon.main) && latestSummon.main.length > 0
     || Array.isArray(latestSummon.sub) && latestSummon.sub.length > 0);
-  if (!hasWeapon && !hasSummon) {
-    const toggle = document.getElementById('deck-toggle');
-    if (toggle) toggle.classList.add('hidden');
+  return hasWeapon || hasSummon;
+}
+function maybeShowDeckToggle() {
+  const toggle = document.getElementById('deck-toggle');
+  if (!toggle) return;
+  toggle.classList.remove('hidden');
+  if (deckToggleText()) {
+    toggle.textContent = '编成详情';
+    toggle.classList.remove('deck-toggle-empty');
+  } else {
+    toggle.textContent = '开编成';
+    toggle.classList.add('deck-toggle-empty');
   }
+}
+function maybeHideDeckToggle() {
+  maybeShowDeckToggle(); // keep the toggle visible with the blink hint
 }
 
 // Popup: main weapon (slot 1) on its own row; remaining 12 in a 4×3 grid.
@@ -831,7 +840,10 @@ function renderWeaponDeckPopup(deck) {
   const body = document.getElementById('weapon-deck-body');
   if (!body) return;
   const slots = deck.slots || [];
-  if (slots.length === 0) { body.innerHTML = ''; return; }
+  if (slots.length === 0) {
+    body.innerHTML = '<div class="deck-empty-hint">打开游戏内队伍页面以同步武器</div>';
+    return;
+  }
   const main = slots.find(w => w.position === 1) || slots[0];
   const rest = slots.filter(w => w !== main);
   let html = '';
@@ -883,7 +895,10 @@ function renderSummonDeckPopup(summon) {
   if (!body) return;
   const main = summon && Array.isArray(summon.main) ? summon.main : [];
   const sub = summon && Array.isArray(summon.sub) ? summon.sub : [];
-  if (main.length === 0 && sub.length === 0) { body.innerHTML = ''; return; }
+  if (main.length === 0 && sub.length === 0) {
+    body.innerHTML = '<div class="deck-empty-hint">打开游戏内队伍页面以同步召唤</div>';
+    return;
+  }
   let html = '';
   if (main.length > 0) {
     // main summons: portrait 196×340 → 32×56 (0.576 ratio), one row
