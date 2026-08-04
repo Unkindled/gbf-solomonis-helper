@@ -845,7 +845,10 @@ function extractWeaponDeck(data) {
         kind: m.kind != null ? Number(m.kind) : null,
         rarity: m.rarity != null ? Number(m.rarity) : null,
         level: p.level != null ? String(p.level) : '',
-        sealed: !!p.is_position_locked,
+        // is_position_locked sits on the SLOT object (sibling of param/
+        // master), NOT inside param — reading param.is_position_locked
+        // was always false.
+        sealed: !!w.is_position_locked,
         skills,
       });
     }
