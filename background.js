@@ -4,6 +4,7 @@
 import {
   MSG_OPEN_WINDOW, MSG_GET_STATE, MSG_GET_MIASMA_LOG,
   MSG_OPEN_GUIDEBOOK_TAB, MSG_FETCH_BOOK_ICONS, MSG_GAME_DATA,
+  MSG_DUNGEON_STATE,
   MSG_WINDOW_DATA,
   DATA_MAP_INIT, DATA_MOVE_NODE, DATA_FINISH_NODE, DATA_PROCEED,
   DATA_SPACEBOOK_ADD, DATA_SPACEBOOK_LIST, DATA_REPORT_BOOK, DATA_INCIDENT,
@@ -12,7 +13,8 @@ import {
   TYPE_MAP_INIT, TYPE_MOVE_UPDATE, TYPE_FINISH_NODE, TYPE_PROCEED,
   TYPE_PARTY_STATUS, TYPE_GUIDE_BOOKS, TYPE_GUIDEBOOK_ICONS,
   TYPE_GUIDEBOOKS_STALE, TYPE_GUIDEBOOK_REFRESH_STARTED,
-  TYPE_GUIDEBOOK_REFRESH_FAILED, TYPE_SHOP_STOCK, TYPE_SHOP_GUIDEBOOKS,
+  TYPE_GUIDEBOOK_REFRESH_FAILED, TYPE_GUIDEBOOK_NO_DUNGEON,
+  TYPE_SHOP_STOCK, TYPE_SHOP_GUIDEBOOKS,
   TYPE_PICK_CANDIDATES, TYPE_PICK_DONE, TYPE_REPORT_BOOKS, TYPE_DUNGEON_POINT,
 } from './shared/protocol.js';
 import { applyMove, applyFinish } from './shared/dungeon-mutations.js';
@@ -190,6 +192,22 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     handleGameData(msg.type, msg.data);
     return;
   }
+
+  if (msg.channel === MSG_DUNGEON_STATE) {
+    // relay.js reports this tab's dungeon presence (hash-driven). Key by
+    // sender.tab.id so multiple game tabs are tracked independently.
+    const tabId = sender.tab && sender.tab.id;
+    if (tabId != null) {
+      if (msg.inDungeon) dungeonTabIds.add(tabId);
+      else dungeonTabIds.delete(tabId);
+    }
+    return;
+  }
+});
+
+// Drop dungeon-presence entries for closed tabs.
+chrome.tabs.onRemoved.addListener((tabId) => {
+  dungeonTabIds.delete(tabId);
 });
 
 // --- Game data processing ---
@@ -308,6 +326,16 @@ const GUIDEBOOK_WIN_W = 340;
 const GUIDEBOOK_WIN_H = 220;
 const GUIDEBOOK_TAB_TIMEOUT_MS = 12000;
 
+// Tabs whose relay script reports being inside the dungeon
+// (#arcarum3/dungeon...). Maintained via MSG_DUNGEON_STATE; tab.url's
+// fragment is unreliable (Chrome strips it), so we rely on page-side
+// location.hash reports instead.
+const dungeonTabIds = new Set();
+
+function hasDungeonTab() {
+  return dungeonTabIds.size > 0;
+}
+
 async function getCornerPosition() {
   try {
     const displays = await chrome.system.display.getInfo();
@@ -326,6 +354,13 @@ async function getCornerPosition() {
 async function openGuidebookTab() {
   // If a refresh is already pending, keep it.
   if (guidebookWinId != null) return;
+  // Don't open the refresh window when the player isn't in the dungeon
+  // (e.g. they finished the run and are playing other content) — the game
+  // SPA wouldn't fire spacebook_status_list anyway. Tell the helper window.
+  if (!hasDungeonTab()) {
+    broadcastToWindow(TYPE_GUIDEBOOK_NO_DUNGEON, true);
+    return;
+  }
   try {
     // Remember the currently focused window so we can hand focus back
     // right after creating the refresh window.

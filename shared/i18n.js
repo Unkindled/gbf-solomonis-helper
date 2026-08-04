@@ -22,6 +22,7 @@
       'status.miasmaDone': '☠ Miasma Lv{level} fully closed',
       'status.guidebookManual': '⚠ Auto-refresh throttled — open the Guide Book page in-game to sync',
       'status.guidebookRefreshing': '⏳ Syncing guide books…',
+      'status.noDungeon': '⚠ No dungeon open — enter Evoking Solomonis, then sync again',
       'status.newPhase': 'New phase — map refreshing...',
       'party.empty': 'Open the party page in-game to sync your party',
       // window — path info
@@ -136,6 +137,7 @@
       'status.miasmaDone': '☠ 瘴气 Lv{level} 已完全收缩',
       'status.guidebookManual': '⚠ 后台刷新被节流 — 请在游戏内打开导本页面以同步',
       'status.guidebookRefreshing': '⏳ 导本同步中…',
+      'status.noDungeon': '⚠ 未检测到地城页面 — 请先进入 Evoking Solomonis 再同步',
       'status.newPhase': '新阶段 — 地图刷新中...',
       'party.empty': '请在游戏内打开队伍页面以同步队伍',
       // window — path info

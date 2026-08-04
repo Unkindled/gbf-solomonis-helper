@@ -15,6 +15,11 @@ export const MSG_FETCH_BOOK_ICONS = 'gbf-helper:fetch-book-icons';
 
 // --- content → background (via window.postMessage → relay) ---
 export const MSG_GAME_DATA = 'gbf-helper:game-data';
+// relay.js (ISOLATED) → background: page-level dungeon presence report
+// (hashchange-driven, tab-scoped). Lets the background know whether a
+// game tab is inside the dungeon WITHOUT reading tab.url (whose fragment
+// is unreliable across browsers).
+export const MSG_DUNGEON_STATE = 'gbf-helper:dungeon-state';
 
 // --- background → window (broadcastToWindow, via chrome.runtime.sendMessage) ---
 export const MSG_WINDOW_DATA = 'gbf-helper:window-data';
@@ -30,6 +35,7 @@ export const TYPE_GUIDEBOOK_ICONS = 'guidebook-icons';   // fetched icon data UR
 export const TYPE_GUIDEBOOKS_STALE = 'guidebooks-stale';
 export const TYPE_GUIDEBOOK_REFRESH_STARTED = 'guidebook-refresh-started';
 export const TYPE_GUIDEBOOK_REFRESH_FAILED = 'guidebook-refresh-failed';
+export const TYPE_GUIDEBOOK_NO_DUNGEON = 'guidebook-no-dungeon';
 export const TYPE_SHOP_STOCK = 'shop-stock';             // {nodeId, stock}
 export const TYPE_SHOP_GUIDEBOOKS = 'shop-guidebooks';   // status_id → rec
 export const TYPE_PICK_CANDIDATES = 'pick-candidates';   // 3-way pick options

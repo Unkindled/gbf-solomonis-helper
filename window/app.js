@@ -15,7 +15,8 @@ import {
   TYPE_MAP_INIT, TYPE_MOVE_UPDATE, TYPE_FINISH_NODE, TYPE_PROCEED,
   TYPE_PARTY_STATUS, TYPE_GUIDE_BOOKS, TYPE_GUIDEBOOK_ICONS,
   TYPE_GUIDEBOOKS_STALE, TYPE_GUIDEBOOK_REFRESH_STARTED,
-  TYPE_GUIDEBOOK_REFRESH_FAILED, TYPE_SHOP_STOCK, TYPE_SHOP_GUIDEBOOKS,
+  TYPE_GUIDEBOOK_REFRESH_FAILED, TYPE_GUIDEBOOK_NO_DUNGEON,
+  TYPE_SHOP_STOCK, TYPE_SHOP_GUIDEBOOKS,
   TYPE_PICK_CANDIDATES, TYPE_PICK_DONE, TYPE_REPORT_BOOKS, TYPE_DUNGEON_POINT,
 } from '../shared/protocol.js';
 import { applyMove, applyFinish } from '../shared/dungeon-mutations.js';
@@ -486,6 +487,13 @@ function handleWindowMessage(type, payload) {
       // throttled the tab). Tell the user to open the guidebook page
       // manually in the game.
       updateStatusBar(I18N.t('status.guidebookManual'));
+      break;
+
+    case TYPE_GUIDEBOOK_NO_DUNGEON:
+      // Player isn't inside the dungeon (run finished, other content open)
+      // — opening the refresh window would be pointless. Show a brief
+      // bottom toast, same style as guidebook-learning notices.
+      showTransientToast(I18N.t('status.noDungeon'));
       break;
 
     case TYPE_SHOP_STOCK:
