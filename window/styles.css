@@ -1308,40 +1308,89 @@ body::before {
 .ev-turn { color: #ffd54a; font-weight: 700; }
 
 
-/* ---------- Weapon deck bar (below party bar) ---------- */
-#weapon-deck { display: flex; align-items: flex-start; }
-.weapon-deck-bar {
+
+/* ---------- Weapon deck: collapsed toggle + popup ---------- */
+.deck-toggle {
   display: flex;
-  gap: 3px;
-  padding: 4px 6px;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
   background: rgba(10,14,20,0.55);
-  border: 1px solid rgba(217,178,90,0.25);
+  border: 1px solid rgba(217,178,90,0.35);
   border-radius: 8px;
+  color: var(--gold-2, #c9a24b);
+  font-family: var(--display);
+  font-size: 13px;
+  cursor: pointer;
 }
-.deck-weapon {
+.deck-toggle:hover { border-color: var(--gold-2, #d9b25a); }
+.deck-toggle.hidden { display: none; }
+
+.weapon-deck-popup {
+  position: absolute;
+  left: 10px;
+  top: 96px; /* below party bar */
+  z-index: 36;
+  min-width: 340px;
+  max-width: 480px;
+  border: 1px solid var(--gold-2);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(217,178,90,0.10), transparent 30%),
+    var(--panel-bg);
+  box-shadow: 0 10px 34px rgba(0,0,0,0.65), 0 0 18px rgba(217,178,90,0.15);
+  animation: popup-in 0.25s cubic-bezier(.2,.9,.3,1.15);
+  padding: 8px 10px;
+}
+.weapon-deck-popup.hidden { display: none; }
+.weapon-deck-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-family: var(--display);
+  font-weight: 700;
+  color: var(--gold-2);
+  font-size: 14px;
+}
+.deck-main-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.deck-row-label {
+  font-size: 12px;
+  color: var(--parch-1);
+  writing-mode: vertical-lr;
+  letter-spacing: 2px;
+  opacity: 0.8;
+}
+.deck-grid {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  gap: 6px;
+  justify-content: start;
+}
+.deck-cell {
   position: relative;
-  width: 34px;
-  height: 34px;
   border-radius: 5px;
   overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.18);
   background: rgba(0,0,0,0.35);
+  cursor: help;
 }
-.deck-weapon .deck-icon {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.deck-weapon.sealed {
+.deck-cell .deck-icon { display: block; object-fit: cover; }
+.deck-cell.sealed {
   opacity: 0.35;
   border-style: dashed;
-  border-color: rgba(255,255,255,0.35);
+  border-color: rgba(255,255,255,0.4);
 }
 .deck-seal {
   position: absolute;
   top: 1px;
   right: 2px;
-  font-size: 10px;
+  font-size: 11px;
   text-shadow: 0 1px 2px #000;
 }
 .deck-lv {
@@ -1354,14 +1403,13 @@ body::before {
   text-shadow: 0 1px 2px #000;
 }
 .deck-empty {
-  width: 100%;
-  height: 100%;
   background: rgba(255,255,255,0.05);
+  display: block;
 }
 /* element attribute tint (2=water,3=fire,4=earth,5=wind,6=light,7=dark) */
-.deck-weapon.attr-2 { box-shadow: inset 0 0 0 1px rgba(66,165,245,0.5); }
-.deck-weapon.attr-3 { box-shadow: inset 0 0 0 1px rgba(239,83,80,0.5); }
-.deck-weapon.attr-4 { box-shadow: inset 0 0 0 1px rgba(102,187,106,0.5); }
-.deck-weapon.attr-5 { box-shadow: inset 0 0 0 1px rgba(165,214,167,0.5); }
-.deck-weapon.attr-6 { box-shadow: inset 0 0 0 1px rgba(255,213,79,0.5); }
-.deck-weapon.attr-7 { box-shadow: inset 0 0 0 1px rgba(171,71,188,0.5); }
+.deck-cell.attr-2 { box-shadow: inset 0 0 0 1px rgba(66,165,245,0.5); }
+.deck-cell.attr-3 { box-shadow: inset 0 0 0 1px rgba(239,83,80,0.5); }
+.deck-cell.attr-4 { box-shadow: inset 0 0 0 1px rgba(102,187,106,0.5); }
+.deck-cell.attr-5 { box-shadow: inset 0 0 0 1px rgba(165,214,167,0.5); }
+.deck-cell.attr-6 { box-shadow: inset 0 0 0 1px rgba(255,213,79,0.5); }
+.deck-cell.attr-7 { box-shadow: inset 0 0 0 1px rgba(171,71,188,0.5); }

@@ -9,7 +9,7 @@ import {
   DATA_MAP_INIT, DATA_MOVE_NODE, DATA_FINISH_NODE, DATA_PROCEED,
   DATA_SPACEBOOK_ADD, DATA_SPACEBOOK_LIST, DATA_REPORT_BOOK, DATA_INCIDENT,
   DATA_PARTY_STATUS, DATA_SHOP_LINEUP, DATA_SHOP_PURCHASE, DATA_BATTLE_RESULT,
-  DATA_DUNGEON_RESULT, DATA_RAID_START,
+  DATA_UNLOCK_WEAPON, DATA_PARTY_DECK, DATA_DUNGEON_RESULT, DATA_RAID_START,
   TYPE_MAP_INIT, TYPE_MOVE_UPDATE, TYPE_FINISH_NODE, TYPE_PROCEED,
   TYPE_PARTY_STATUS, TYPE_GUIDE_BOOKS, TYPE_GUIDEBOOK_ICONS, TYPE_DECK_WEAPONS,
   TYPE_GUIDEBOOKS_STALE, TYPE_GUIDEBOOK_REFRESH_STARTED,
@@ -35,6 +35,7 @@ let gameState = {
   guideBooksStale: false, // set true after battle end (drops may be missed)
   shopStock: new Map(),   // node_id → {coinAfter, items:[{lineup_id,name,price,stock,canBuy}]}
   shopGuidebooks: {},     // status_id → {status_id,name,icon_type,rarity} from shop lineups
+  weaponDeck: null,       // normalized weapon slots from deck_weapon / party deck
 };
 
 // Miasma data recorder — stores every miasma snapshot for formula analysis
@@ -52,11 +53,13 @@ let persistTimer = null;
 
 function snapshotGameState() {
   const { map, currentNodeId, totalTurn, dungeonStatus, miasmaInfo,
-    partyStatus, dungeonPoint, guideBooks, guideBooksStale, shopGuidebooks } = gameState;
+    partyStatus, dungeonPoint, guideBooks, guideBooksStale, shopGuidebooks,
+    weaponDeck } = gameState;
   const shopStock = {};
   for (const [k, v] of gameState.shopStock) shopStock[k] = v;
   return { map, currentNodeId, totalTurn, dungeonStatus, miasmaInfo,
-    partyStatus, dungeonPoint, guideBooks, guideBooksStale, shopGuidebooks, shopStock };
+    partyStatus, dungeonPoint, guideBooks, guideBooksStale, shopGuidebooks,
+    weaponDeck, shopStock };
 }
 
 function persistGameState() {
@@ -81,6 +84,7 @@ async function restoreGameState() {
     gameState.guideBooks = saved.guideBooks ?? [];
     gameState.guideBooksStale = !!saved.guideBooksStale;
     gameState.shopGuidebooks = saved.shopGuidebooks ?? {};
+    gameState.weaponDeck = saved.weaponDeck ?? null;
     gameState.map = saved.map ?? null;
     if (saved.shopStock) {
       // Object.entries yields STRING keys, but the handlers index with the
@@ -266,6 +270,12 @@ function handleGameData(type, data) {
       break;
     case DATA_SHOP_PURCHASE:
       handleShopPurchase(data);
+      break;
+    case DATA_UNLOCK_WEAPON:
+      handleUnlockWeapon(data);
+      break;
+    case DATA_PARTY_DECK:
+      handlePartyDeck(data);
       break;
     case DATA_BATTLE_RESULT:
       // Battle ended → guidebook drops may have happened silently.
@@ -823,44 +833,84 @@ function extractPartyStatus(data) {
 
 // Weapon deck rides on proceed/incident responses (action_type=200,
 // scenario_type=3). Normalize the 13 slots for display; sealed slots are
-// flagged by is_position_locked (from the deck_weapon slot param).
+// flagged by is_position_locked (on the SLOT object, not param).
+function normalizeWeaponSlots(weaponsObj) {
+  const slots = [];
+  if (!weaponsObj || typeof weaponsObj !== 'object') return slots;
+  for (const [pos, w] of Object.entries(weaponsObj)) {
+    if (!w) continue;
+    const p = w.param || {};
+    const m = w.master || {};
+    const skills = [w.skill1, w.skill2, w.skill3, w.skill4]
+      .filter(Boolean)
+      .map(sk => ({ id: sk.id, name: sk.name || '', description: sk.description || '', image: sk.image || '' }));
+    slots.push({
+      position: Number(pos),
+      imageId: p.image_id || m.id || '',
+      name: m.name || '',
+      attribute: m.attribute != null ? Number(m.attribute) : null,
+      kind: m.kind != null ? Number(m.kind) : null,
+      rarity: m.rarity != null ? Number(m.rarity) : null,
+      level: p.level != null ? String(p.level) : '',
+      sealed: !!w.is_position_locked,
+      skills,
+    });
+  }
+  slots.sort((a, b) => a.position - b.position);
+  return slots;
+}
+
+function setWeaponDeck(deckPayload) {
+  gameState.weaponDeck = deckPayload;
+  broadcastToWindow(TYPE_DECK_WEAPONS, deckPayload);
+  persistGameState();
+}
+
 function extractWeaponDeck(data) {
   if (!data || !Array.isArray(data.action_scenario_list)) return;
   for (const s of data.action_scenario_list) {
     const dw = s.deck_weapon;
     if (!dw || !dw.weapons || typeof dw.weapons !== 'object') continue;
-    const slots = [];
-    for (const [pos, w] of Object.entries(dw.weapons)) {
-      if (!w) continue;
-      const p = w.param || {};
-      const m = w.master || {};
-      const skills = [w.skill1, w.skill2, w.skill3, w.skill4]
-        .filter(Boolean)
-        .map(sk => ({ id: sk.id, name: sk.name || '', description: sk.description || '', image: sk.image || '' }));
-      slots.push({
-        position: Number(pos),
-        imageId: p.image_id || m.id || '',
-        name: m.name || '',
-        attribute: m.attribute != null ? Number(m.attribute) : null,
-        kind: m.kind != null ? Number(m.kind) : null,
-        rarity: m.rarity != null ? Number(m.rarity) : null,
-        level: p.level != null ? String(p.level) : '',
-        // is_position_locked sits on the SLOT object (sibling of param/
-        // master), NOT inside param — reading param.is_position_locked
-        // was always false.
-        sealed: !!w.is_position_locked,
-        skills,
-      });
-    }
+    const slots = normalizeWeaponSlots(dw.weapons);
     if (slots.length === 0) continue;
-    slots.sort((a, b) => a.position - b.position);
-    broadcastToWindow(TYPE_DECK_WEAPONS, {
+    setWeaponDeck({
       slots,
       isOpenAdditional: !!dw.is_open_additional_weapon,
       isUseAdditional: !!dw.is_use_additional_weapon,
     });
     return;
   }
+}
+
+// unlock_weapon: the REQUEST carries weapon_positions (["4"]) — mark those
+// slots unsealed immediately, then the follow-up proceed response will
+// resend the full deck (extractWeaponDeck overwrites with full data).
+function handleUnlockWeapon(data) {
+  if (!data || !data._requestBody || !Array.isArray(data._requestBody.weapon_positions)) return;
+  const cur = gameState.weaponDeck;
+  if (!cur || !Array.isArray(cur.slots)) return;
+  let changed = false;
+  const positions = new Set(data._requestBody.weapon_positions.map(Number));
+  for (const slot of cur.slots) {
+    if (positions.has(slot.position) && slot.sealed) {
+      slot.sealed = false;
+      changed = true;
+    }
+  }
+  if (changed) setWeaponDeck(cur);
+}
+
+// party page: /party/deck/{id} response has deck.pc.weapons (same shape).
+function handlePartyDeck(data) {
+  const pc = data && data.deck && data.deck.pc;
+  if (!pc || !pc.weapons) return;
+  const slots = normalizeWeaponSlots(pc.weapons);
+  if (slots.length === 0) return;
+  setWeaponDeck({
+    slots,
+    isOpenAdditional: !!pc.is_open_additional_weapon,
+    isUseAdditional: !!pc.is_use_additional_weapon,
+  });
 }
 
 function handlePartyStatus(data) {

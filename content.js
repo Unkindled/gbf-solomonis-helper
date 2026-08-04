@@ -22,6 +22,8 @@
     partyStatus: /rest\/arcarum3\/dungeon\/party_status/,
     shopLineup: /rest\/arcarum3\/dungeon\/dungeon_shop_lineup\//,
     shopPurchase: /rest\/arcarum3\/dungeon\/purchase_dungeon_shop_item/,
+    unlockWeapon: /rest\/arcarum3\/dungeon\/proceed_node_event_unlock_weapon/,
+    partyDeck: /rest\/arcarum3\/party\/deck\/\d+/,
     battleResult: /\/result\/content\/index\//,
     // Dungeon OVER (expedition finished) — the arcarum3 result page.
     // Distinct from battleResult (a single battle's result page).

@@ -102,6 +102,7 @@ function init() {
       applyFullMap(state.map);
     }
     if (state && state.partyStatus) renderPartyBar(state.partyStatus);
+    if (state && state.weaponDeck) renderWeaponDeck(state.weaponDeck);
     if (state && state.guideBooks) renderGuideBooks(state.guideBooks);
     if (state && state.dungeonPoint != null) renderDungeonPoint(state.dungeonPoint);
     if (state && state.guideBooksStale) setGuideBooksStale(true);
@@ -170,6 +171,17 @@ function init() {
   });
   document.getElementById('guidebook-popup-close').addEventListener('click', () => {
     popup.classList.add('hidden');
+  });
+
+  // Weapon deck: collapsed by default; click toggles the popup below the
+  // party bar (like 'My Guide Books').
+  const deckToggle = document.getElementById('weapon-deck');
+  const deckPopup = document.getElementById('weapon-deck-popup');
+  deckToggle.addEventListener('click', () => {
+    deckPopup.classList.toggle('hidden');
+  });
+  document.getElementById('weapon-deck-close').addEventListener('click', () => {
+    deckPopup.classList.add('hidden');
   });
 
   // Guide book codex: opens as a separate large modal ("opening a book")
@@ -713,29 +725,58 @@ let latestDeck = null;
 const ASSET_CDN = 'https://prd-game-a-granbluefantasy.akamaized.net/assets_en/img/sp/assets/weapon/';
 function renderWeaponDeck(deck) {
   latestDeck = deck;
-  const el = document.getElementById('weapon-deck');
-  if (!el) return;
+  const toggle = document.getElementById('weapon-deck');
+  const countEl = document.getElementById('deck-count');
+  if (!toggle || !countEl) return;
   if (!deck || !Array.isArray(deck.slots) || deck.slots.length === 0) {
-    el.innerHTML = '';
+    toggle.classList.add('hidden');
+    if (!document.getElementById('weapon-deck-popup').classList.contains('hidden')) {
+      document.getElementById('weapon-deck-popup').classList.add('hidden');
+    }
     return;
   }
-  const html = deck.slots.map((w) => {
-    const img = w.imageId
-      ? `${ASSET_CDN}m/${String(w.imageId).replace(/_\d+$/, '')}.jpg`
-      : '';
-    const sealed = !!w.sealed;
-    const lv = w.level ? `<span class="deck-lv">${w.level}</span>` : '';
-    const attrCls = w.attribute != null ? ` attr-${w.attribute}` : '';
-    const name = w.name || '—';
-    const skills = (w.skills || []).map(sk => sk.name).filter(Boolean).join(' / ');
-    const title = `${name} Lv${w.level || ''}${skills ? ' — ' + skills : ''}`;
-    return `<div class="deck-weapon${sealed ? ' sealed' : ''}${attrCls}" title="${escapeHtml(title)}">
-      ${img ? `<img class="deck-icon" src="${img}" alt="" onerror="this.style.display='none';">` : '<div class="deck-empty"></div>'}
-      ${sealed ? '<span class="deck-seal">🔒</span>' : ''}
-      ${lv}
-    </div>`;
-  }).join('');
-  el.innerHTML = `<div class="weapon-deck-bar">${html}</div>`;
+  // Toggle button shows unlocked weapon count.
+  const unlocked = deck.slots.filter(w => !w.sealed).length;
+  countEl.textContent = String(unlocked);
+  toggle.classList.remove('hidden');
+  // Render popup body (kept fresh even while hidden).
+  renderWeaponDeckPopup(deck);
+}
+
+// Popup: main weapon (slot 1) on its own row; remaining 12 in a 4×3 grid.
+// Weapon art is 280×160 (1.75:1) — main 126×72, grid cells 70×40.
+function weaponImg(w, wPx, hPx, cls) {
+  const img = w.imageId
+    ? `${ASSET_CDN}m/${String(w.imageId).replace(/_\d+$/, '')}.jpg`
+    : '';
+  const sealed = !!w.sealed;
+  const lv = w.level ? `<span class="deck-lv">${w.level}</span>` : '';
+  const attrCls = w.attribute != null ? ` attr-${w.attribute}` : '';
+  const name = w.name || '—';
+  const skills = (w.skills || []).map(sk => sk.name).filter(Boolean).join(' / ');
+  const title = `${name} Lv${w.level || ''}${skills ? ' — ' + skills : ''}`;
+  return `<div class="deck-cell ${cls}${sealed ? ' sealed' : ''}${attrCls}" title="${escapeHtml(title)}" style="width:${wPx}px;height:${hPx}px">
+    ${img ? `<img class="deck-icon" src="${img}" alt="" style="width:${wPx}px;height:${hPx}px" onerror="this.style.display='none';">` : '<div class="deck-empty" style="width:' + wPx + 'px;height:' + hPx + 'px"></div>'}
+    ${sealed ? '<span class="deck-seal">🔒</span>' : ''}
+    ${lv}
+  </div>`;
+}
+
+function renderWeaponDeckPopup(deck) {
+  const body = document.getElementById('weapon-deck-body');
+  if (!body) return;
+  const slots = deck.slots || [];
+  if (slots.length === 0) { body.innerHTML = ''; return; }
+  const main = slots.find(w => w.position === 1) || slots[0];
+  const rest = slots.filter(w => w !== main);
+  let html = '';
+  if (main) {
+    html += `<div class="deck-main-row"><span class="deck-row-label">主武器</span>${weaponImg(main, 126, 72, 'deck-main')}</div>`;
+  }
+  if (rest.length > 0) {
+    html += `<div class="deck-grid">${rest.map(w => weaponImg(w, 70, 40, 'deck-grid-item')).join('')}</div>`;
+  }
+  body.innerHTML = html;
 }
 
 function getBookIconUrl(iconType) {
