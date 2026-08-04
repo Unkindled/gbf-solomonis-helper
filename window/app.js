@@ -619,16 +619,16 @@ function showEventDetail(detail) {
     const text = pickZh(dbOpt?.text) || c.text || '';
     const turn = c.turn != null ? ` · <span class="ev-turn">${c.turn}回合</span>` : '';
     return `<div class="ev-choice">
-      <div class="ev-choice-title">${escapeHtml(title)}${turn}</div>
-      ${text ? `<div class="ev-choice-text">${escapeHtml(text)}</div>` : ''}
+      <div class="ev-choice-title">${escapeEventText(title)}${turn}</div>
+      ${text ? `<div class="ev-choice-text">${escapeEventText(text)}</div>` : ''}
     </div>`;
   }).join('');
 
   el.innerHTML = `<div class="ev-header">
-      ${dbName ? `<span class="ev-name">${escapeHtml(dbName)}</span>` : '<span class="ev-name">事件</span>'}
+      ${dbName ? `<span class="ev-name">${escapeEventText(dbName)}</span>` : '<span class="ev-name">事件</span>'}
       <button id="event-detail-close" class="btn-small">×</button>
     </div>
-    ${detail.description ? `<div class="ev-desc">${escapeHtml(detail.description).replace(/\{\{PLAYER\}\}/g, '主角')}</div>` : ''}
+    ${detail.description ? `<div class="ev-desc">${escapeEventText(detail.description).replace(/\{\{PLAYER\}\}/g, '主角')}</div>` : ''}
     ${dbTips ? `<ul class="ev-tips">${dbTips}</ul>` : ''}
     <div class="ev-choices">${rows}</div>`;
   el.classList.remove('hidden');
@@ -957,6 +957,19 @@ function renderCodex() {
 
 function escapeHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/**
+ * Escape for event text: like escapeHtml, but preserves the game's <br>
+ * line breaks as real line breaks. Any OTHER HTML tag is still escaped.
+ */
+function escapeEventText(s) {
+  return String(s)
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 /** Short-lived toast notification (auto-hides after 2.5s). */
